@@ -52,6 +52,9 @@ export const auth = betterAuth({
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
     },
+    ipAddress: {
+      ipAddressHeaders: ["x-forwarded-for", "cf-connecting-ip", "x-real-ip"],
+    },
   },
   account: {
     accountLinking: {
