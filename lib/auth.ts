@@ -14,6 +14,11 @@ const resendFromEmail = process.env.RESEND_FROM_EMAIL || "Vaultly <onboarding@re
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
+  trustedOrigins: [
+    env.BETTER_AUTH_URL,
+    env.NEXT_PUBLIC_APP_URL,
+    ...(process.env.RAILWAY_PUBLIC_DOMAIN ? [`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`] : []),
+  ].filter(Boolean),
   database: drizzleAdapter(db, {
     provider: "mysql",
     schema: {

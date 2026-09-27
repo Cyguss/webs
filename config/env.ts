@@ -22,7 +22,20 @@ const envSchema = z.object({
     .min(16, "BETTER_AUTH_SECRET must be at least 16 characters"),
   BETTER_AUTH_URL: z
     .string()
-    .default("http://localhost:3000"),
+    .optional()
+    .transform((val) => {
+      const candidate =
+        (val && val.trim()) ||
+        (process.env.BETTER_AUTH_URL && process.env.BETTER_AUTH_URL.trim()) ||
+        (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.trim()) ||
+        (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN.trim()}` : "") ||
+        "http://localhost:3000";
+      let clean = candidate;
+      if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+        clean = `https://${clean}`;
+      }
+      return clean.replace(/\/+$/, "");
+    }),
 
   // ── Google OAuth (Optional) ──
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
@@ -58,7 +71,21 @@ const envSchema = z.object({
   SUPER_ADMIN_PASSWORD: z.string().min(1, "SUPER_ADMIN_PASSWORD must be defined in environment"),
 
   // ── Public Platform Config ──
-  NEXT_PUBLIC_APP_URL: z.string().default("http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: z
+    .string()
+    .optional()
+    .transform((val) => {
+      const candidate =
+        (val && val.trim()) ||
+        (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.trim()) ||
+        (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN.trim()}` : "") ||
+        "http://localhost:3000";
+      let clean = candidate;
+      if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+        clean = `https://${clean}`;
+      }
+      return clean.replace(/\/+$/, "");
+    }),
   NEXT_PUBLIC_APP_DOMAIN: z.string().default("localhost:3000"),
 });
 
