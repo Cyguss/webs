@@ -1,0 +1,24 @@
+import { createAuthClient } from "better-auth/react";
+import { twoFactorClient } from "better-auth/client/plugins";
+
+export const authClient = createAuthClient({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  plugins: [
+    twoFactorClient({
+      onTwoFactorRedirect: () => {
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login?twoFactor=true";
+        }
+      },
+    }),
+  ],
+});
+
+export const {
+  signIn,
+  signOut,
+  signUp,
+  useSession,
+  twoFactor,
+  linkSocial,
+} = authClient;

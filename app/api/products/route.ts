@@ -1,0 +1,261 @@
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { shops, products, inventoryKeys } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { createProductSchema, updateProductSchema } from "@/lib/validations/product";
+import { getActiveMerchantShop } from "@/lib/tenant";
+
+export async function POST(req: Request) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get active user shop
+    const userShop = await getActiveMerchantShop(session.user.id);
+
+    if (!userShop) {
+      return NextResponse.json({ error: "Shop not found. Please create a shop first." }, { status: 404 });
+    }
+
+    const body = await req.json();
+    const result = createProductSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error.issues[0]?.message || "Invalid product data" },
+        { status: 400 }
+      );
+    }
+
+    const { title, description, price, currency, keys, thumbnailUrl, images, receiptNote } = result.data;
+    const productId = crypto.randomUUID();
+
+    const processedImages = Array.isArray(images)
+      ? images.map((u: string) => (typeof u === "string" ? u.trim() : "")).filter(Boolean).slice(0, 5)
+      : [];
+    const primaryThumb = thumbnailUrl || processedImages[0] || null;
+
+    // Insert product — keys only platform
+    await db.insert(products).values({
+      id: productId,
+      shopId: userShop.id,
+      title,
+      description: description || null,
+      receiptNote: receiptNote || null,
+      type: "key",
+      price: price.toString(),
+      currency: currency || "USD",
+      isUnlimitedStock: false,
+      stockLimit: null,
+      thumbnailUrl: primaryThumb,
+      images: processedImages.length > 0 ? JSON.stringify(processedImages) : null,
+      isActive: true,
+    });
+
+    // Insert inventory keys
+    if (Array.isArray(keys) && keys.length > 0) {
+      const keysToInsert = keys
+        .map((k: string) => k.trim())
+        .filter((k: string) => k.length > 0)
+        .map((keyValue: string) => ({
+          id: crypto.randomUUID(),
+          productId: productId,
+          keyValue,
+          isUsed: false,
+        }));
+
+      if (keysToInsert.length > 0) {
+        await db.insert(inventoryKeys).values(keysToInsert);
+      }
+    }
+
+    return NextResponse.json({ success: true, productId });
+  } catch (err: any) {
+    console.error("Error creating product:", err);
+    return NextResponse.json({ error: err.message || "Failed to create product" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get("id");
+
+    if (!productId) {
+      return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
+    }
+
+    const userShop = await getActiveMerchantShop(session.user.id);
+
+    if (!userShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    // Verify product belongs to user shop
+    const existingProduct = await db.query.products.findFirst({
+      where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json({ error: "Product not found or access denied" }, { status: 404 });
+    }
+
+    await db.delete(products).where(eq(products.id, productId));
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Error deleting product:", err);
+    return NextResponse.json({ error: err.message || "Failed to delete product" }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get("id");
+
+    const userShop = await getActiveMerchantShop(session.user.id);
+
+    if (!userShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    if (productId) {
+      const product = await db.query.products.findFirst({
+        where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+      });
+
+      if (!product) {
+        return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      }
+
+      let parsedImages: string[] = [];
+      if (product.images) {
+        try {
+          parsedImages = JSON.parse(product.images);
+        } catch {
+          parsedImages = [];
+        }
+      }
+      if (parsedImages.length === 0 && product.thumbnailUrl) {
+        parsedImages = [product.thumbnailUrl];
+      }
+
+      const keys = await db
+        .select()
+        .from(inventoryKeys)
+        .where(eq(inventoryKeys.productId, productId));
+
+      return NextResponse.json({ product: { ...product, parsedImages }, keys });
+    }
+
+    const allProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.shopId, userShop.id));
+
+    return NextResponse.json({ products: allProducts });
+  } catch (err: any) {
+    console.error("Error fetching product:", err);
+    return NextResponse.json({ error: err.message || "Failed to fetch product" }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const result = updateProductSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error.issues[0]?.message || "Invalid update data" },
+        { status: 400 }
+      );
+    }
+
+    const { id, title, description, price, thumbnailUrl, images, isActive, newKeys, receiptNote } = result.data;
+
+    const userShop = await getActiveMerchantShop(session.user.id);
+
+    if (!userShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const existingProduct = await db.query.products.findFirst({
+      where: and(eq(products.id, id), eq(products.shopId, userShop.id)),
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = price.toString();
+    if (receiptNote !== undefined) updateData.receiptNote = receiptNote || null;
+    if (images !== undefined) {
+      const processedImages = Array.isArray(images)
+        ? images.map((u: string) => (typeof u === "string" ? u.trim() : "")).filter(Boolean).slice(0, 5)
+        : [];
+      updateData.images = processedImages.length > 0 ? JSON.stringify(processedImages) : null;
+      if (thumbnailUrl === undefined && processedImages[0]) {
+        updateData.thumbnailUrl = processedImages[0];
+      }
+    }
+    if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl || null;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    await db.update(products).set(updateData).where(eq(products.id, id));
+
+    if (Array.isArray(newKeys) && newKeys.length > 0) {
+      const keysToInsert = newKeys
+        .map((k: string) => k.trim())
+        .filter((k: string) => k.length > 0)
+        .map((keyValue: string) => ({
+          id: crypto.randomUUID(),
+          productId: id,
+          keyValue,
+          isUsed: false,
+        }));
+
+      if (keysToInsert.length > 0) {
+        await db.insert(inventoryKeys).values(keysToInsert);
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Error updating product:", err);
+    return NextResponse.json({ error: err.message || "Failed to update product" }, { status: 500 });
+  }
+}
