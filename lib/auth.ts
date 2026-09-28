@@ -41,6 +41,11 @@ export const auth = betterAuth({
         defaultValue: true,
         input: false,
       },
+      adminPermissions: {
+        type: "string",
+        defaultValue: null,
+        input: false,
+      },
     },
   },
   session: {
@@ -52,9 +57,10 @@ export const auth = betterAuth({
     },
   },
   advanced: {
+    useSecureCookies: env.BETTER_AUTH_URL.startsWith("https://"),
     defaultCookieAttributes: {
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: env.BETTER_AUTH_URL.startsWith("https://"),
       httpOnly: true,
     },
     ipAddress: {

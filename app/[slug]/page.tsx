@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { StorefrontProductsCatalog } from "@/components/storefront-products-catalog";
 import { StorefrontSidebarRecovery } from "@/components/storefront-sidebar-recovery";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function DiscordIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -134,11 +135,11 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
             >
               <Lock size={24} />
             </div>
-            <h1 style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", marginBottom: 8, letterSpacing: "0.04em" }}>
-              NODE_PENDING_APPROVAL
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", marginBottom: 8, letterSpacing: "0.01em" }}>
+              Store Pending Approval
             </h1>
             <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: 24 }}>
-              Merchant node <strong>{shop.name}</strong> is currently pending platform signature verification.
+              <strong>{shop.name}</strong> is currently pending platform approval.
             </p>
             <Link
               href="/"
@@ -151,7 +152,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 fontSize: 12,
               }}
             >
-              [RETURN_TO_HUB]
+              Back to Home
             </Link>
           </div>
         </div>
@@ -188,7 +189,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
     })
   );
 
-  const bg = "#030305";
+  const bg = "var(--color-background)";
   const accent = "rgb(55, 44, 102)";
 
   const { getPlatformConfig } = await import("@/lib/platform-settings");
@@ -208,8 +209,8 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
       className="page-transition"
       style={{
         minHeight: "100vh",
-        background: bg,
-        color: "#ffffff",
+        background: "var(--color-background)",
+        color: "var(--color-foreground)",
         fontFamily: "var(--font-mono, monospace)",
         position: "relative",
       }}
@@ -295,7 +296,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   {shop.name}
                 </span>
                 <span style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.45)" }}>
-                  krypt.market/{shop.slug}
+                  powered by krypt.market
                 </span>
               </div>
             </Link>
@@ -318,14 +319,17 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 textDecoration: "none",
                 fontSize: 11,
                 fontWeight: 800,
-                letterSpacing: "0.06em",
+                letterSpacing: "0.04em",
                 boxShadow: "0 0 14px rgba(55, 44, 102, 0.5)",
                 transition: "all 0.15s ease",
               }}
             >
               <Key size={13} />
-              <span>[RECOVER_KEYS]</span>
+              <span>Find My Order</span>
             </Link>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Hub root link */}
             <Link
@@ -418,27 +422,9 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
               </div>
 
               <div>
-                <h1 style={{ fontSize: 17, fontWeight: 900, color: "#ffffff", margin: 0, letterSpacing: "0.04em" }}>
+                <h1 style={{ fontSize: 17, fontWeight: 900, color: "#ffffff", margin: 0, letterSpacing: "0.02em" }}>
                   {shop.name}
                 </h1>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                  <span
-                    style={{
-                      fontSize: 9.5,
-                      fontWeight: 800,
-                      padding: "2px 6px",
-                      borderRadius: 3,
-                      background: "rgba(55, 44, 102, 0.35)",
-                      border: "1px solid rgba(139, 92, 246, 0.4)",
-                      color: "#c4b5fd",
-                    }}
-                  >
-                    VERIFIED_NODE
-                  </span>
-                  <span style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.4)" }}>
-                    PGP: #{(shop.id || "4F8A").slice(0, 6).toUpperCase()}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -465,23 +451,23 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
               }}
             >
               <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>LATENCY</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>&lt; 2.4s</div>
+                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Delivery</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Instant</div>
               </div>
 
               <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>PROTOCOLS</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>{shopProducts.length} ACTIVE</div>
+                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Products</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>{shopProducts.length} Available</div>
               </div>
 
               <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>CIPHER</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>AES-256</div>
+                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Security</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Encrypted</div>
               </div>
 
               <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>RATING</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>5.0 / 5.0 ★</div>
+                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Rating</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>5.0 ★</div>
               </div>
             </div>
           </div>
@@ -489,7 +475,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
           {/* Embedded Instant Key Recovery Widget */}
           <StorefrontSidebarRecovery shopSlug={shop.slug} shopName={shop.name} accentColor={accent} />
 
-          {/* Tactical Uplink Relays (Socials & Community) */}
+          {/* Socials & Community */}
           {(shop.discordUrl || shop.telegramUrl || shop.youtubeUrl || shop.trustpilotUrl) && (
             <div
               style={{
@@ -499,8 +485,8 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 padding: 14,
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255, 255, 255, 0.6)", marginBottom: 10, letterSpacing: "0.08em" }}>
-                TACTICAL_UPLINKS // SIGNALS
+              <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255, 255, 255, 0.6)", marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                Community & Links
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -526,10 +512,10 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <DiscordIcon size={14} color="#a78bfa" />
-                      <span>DISCORD RELAY</span>
+                      <span>Discord Server</span>
                     </div>
                     <span style={{ fontSize: 9.5, color: "#c4b5fd" }}>
-                      {discordDetails?.presenceCount ? `${discordDetails.presenceCount} ON` : "ACTIVE"}
+                      {discordDetails?.presenceCount ? `${discordDetails.presenceCount} online` : "Join"}
                     </span>
                   </a>
                 )}
@@ -555,7 +541,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <TelegramIcon size={14} color="#ffffff" />
-                      <span>TELEGRAM CHANNEL</span>
+                      <span>Telegram</span>
                     </div>
                     <ExternalLink size={11} color="rgba(255,255,255,0.4)" />
                   </a>
@@ -582,7 +568,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <TrustpilotIcon size={14} color="#22c55e" />
-                      <span>TRUSTPILOT VERIFIED</span>
+                      <span>Trustpilot Reviews</span>
                     </div>
                     <span style={{ fontSize: 9.5, color: "#22c55e" }}>5.0 ★</span>
                   </a>
@@ -609,7 +595,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <YoutubeIcon size={14} color="#ffffff" />
-                      <span>YOUTUBE SHOWCASE</span>
+                      <span>YouTube</span>
                     </div>
                     <ExternalLink size={11} color="rgba(255,255,255,0.4)" />
                   </a>
@@ -619,9 +605,9 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
           )}
         </aside>
 
-        {/* ─── RIGHT COLUMN: Weaponized Catalog & Panoramic Holo-Banner ─── */}
+        {/* ─── RIGHT COLUMN: Products Catalog & Storefront Banner ─── */}
         <main style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Panoramic Storefront Hero HUD Banner */}
+          {/* Storefront Hero Banner */}
           <div
             style={{
               height: 180,
@@ -675,49 +661,23 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
               }}
             />
 
-            {/* Banner HUD Text Overlay */}
+            {/* Banner Text Overlay */}
             <div
               style={{
                 position: "absolute",
                 bottom: 16,
                 left: 20,
                 right: 20,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-end",
-                flexWrap: "wrap",
-                gap: 12,
                 zIndex: 2,
               }}
             >
-              <div>
-                <div style={{ fontSize: 10, color: "#c4b5fd", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-                  DISPATCH_VAULT // MATRIX
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "#ffffff", letterSpacing: "0.02em" }}>
-                  {shop.name}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 10,
-                    padding: "3px 8px",
-                    borderRadius: 4,
-                    background: "rgba(0, 0, 0, 0.7)",
-                    border: "1px solid rgba(139, 92, 246, 0.5)",
-                    color: "#ffffff",
-                    fontWeight: 800,
-                  }}
-                >
-                  LIVE_STOCK_SYNC
-                </span>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#ffffff", letterSpacing: "0.02em" }}>
+                {shop.name}
               </div>
             </div>
           </div>
 
-          {/* Weaponized Product Matrix & Control Deck */}
+          {/* Product Matrix & Control Deck */}
           <StorefrontProductsCatalog
             products={productsWithStock as any}
             shopSlug={shop.slug}
@@ -733,7 +693,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
         </main>
       </div>
 
-      {/* ─── Tactical Darknet Footer ─── */}
+      {/* ─── Storefront Footer ─── */}
       <footer
         style={{
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",
@@ -758,17 +718,15 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ color: "#ffffff", fontWeight: 800 }}>KRYPT.MARKET</span>
             <span>•</span>
-            <span>NODE_{shop.slug.toUpperCase()}</span>
-            <span>•</span>
-            <span>ZERO-KNOWLEDGE DISPATCH PROTOCOL</span>
+            <span>{shop.name}</span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <Link href={`/${shop.slug}/lookup`} style={{ color: "#c4b5fd", textDecoration: "none" }}>
-              [RECOVER_KEYS]
+              Find My Order
             </Link>
             <Link href="/" style={{ color: "rgba(255, 255, 255, 0.6)", textDecoration: "none" }}>
-              [DEPLOY_NODE]
+              Create Store
             </Link>
           </div>
         </div>

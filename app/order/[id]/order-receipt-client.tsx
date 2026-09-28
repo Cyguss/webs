@@ -78,7 +78,7 @@ export default function OrderReceiptClient({
           fontFamily: "var(--font-mono, monospace)",
         }}
       >
-        {deliveryValue || "[PENDING_DISPATCH // DAEMON_PROCESSING]"}
+        {deliveryValue || "Generating license key..."}
       </div>
     );
   }
@@ -118,10 +118,10 @@ export default function OrderReceiptClient({
           </div>
           <div>
             <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              LICENSE_VALIDITY // PROTOCOL_TERM
+              License Duration
             </div>
             <div style={{ fontSize: 13, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
-              <span>{durationMeta.label.toUpperCase()}</span>
+              <span>{durationMeta.label}</span>
               <span
                 style={{
                   fontSize: 9,
@@ -140,7 +140,7 @@ export default function OrderReceiptClient({
 
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.5)" }}>
-            {durationMeta.isLifetime ? "STATUS" : "REMAINING"}
+            {durationMeta.isLifetime ? "Status" : "Remaining"}
           </div>
           <div
             style={{
@@ -151,10 +151,10 @@ export default function OrderReceiptClient({
             }}
           >
             {durationMeta.isLifetime
-              ? "[PERMANENT_UNLOCKED]"
+              ? "Lifetime Access"
               : expiresAt
-              ? `[${formatExpirationRemaining(expiresAt).toUpperCase()}]`
-              : `[${durationMeta.days}D FROM DISPATCH]`}
+              ? `${formatExpirationRemaining(expiresAt)} remaining`
+              : `${durationMeta.days} days active`}
           </div>
         </div>
       </div>
@@ -163,8 +163,8 @@ export default function OrderReceiptClient({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Terminal size={14} color="#c4b5fd" />
-          <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            {keys.length > 1 ? `[${keys.length} DECRYPTED KEYS DELIVERED]` : "[DECRYPTED LICENSE KEY]"}
+          <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {keys.length > 1 ? `${keys.length} License Keys Delivered` : "License Key"}
           </span>
         </div>
 
@@ -184,7 +184,7 @@ export default function OrderReceiptClient({
               gap: 6,
             }}
           >
-            {copiedAll ? <><Check size={12} /> [HASH_VERIFIED // ALL_COPIED]</> : <><Copy size={12} /> [COPY_ALL_{keys.length}_KEYS]</>}
+            {copiedAll ? <><Check size={12} /> Copied All Keys</> : <><Copy size={12} /> Copy All ({keys.length})</>}
           </button>
         )}
       </div>
@@ -278,7 +278,7 @@ export default function OrderReceiptClient({
                   boxShadow: isCopied ? "0 0 12px rgba(139, 92, 246, 0.35)" : "none",
                 }}
               >
-                {isCopied ? <><Check size={12} /> [COPIED]</> : <><Copy size={12} /> [COPY]</>}
+                {isCopied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
               </button>
             </div>
           );

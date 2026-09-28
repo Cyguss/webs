@@ -15,6 +15,7 @@ const TABLE_DEFINITIONS = [
     \`discord_username\` VARCHAR(100),
     \`discord_roles\` TEXT,
     \`admin_permissions_active\` BOOLEAN NOT NULL DEFAULT 1,
+    \`admin_permissions\` TEXT,
     \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
@@ -392,35 +393,65 @@ export async function ensureDatabaseSchema(pool: mysql.Pool): Promise<void> {
           }
         }
 
+        // Helper to safely add column on MySQL without IF NOT EXISTS syntax errors
+        async function ensureColumn(table: string, column: string, definition: string) {
+          try {
+            const [rows]: any = await conn.query(
+              `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+              [table, column]
+            );
+            if (!rows || rows.length === 0) {
+              await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
+              console.log(`✓ [DB Auto-Init] Added missing column ${table}.${column}`);
+            }
+          } catch {
+            // Fallback direct ALTER ignoring duplicate column error (1060 / ER_DUP_FIELDNAME)
+            try {
+              await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
+              console.log(`✓ [DB Auto-Init] Added missing column ${table}.${column}`);
+            } catch (alterErr: any) {
+              if (alterErr?.errno !== 1060 && alterErr?.code !== "ER_DUP_FIELDNAME") {
+                console.warn(`[DB Auto-Init] Column migration notice for ${table}.${column}:`, alterErr?.message);
+              }
+            }
+          }
+        }
+
         // Verify and add missing columns if any table was partially migrated previously
-        const columnPatches = [
-          "ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `two_factor_method` VARCHAR(20) DEFAULT 'email'",
-          "ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `admin_permissions_active` BOOLEAN NOT NULL DEFAULT 1",
-          "ALTER TABLE `user` ADD COLUMN IF NOT EXISTS `admin_permissions` TEXT NULL",
-          "ALTER TABLE `shops` ADD COLUMN IF NOT EXISTS `is_accepted` BOOLEAN NOT NULL DEFAULT 0",
-          "ALTER TABLE `shops` ADD COLUMN IF NOT EXISTS `theme_mode` VARCHAR(20) DEFAULT 'dark'",
-          "ALTER TABLE `shops` ADD COLUMN IF NOT EXISTS `categories` TEXT NULL",
-          "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `category` VARCHAR(100) NULL",
-          "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `duration` VARCHAR(50) NOT NULL DEFAULT 'lifetime'",
-          "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `duration_days` INT NOT NULL DEFAULT 0",
-          "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `custom_duration_label` VARCHAR(100) NULL",
-          "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `variants` TEXT NULL",
-          "ALTER TABLE `inventory_keys` ADD COLUMN IF NOT EXISTS `duration` VARCHAR(50) DEFAULT 'lifetime'",
-          "ALTER TABLE `inventory_keys` ADD COLUMN IF NOT EXISTS `duration_days` INT DEFAULT 0",
-          "ALTER TABLE `inventory_keys` ADD COLUMN IF NOT EXISTS `custom_duration_label` VARCHAR(100) NULL",
-          "ALTER TABLE `inventory_keys` ADD COLUMN IF NOT EXISTS `variant_id` VARCHAR(50) NULL",
-          "ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `variant_id` VARCHAR(50) NULL",
-          "ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `key_duration` VARCHAR(50) NULL",
-          "ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `key_duration_days` INT NULL",
-          "ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `key_expires_at` TIMESTAMP NULL",
+        const columnsToEnsure = [
+          { table: "user", column: "two_factor_method", def: "VARCHAR(20) DEFAULT 'email'" },
+          { table: "user", column: "admin_permissions_active", def: "BOOLEAN NOT NULL DEFAULT 1" },
+          { table: "user", column: "admin_permissions", def: "TEXT NULL" },
+          { table: "user", column: "discord_id", def: "VARCHAR(64) NULL" },
+          { table: "user", column: "discord_username", def: "VARCHAR(100) NULL" },
+          { table: "user", column: "discord_roles", def: "TEXT NULL" },
+          { table: "shops", column: "is_accepted", def: "BOOLEAN NOT NULL DEFAULT 0" },
+          { table: "shops", column: "theme_mode", def: "VARCHAR(20) DEFAULT 'dark'" },
+          { table: "shops", column: "categories", def: "TEXT NULL" },
+          { table: "shops", column: "twitter_url", def: "TEXT NULL" },
+          { table: "shops", column: "discord_url", def: "TEXT NULL" },
+          { table: "shops", column: "telegram_url", def: "TEXT NULL" },
+          { table: "shops", column: "youtube_url", def: "TEXT NULL" },
+          { table: "shops", column: "trustpilot_url", def: "TEXT NULL" },
+          { table: "shops", column: "discord_webhook_url", def: "TEXT NULL" },
+          { table: "products", column: "category", def: "VARCHAR(100) NULL" },
+          { table: "products", column: "duration", def: "VARCHAR(50) NOT NULL DEFAULT 'lifetime'" },
+          { table: "products", column: "duration_days", def: "INT NOT NULL DEFAULT 0" },
+          { table: "products", column: "custom_duration_label", def: "VARCHAR(100) NULL" },
+          { table: "products", column: "variants", def: "TEXT NULL" },
+          { table: "products", column: "sort_order", def: "INT NOT NULL DEFAULT 0" },
+          { table: "inventory_keys", column: "duration", def: "VARCHAR(50) DEFAULT 'lifetime'" },
+          { table: "inventory_keys", column: "duration_days", def: "INT DEFAULT 0" },
+          { table: "inventory_keys", column: "custom_duration_label", def: "VARCHAR(100) NULL" },
+          { table: "inventory_keys", column: "variant_id", def: "VARCHAR(50) NULL" },
+          { table: "orders", column: "variant_id", def: "VARCHAR(50) NULL" },
+          { table: "orders", column: "key_duration", def: "VARCHAR(50) NULL" },
+          { table: "orders", column: "key_duration_days", def: "INT NULL" },
+          { table: "orders", column: "key_expires_at", def: "TIMESTAMP NULL" },
         ];
 
-        for (const patch of columnPatches) {
-          try {
-            await conn.query(patch);
-          } catch {
-            // Ignore if already exists or dialect doesn't support IF NOT EXISTS in ALTER
-          }
+        for (const col of columnsToEnsure) {
+          await ensureColumn(col.table, col.column, col.def);
         }
 
         // Insert default platform settings if missing

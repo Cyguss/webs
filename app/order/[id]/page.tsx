@@ -8,6 +8,7 @@ import { CheckCircle2, Key, Package, ShieldCheck, Lock, Mail, ArrowRight, Termin
 import { verifyOrderAccessToken } from "@/lib/order-auth";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function OrderReceiptPage({
   params,
@@ -123,15 +124,15 @@ export default async function OrderReceiptPage({
             <Lock size={28} />
           </div>
 
-          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#ff2a4b", letterSpacing: "0.08em", marginBottom: 6 }}>
-            // PROTOCOL_GATE: ENCRYPTED_DELIVERY_VAULT
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#ff2a4b", letterSpacing: "0.04em", marginBottom: 6, textTransform: "uppercase" }}>
+            Secure Order Verification
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.01em", marginBottom: 10, color: "#fff" }}>
             Order Receipt Protected
           </h1>
           <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, lineHeight: 1.6, marginBottom: 26 }}>
-            For privacy and fraud prevention, decrypted license keys are locked. Open the secure magic link dispatched to your purchase mailbox.
+            For privacy and security, direct license access is protected. Check the receipt link sent to your email address or lookup your order below.
           </p>
 
           <div
@@ -146,10 +147,10 @@ export default async function OrderReceiptPage({
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, marginBottom: 6 }}>
               <Mail size={16} color="#c4b5fd" />
-              <span>Dispatched to customer mailbox on record</span>
+              <span>Receipt sent to customer email on file</span>
             </div>
             <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.45)" }}>
-              TXID REFERENCE: <strong style={{ color: "#ffffff" }}>#{order.id.slice(0, 12)}</strong>
+              Order ID: <strong style={{ color: "#ffffff" }}>#{order.id.slice(0, 12)}</strong>
             </div>
           </div>
 
@@ -173,7 +174,7 @@ export default async function OrderReceiptPage({
               }}
             >
               <Mail size={14} />
-              <span>[RESEND_ACCESS_LINK // LOOKUP]</span>
+              <span>Find My Order & Keys</span>
             </Link>
 
             {shop && (
@@ -205,14 +206,14 @@ export default async function OrderReceiptPage({
       className="page-transition"
       style={{
         minHeight: "100vh",
-        background: "#030305",
-        color: "#fff",
+        background: "var(--color-background)",
+        color: "var(--color-foreground)",
         fontFamily: "Inter, sans-serif",
-        padding: "60px 24px",
+        padding: "40px 24px 60px",
         position: "relative",
       }}
     >
-      {/* Tactical Background Grid */}
+      {/* Background Grid */}
       <div
         className="krypt-grid-bg"
         style={{
@@ -222,6 +223,11 @@ export default async function OrderReceiptPage({
           pointerEvents: "none",
         }}
       />
+
+      {/* Top Bar Controls */}
+      <div style={{ maxWidth: 640, margin: "0 auto 20px", display: "flex", justifyContent: "flex-end", position: "relative", zIndex: 10 }}>
+        <ThemeToggle />
+      </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 10 }}>
         {/* Header */}
@@ -244,15 +250,15 @@ export default async function OrderReceiptPage({
             <CheckCircle2 size={30} />
           </div>
 
-          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#a78bfa", letterSpacing: "0.08em", marginBottom: 4 }}>
-            // SETTLEMENT_VERIFIED: DISPATCH_CONFIRMED
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#a78bfa", letterSpacing: "0.04em", marginBottom: 4, textTransform: "uppercase" }}>
+            Payment Confirmed • Delivery Ready
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: "-0.01em", color: "#fff" }}>
-            Payment Successful & Keys Dispatched
+            Payment Successful & Keys Delivered
           </h1>
           <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginTop: 4 }}>
-            Direct fulfillment receipt from <strong style={{ color: "#ffffff" }}>{shop?.name}</strong>
+            Order receipt from <strong style={{ color: "#ffffff" }}>{shop?.name}</strong>
           </p>
         </div>
 
@@ -270,7 +276,7 @@ export default async function OrderReceiptPage({
             overflow: "hidden",
           }}
         >
-          {/* Tactical Top LED Accent */}
+          {/* Top LED Accent */}
           <div
             style={{
               position: "absolute",
@@ -301,7 +307,7 @@ export default async function OrderReceiptPage({
               </div>
               <div>
                 <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
-                  DISPATCHED PROTOCOL PRODUCT
+                  Purchased Item
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{product?.title}</div>
               </div>
@@ -319,7 +325,7 @@ export default async function OrderReceiptPage({
                   fontWeight: 800,
                 }}
               >
-                QTY: {order.quantity}
+                Qty: {order.quantity}
               </span>
             )}
           </div>
@@ -336,29 +342,29 @@ export default async function OrderReceiptPage({
             />
           ) : (
             <div style={{ padding: 14, borderRadius: 8, background: "rgba(3, 3, 5, 0.9)", color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "var(--font-mono, monospace)" }}>
-              Order daemon processing. Key dispatched to <strong>{order.buyerEmail}</strong>.
+              Processing order. Details dispatched to <strong>{order.buyerEmail}</strong>.
             </div>
           )}
 
-          {/* Telemetry Receipt Info */}
+          {/* Receipt Info */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>
             <div>
-              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>TXID REFERENCE</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>ORDER ID</span>
               <span style={{ color: "#ffffff", fontWeight: 700 }}>#{order.id.slice(0, 14)}</span>
             </div>
 
             <div>
-              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>CUSTOMER MAILBOX</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>CUSTOMER EMAIL</span>
               <span style={{ color: "#fff" }}>{order.buyerEmail}</span>
             </div>
 
             <div>
-              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>SETTLED AMOUNT ({order.quantity} ITEM{order.quantity > 1 ? "S" : ""})</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>TOTAL PAID ({order.quantity} ITEM{order.quantity > 1 ? "S" : ""})</span>
               <span style={{ fontWeight: 800, color: "#ffffff", fontSize: 14 }}>${parseFloat(order.totalAmount).toFixed(2)} USD</span>
             </div>
 
             <div>
-              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>PAYMENT GATEWAY</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>PAYMENT METHOD</span>
               <span style={{ textTransform: "uppercase", color: "#c4b5fd", fontWeight: 700 }}>{order.paymentMethod}</span>
             </div>
           </div>

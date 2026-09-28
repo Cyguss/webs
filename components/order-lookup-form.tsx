@@ -106,14 +106,14 @@ export function OrderLookupForm({
           >
             <Terminal size={24} />
           </div>
-          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd", letterSpacing: "0.08em", marginBottom: 4 }}>
-            // PROTOCOL_QUERY: USER_PURCHASE_INDEX
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd", letterSpacing: "0.04em", marginBottom: 4, textTransform: "uppercase" }}>
+            Order History Lookup
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.01em", color: "#fff" }}>
             Find My Purchased Orders & Keys
           </h1>
           <p style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.5)", margin: 0, lineHeight: 1.5 }}>
-            Lost your active session tab or need to retrieve your decrypted license keys? Query the ledger using your checkout email.
+            Lost your active tab or need to retrieve your license keys? Enter the email address you used during checkout.
           </p>
         </div>
 
@@ -133,7 +133,7 @@ export function OrderLookupForm({
             <input
               type="email"
               required
-              placeholder="operator@proton.me"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{
@@ -181,12 +181,12 @@ export function OrderLookupForm({
             {loading ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
-                <span>[QUERYING_LEDGER...]</span>
+                <span>Searching...</span>
               </>
             ) : (
               <>
                 <Search size={15} />
-                <span>[RETRIEVE_PURCHASED_KEYS]</span>
+                <span>Find Orders & Keys</span>
               </>
             )}
           </button>
@@ -213,7 +213,7 @@ export function OrderLookupForm({
                 }}
               >
                 <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
-                <span>Decrypted receipt links dispatched to <strong>{email}</strong>.</span>
+                <span>Receipt links sent to <strong>{email}</strong>.</span>
               </div>
             )}
 
@@ -229,15 +229,15 @@ export function OrderLookupForm({
                 }}
               >
                 <AlertCircle size={26} style={{ color: "#ef4444", margin: "0 auto 10px" }} />
-                <div style={{ fontWeight: 800, fontSize: 13, color: "#fff", marginBottom: 4 }}>[ZERO_RECORDS_FOUND]</div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: "#fff", marginBottom: 4 }}>No Orders Found</div>
                 <div style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", maxWidth: 360, margin: "0 auto" }}>
-                  No completed orders matching <strong>{email}</strong> found in the ledger.
+                  No completed orders matching <strong>{email}</strong> were found.
                 </div>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.5)", marginBottom: 4 }}>
-                  [MATCHED_ORDERS: {results.length}]
+                  Found Orders ({results.length})
                 </div>
 
                 {results.map((ord, oIdx) => (
@@ -277,7 +277,7 @@ export function OrderLookupForm({
                       <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.5)", marginTop: 4, display: "flex", gap: 10 }}>
                         <span>Store: <strong style={{ color: "#ffffff" }}>{ord.shopName}</strong></span>
                         <span>•</span>
-                        <span>TXID: #{ord.shortId}</span>
+                        <span>Order: #{ord.shortId}</span>
                         <span>•</span>
                         <span>{new Date(ord.createdAt).toLocaleDateString()}</span>
                       </div>
@@ -306,7 +306,7 @@ export function OrderLookupForm({
                         }}
                       >
                         <Key size={12} />
-                        <span>[VIEW_KEYS]</span>
+                        <span>View Order</span>
                       </Link>
                     </div>
                   </div>
@@ -319,7 +319,7 @@ export function OrderLookupForm({
 
       <div style={{ marginTop: 20, textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
         <ShieldCheck size={13} color="#c4b5fd" />
-        <span>CRYPTOGRAPHICALLY SECURED WITH ZERO LOG RETENTION</span>
+        <span>Secure Order Lookup • Instant Delivery</span>
       </div>
     </div>
   );

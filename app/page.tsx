@@ -18,7 +18,17 @@ import {
   ShieldCheck,
   Sparkles,
   ShoppingBag,
+  Terminal,
+  Bot,
+  RefreshCw,
+  BarChart3,
+  Tag,
+  Clock,
+  ChevronRight,
+  Server,
 } from "lucide-react";
+
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function DiscordLogo({ size = 16 }: { size?: number }) {
   return (
@@ -31,6 +41,7 @@ function DiscordLogo({ size = 16 }: { size?: number }) {
 export default function LandingPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [demoTier, setDemoTier] = useState<"day" | "month" | "lifetime">("month");
 
   const DISCORD_INVITE = "https://discord.gg/krypt";
 
@@ -44,14 +55,14 @@ export default function LandingPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#030305",
-        color: "#ffffff",
+        background: "var(--color-background)",
+        color: "var(--color-foreground)",
         fontFamily: "var(--font-sans, Inter, sans-serif)",
         overflowX: "hidden",
         position: "relative",
       }}
     >
-      {/* Cyber Grid & Ambient Background */}
+      {/* Ambient Grid Background */}
       <div
         className="krypt-grid-bg"
         style={{
@@ -63,7 +74,7 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Top Ambient Glow */}
+      {/* Top Ambient Violet Glow */}
       <div
         style={{
           position: "fixed",
@@ -71,9 +82,9 @@ export default function LandingPage() {
           left: "50%",
           transform: "translateX(-50%)",
           width: "100%",
-          maxWidth: 1000,
-          height: 380,
-          background: "radial-gradient(ellipse at 50% 0%, rgba(55, 44, 102, 0.4) 0%, rgba(139, 92, 246, 0.12) 35%, transparent 70%)",
+          maxWidth: 1100,
+          height: 420,
+          background: "radial-gradient(ellipse at 50% 0%, rgba(55, 44, 102, 0.45) 0%, rgba(139, 92, 246, 0.14) 35%, transparent 70%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -85,7 +96,7 @@ export default function LandingPage() {
           position: "sticky",
           top: 14,
           zIndex: 50,
-          maxWidth: 1080,
+          maxWidth: 1100,
           margin: "0 auto",
           padding: "0 16px",
         }}
@@ -130,34 +141,32 @@ export default function LandingPage() {
             >
               <ShoppingBag size={16} />
             </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 900,
-                    letterSpacing: "0.04em",
-                    color: "#ffffff",
-                    fontFamily: "var(--font-mono, monospace)",
-                  }}
-                >
-                  KRYPT
-                </span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 800,
-                    padding: "1px 5px",
-                    borderRadius: 4,
-                    background: "rgba(55, 44, 102, 0.4)",
-                    border: "1px solid rgba(139, 92, 246, 0.4)",
-                    color: "#c4b5fd",
-                    fontFamily: "var(--font-mono, monospace)",
-                  }}
-                >
-                  MARKET
-                </span>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 900,
+                  letterSpacing: "0.04em",
+                  color: "#ffffff",
+                  fontFamily: "var(--font-mono, monospace)",
+                }}
+              >
+                KRYPT
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.4)",
+                  color: "#c4b5fd",
+                  fontFamily: "var(--font-mono, monospace)",
+                }}
+              >
+                MARKET
+              </span>
             </div>
           </Link>
 
@@ -207,6 +216,8 @@ export default function LandingPage() {
               <DiscordLogo size={14} />
               <span>Discord</span>
             </a>
+
+            <ThemeToggle />
 
             {isAuthenticated ? (
               <Link
@@ -268,9 +279,9 @@ export default function LandingPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 960,
+          maxWidth: 1040,
           margin: "0 auto",
-          padding: "80px 24px 40px",
+          padding: "72px 24px 40px",
           textAlign: "center",
           opacity: mounted ? 1 : 0,
           transform: mounted ? "translateY(0)" : "translateY(8px)",
@@ -281,19 +292,19 @@ export default function LandingPage() {
         <div
           className="krypt-tag krypt-tag-violet animate-pop"
           style={{
-            marginBottom: 24,
+            marginBottom: 20,
             padding: "5px 14px",
             borderRadius: 99,
           }}
         >
           <Sparkles size={13} />
-          <span>Automated Digital Key & License Delivery</span>
+          <span>Automated Digital Key & License E-Commerce</span>
         </div>
 
         {/* Hero Title */}
         <h1
           style={{
-            fontSize: "clamp(34px, 5.5vw, 64px)",
+            fontSize: "clamp(34px, 5.5vw, 62px)",
             fontWeight: 900,
             lineHeight: 1.08,
             letterSpacing: "-0.03em",
@@ -301,7 +312,7 @@ export default function LandingPage() {
             color: "#ffffff",
           }}
         >
-          The Modern E-Commerce Platform for Digital Goods
+          Sell Software & Digital Keys with Instant 24/7 Delivery
         </h1>
 
         {/* Subtitle */}
@@ -309,16 +320,16 @@ export default function LandingPage() {
           style={{
             fontSize: "clamp(15px, 2vw, 17px)",
             color: "#8b949e",
-            maxWidth: 620,
+            maxWidth: 680,
             margin: "0 auto 36px",
             lineHeight: 1.6,
           }}
         >
-          Launch your automated store in minutes. Deposit software serials, license keys, and accounts. Accept Card and Crypto payments with zero-delay instant key fulfillment.
+          Launch your high-conversion storefront in minutes. Deposit serial keys, configure duration plans, and accept Card &amp; Crypto payments. We host your custom domain on Cloudflare Edge with automated SSL.
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 48 }}>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 50 }}>
           {isAuthenticated ? (
             <Link
               href="/dashboard"
@@ -355,7 +366,7 @@ export default function LandingPage() {
                 <ArrowRight size={15} />
               </Link>
               <Link
-                href="/login"
+                href="/demo-store"
                 className="interactive-pill"
                 style={{
                   display: "inline-flex",
@@ -371,55 +382,126 @@ export default function LandingPage() {
                   textDecoration: "none",
                 }}
               >
-                Sign In
+                <span>View Demo Store</span>
+                <ExternalLink size={14} color="#c4b5fd" />
               </Link>
             </>
           )}
         </div>
 
-        {/* Highlights Row */}
+        {/* Interactive Storefront Preview Deck */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 14,
-            maxWidth: 820,
-            margin: "0 auto",
+            maxWidth: 780,
+            margin: "0 auto 40px",
+            background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+            border: "1px solid rgba(55, 44, 102, 0.55)",
+            borderRadius: 16,
+            padding: 24,
+            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(55, 44, 102, 0.3)",
+            textAlign: "left",
           }}
         >
-          <div className="krypt-card" style={{ padding: "18px 20px", textAlign: "left" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#c4b5fd", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
-              INSTANT DELIVERY
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: 14, marginBottom: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
+                store.yourbrand.com • Hosted by Krypt
+              </span>
             </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#ffffff", marginBottom: 4 }}>
-              0-Second Dispatch
-            </div>
-            <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>
-              Keys revealed on-screen and emailed instantly upon payment confirmation.
-            </div>
+            <span style={{ fontSize: 11, color: "#c4b5fd", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+              Instant 24/7 Delivery
+            </span>
           </div>
 
-          <div className="krypt-card" style={{ padding: "18px 20px", textAlign: "left" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#c4b5fd", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
-              MULTIPLE DURATION TIERS
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#ffffff", marginBottom: 4 }}>
-              Day / Week / Month / Lifetime
-            </div>
-            <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>
-              Separate stock vaults and custom pricing for every license duration.
-            </div>
-          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#c4b5fd", fontFamily: "var(--font-mono, monospace)", fontWeight: 700, marginBottom: 4 }}>
+                DIGITAL PRODUCT
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#ffffff", marginBottom: 6 }}>
+                Apex Protocol Suite
+              </div>
+              <p style={{ fontSize: 12.5, color: "#8b949e", margin: "0 0 14px", lineHeight: 1.5 }}>
+                Automated license key generation with 0-second checkout dispatch.
+              </p>
 
-          <div className="krypt-card" style={{ padding: "18px 20px", textAlign: "left" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#c4b5fd", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
-              ZERO DOUBLE-SELLS
+              {/* Interactive Duration Tabs */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                {[
+                  { id: "day", label: "1 Day", price: "$4.99", stock: "14 left" },
+                  { id: "month", label: "30 Days", price: "$24.99", stock: "8 left" },
+                  { id: "lifetime", label: "Lifetime", price: "$69.99", stock: "Instant" },
+                ].map((tier) => (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    onClick={() => setDemoTier(tier.id as any)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 6px",
+                      borderRadius: 6,
+                      background: demoTier === tier.id ? "rgb(55, 44, 102)" : "rgba(255, 255, 255, 0.03)",
+                      border: demoTier === tier.id ? "1px solid #8b5cf6" : "1px solid rgba(255, 255, 255, 0.08)",
+                      color: demoTier === tier.id ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono, monospace)" }}>{tier.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: "#ffffff", marginTop: 2 }}>{tier.price}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#ffffff", marginBottom: 4 }}>
-              Single-Use Key Vault
-            </div>
-            <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>
-              Mathematical lock on key delivery prevents duplicate deliveries forever.
+
+            {/* Quick Live Preview Box */}
+            <div
+              style={{
+                background: "rgba(3, 3, 5, 0.95)",
+                border: "1px solid rgba(139, 92, 246, 0.3)",
+                borderRadius: 10,
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono, monospace)" }}>Selected Plan</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#c4b5fd", fontFamily: "var(--font-mono, monospace)" }}>
+                  {demoTier === "day" ? "1 Day Pass ($4.99)" : demoTier === "month" ? "30 Days Access ($24.99)" : "Lifetime License ($69.99)"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono, monospace)" }}>Payment Methods</span>
+                <span style={{ fontSize: 11, color: "#ffffff", fontWeight: 700 }}>Card &bull; Crypto</span>
+              </div>
+
+              <Link
+                href="/demo-store"
+                className="krypt-btn-primary"
+                style={{
+                  width: "100%",
+                  padding: "9px",
+                  borderRadius: 6,
+                  textAlign: "center",
+                  textDecoration: "none",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  fontFamily: "var(--font-mono, monospace)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  marginTop: 4,
+                }}
+              >
+                <Zap size={13} />
+                <span>Test Live Checkout</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -430,8 +512,8 @@ export default function LandingPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 960,
-          margin: "40px auto 60px",
+          maxWidth: 1040,
+          margin: "0 auto 60px",
           padding: "0 20px",
         }}
       >
@@ -467,22 +549,19 @@ export default function LandingPage() {
               </div>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#ffffff" }}>
-                  Card Checkout Gateway
+                  Credit &amp; Debit Card Checkout
                 </h3>
                 <span style={{ fontSize: 11, color: "#8b949e" }}>
-                  Stripe Card & Digital Wallets
+                  Stripe Card, Apple Pay &amp; Google Pay
                 </span>
               </div>
             </div>
             <p style={{ fontSize: 13, color: "#8b949e", margin: "0 0 16px", lineHeight: 1.5 }}>
-              Process credit and debit card payments securely with bank-grade encrypted checkout tunnels.
+              Process major card payments securely with 3D Secure verification and zero customer friction.
             </p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {["VISA", "MASTERCARD", "AMEX", "APPLE PAY", "GOOGLE PAY"].map((badge) => (
-                <span
-                  key={badge}
-                  className="krypt-tag krypt-tag-violet"
-                >
+                <span key={badge} className="krypt-tag krypt-tag-violet">
                   {badge}
                 </span>
               ))}
@@ -514,25 +593,311 @@ export default function LandingPage() {
               </div>
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#ffffff" }}>
-                  Cryptocurrency Payments
+                  Cryptocurrency Invoicing
                 </h3>
                 <span style={{ fontSize: 11, color: "#8b949e" }}>
-                  Automated Blockchain Invoicing
+                  Direct Automated Blockchain Settlements
                 </span>
               </div>
             </div>
             <p style={{ fontSize: 13, color: "#8b949e", margin: "0 0 16px", lineHeight: 1.5 }}>
-              Native crypto invoicing with zero chargeback risk and direct automated payment confirmation.
+              Accept decentralized payments with automated address generation, instant mempool detection, and 0 chargebacks.
             </p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {["BTC", "LTC", "XMR", "USDT", "ETH", "SOL"].map((coin) => (
-                <span
-                  key={coin}
-                  className="krypt-tag krypt-tag-violet"
-                >
+                <span key={coin} className="krypt-tag krypt-tag-violet">
                   {coin}
                 </span>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Merchant Suite & Store Operations (Redesigned) ───────────── */}
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1040,
+          margin: "0 auto 70px",
+          padding: "0 20px",
+        }}
+      >
+        <div style={{ textAlign: "left", marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono, monospace)" }}>
+            Merchant Suite &amp; Operations
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.02em", margin: "0 0 8px" }}>
+            The Operating System for Digital Goods
+          </h2>
+          <p style={{ fontSize: 14, color: "#8b949e", margin: 0, maxWidth: 640 }}>
+            Everything you need to automate orders, manage serial pools, protect license keys, and scale your brand without technical friction.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {/* Card 1: Custom Domains (We Host) */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.5)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Globe size={19} />
+              </div>
+              <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 10 }}>
+                WE HOST FOR YOU
+              </span>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                Custom Domains &amp; Edge CDN
+              </h3>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+                Connect your brand domain (<code style={{ color: "#c4b5fd" }}>store.yourbrand.com</code>) with 1 click. We host everything on our global edge network with automatic SSL certificates and DDoS protection.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: Multi-Duration Key Vault */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.5)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Clock size={19} />
+              </div>
+              <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 10 }}>
+                DAY / MONTH / LIFETIME
+              </span>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                Multi-Duration Key Vaults
+              </h3>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+                Set separate stock pools and distinct prices for Daily, Weekly, Monthly, and Lifetime tiers under a single product listing. Paste serials in bulk line-by-line.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Instant 0-Second Delivery */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.5)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Zap size={19} />
+              </div>
+              <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 10 }}>
+                0-SECOND DISPATCH
+              </span>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                Automated Fulfillment &amp; Anti-Duplicate
+              </h3>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+                Keys are automatically assigned and revealed instantly upon confirmed payment. Built-in atomic locking guarantees zero double-sells across all traffic spikes.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: HMAC Webhooks & API */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.5)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Code2 size={19} />
+              </div>
+              <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 10 }}>
+                HMAC-SHA256
+              </span>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                Developer Webhooks &amp; REST API
+              </h3>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+                Trigger external loaders, server APIs, and backend auth databases with cryptographically signed order payloads and customizable retry policies.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 5: Discord Community Sync */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.5)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Bot size={19} />
+              </div>
+              <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 10 }}>
+                AUTO-ROLE SYNC
+              </span>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                Discord Server &amp; Social Widgets
+              </h3>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+                Display live online community member counts, showcase verified buyer reviews, and link your Telegram, YouTube, and Trustpilot channels directly.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 6: Self-Service Order Lookup */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.5)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Key size={19} />
+              </div>
+              <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 10 }}>
+                ZERO SUPPORT TICKETS
+              </span>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+                Self-Service Key Recovery
+              </h3>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+                Customers can lookup and retrieve all past keys and receipt links with their email anytime, eliminating 90% of routine support requests.
+              </p>
             </div>
           </div>
         </div>
@@ -543,14 +908,14 @@ export default function LandingPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 960,
-          margin: "0 auto 60px",
+          maxWidth: 1040,
+          margin: "0 auto 70px",
           padding: "0 20px",
         }}
       >
         <div style={{ textAlign: "left", marginBottom: 20 }}>
-          <div className="krypt-hud-label" style={{ marginBottom: 4 }}>
-            HOW IT WORKS
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono, monospace)" }}>
+            Quick Setup
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", margin: 0 }}>
             Start Selling in 3 Simple Steps
@@ -566,22 +931,22 @@ export default function LandingPage() {
         >
           {[
             {
-              phase: "STEP 01",
-              title: "Create Your Store",
-              desc: "Set up your storefront URL, custom branding, logo, and optional custom domain.",
-              tag: "SETUP",
+              phase: "01",
+              title: "Create Store & Domain",
+              desc: "Pick your store URL or link your own custom domain. We automatically host and secure it on Cloudflare edge.",
+              tag: "FREE HOSTING",
             },
             {
-              phase: "STEP 02",
+              phase: "02",
               title: "Add Products & Keys",
-              desc: "Paste license keys line-by-line. Set duration tiers (Daily, Weekly, Monthly, Lifetime).",
+              desc: "Paste license serials line-by-line. Configure duration tiers (Daily, Weekly, Monthly, Lifetime) with custom prices.",
               tag: "INVENTORY",
             },
             {
-              phase: "STEP 03",
-              title: "Automated Instant Delivery",
-              desc: "Buyers complete checkout. One unique key is unlocked and delivered immediately 24/7.",
-              tag: "AUTOMATION",
+              phase: "03",
+              title: "Instant 24/7 Delivery",
+              desc: "Accept Card & Crypto payments. Customers receive their unique license key immediately on-screen and by email.",
+              tag: "AUTOMATED",
             },
           ].map((s) => (
             <div
@@ -589,24 +954,26 @@ export default function LandingPage() {
               className="krypt-card"
               style={{
                 padding: "22px",
+                background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+                border: "1px solid rgba(55, 44, 102, 0.45)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <span
                   style={{
-                    fontSize: 11,
-                    fontWeight: 800,
+                    fontSize: 12,
+                    fontWeight: 900,
                     fontFamily: "var(--font-mono, monospace)",
                     color: "#c4b5fd",
                   }}
                 >
-                  {s.phase}
+                  STEP {s.phase}
                 </span>
                 <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 9 }}>
                   {s.tag}
                 </span>
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px", color: "#ffffff" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 8px", color: "#ffffff" }}>
                 {s.title}
               </h3>
               <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
@@ -617,80 +984,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Security Matrix & Merchant Controls ──────────────────────── */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 1,
-          maxWidth: 960,
-          margin: "0 auto 60px",
-          padding: "0 20px",
-        }}
-      >
-        <div style={{ textAlign: "left", marginBottom: 20 }}>
-          <div className="krypt-hud-label" style={{ marginBottom: 4 }}>
-            FEATURES & SECURITY
-          </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", margin: 0 }}>
-            Built for High-Volume Digital Sellers
-          </h2>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <div className="krypt-card" style={{ padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#c4b5fd" }}>
-              <Key size={17} />
-              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>Single-Use Key Vault</span>
-            </div>
-            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
-              Each serial is marked as delivered automatically upon payment, mathematically preventing double-sells.
-            </p>
-          </div>
-
-          <div className="krypt-card" style={{ padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#ffffff" }}>
-              <Globe size={17} />
-              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>Custom Domains</span>
-            </div>
-            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
-              Connect your branded domain or subdomain directly with automatic SSL certificate provisioning.
-            </p>
-          </div>
-
-          <div className="krypt-card" style={{ padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#c4b5fd" }}>
-              <Code2 size={17} />
-              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>HMAC Webhooks</span>
-            </div>
-            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
-              Cryptographically signed HMAC-SHA256 order webhooks for Discord bot role assignments or external server automation.
-            </p>
-          </div>
-
-          <div className="krypt-card" style={{ padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#ffffff" }}>
-              <Lock size={17} />
-              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>TOTP 2FA Security</span>
-            </div>
-            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
-              Protect merchant settings, API credentials, and payout destinations with multi-factor authentication.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* ─── Transparent 5% Platform Fee Card ─────────────────────────── */}
       <section
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 640,
+          maxWidth: 680,
           margin: "0 auto 80px",
           padding: "0 20px",
         }}
@@ -700,11 +999,12 @@ export default function LandingPage() {
           style={{
             padding: "40px 32px",
             textAlign: "center",
-            border: "1px solid rgba(55, 44, 102, 0.5)",
-            boxShadow: "0 0 30px rgba(55, 44, 102, 0.35)",
+            background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+            border: "1px solid rgba(55, 44, 102, 0.6)",
+            boxShadow: "0 0 40px rgba(55, 44, 102, 0.35)",
           }}
         >
-          <div className="krypt-hud-label" style={{ marginBottom: 8, color: "#c4b5fd" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontFamily: "var(--font-mono, monospace)" }}>
             TRANSPARENT PRICING
           </div>
           <div
@@ -720,20 +1020,20 @@ export default function LandingPage() {
           >
             5%
           </div>
-          <p style={{ fontSize: 14, color: "#8b949e", margin: "0 auto 24px", maxWidth: 420 }}>
-            Flat platform fee per completed checkout. Keep 95% of your sales. No subscriptions, zero hidden charges.
+          <p style={{ fontSize: 14, color: "#8b949e", margin: "0 auto 24px", maxWidth: 460, lineHeight: 1.5 }}>
+            Flat platform fee per completed checkout. Keep 95% of your sales revenue. Zero monthly subscription, free custom domain hosting, fast payouts.
           </p>
 
           <div
             style={{
               display: "flex",
-              gap: 12,
+              gap: 10,
               justifyContent: "center",
               flexWrap: "wrap",
               marginBottom: 28,
             }}
           >
-            {["ZERO SETUP FEES", "ZERO MONTHLY RENT", "INSTANT DISPATCH", "FAST PAYOUTS"].map((item) => (
+            {["ZERO MONTHLY RENT", "CUSTOM DOMAIN HOSTING", "INSTANT KEY DISPATCH", "FAST PAYOUTS"].map((item) => (
               <div
                 key={item}
                 className="krypt-tag krypt-tag-violet"
@@ -794,7 +1094,7 @@ export default function LandingPage() {
       >
         <div
           style={{
-            maxWidth: 960,
+            maxWidth: 1040,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
@@ -808,8 +1108,8 @@ export default function LandingPage() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontWeight: 800, color: "#ffffff" }}>KRYPT MARKET</span>
-            <span>//</span>
-            <span style={{ color: "#c4b5fd" }}>DIGITAL GOODS & KEYS</span>
+            <span>&bull;</span>
+            <span style={{ color: "#c4b5fd" }}>Digital Key &amp; License E-Commerce</span>
           </div>
 
           <div>&copy; {new Date().getFullYear()} KRYPT. All rights reserved.</div>

@@ -73,7 +73,7 @@ export default function ProductCheckoutClient({
     }
     if (!product.isUnlimitedStock && val > currentActiveStock) {
       setQuantity(Math.max(1, currentActiveStock));
-      setStockNotice(`[VAULT_LIMIT: MAX ${currentActiveStock} UNITS]`);
+      setStockNotice(`Maximum ${currentActiveStock} items available in stock.`);
       return;
     }
     setQuantity(val);
@@ -81,7 +81,7 @@ export default function ProductCheckoutClient({
 
   function handleIncrement() {
     if (!product.isUnlimitedStock && quantity >= currentActiveStock) {
-      setStockNotice(`[LIMIT_REACHED: ONLY ${currentActiveStock} AVAILABLE IN VAULT]`);
+      setStockNotice(`Only ${currentActiveStock} items available in stock.`);
       setTimeout(() => setStockNotice(null), 4000);
       return;
     }
@@ -123,11 +123,11 @@ export default function ProductCheckoutClient({
 
       setAppliedCoupon(data);
       setCouponError(null);
-      toast.success("Promo Hash Verified", `Discount applied: ${data.code}`);
+      toast.success("Coupon Applied", `Discount code ${data.code} applied successfully.`);
     } catch (err: any) {
       setCouponError(err.message);
       setAppliedCoupon(null);
-      toast.error("Promo Error", err.message || "Invalid coupon code");
+      toast.error("Coupon Error", err.message || "Invalid coupon code");
     } finally {
       setCouponLoading(false);
     }
@@ -137,30 +137,30 @@ export default function ProductCheckoutClient({
     setError(null);
 
     if (!buyerEmail.trim() || !buyerEmail.includes("@")) {
-      const msg = "Please enter a valid destination email address for key dispatch.";
+      const msg = "Please enter a valid email address.";
       setError(msg);
-      toast.error("Invalid Destination", msg);
+      toast.error("Invalid Email", msg);
       return;
     }
 
     if (isDisposableEmail(buyerEmail)) {
-      const msg = "Disposable email domains are blocked by anti-fraud filters. Please enter a permanent mailbox.";
+      const msg = "Temporary/disposable email addresses are not permitted. Please use a regular email.";
       setError(msg);
-      toast.error("Disposable Mail Blocked", msg);
+      toast.error("Disposable Email Blocked", msg);
       return;
     }
 
     if (!product.isUnlimitedStock && currentActiveStock <= 0) {
       const msg = selectedVariant
-        ? `The "${selectedVariant.label || selectedVariant.duration}" license tier is out of stock in vault.`
-        : "Product vault is currently depleted.";
+        ? `The "${selectedVariant.label || selectedVariant.duration}" plan is currently out of stock.`
+        : "This product is currently out of stock.";
       setError(msg);
-      toast.error("Vault Depleted", msg);
+      toast.error("Out of Stock", msg);
       return;
     }
 
     if (!product.isUnlimitedStock && quantity > currentActiveStock) {
-      const msg = `Cannot dispatch ${quantity} keys. Only ${currentActiveStock} available in vault partition.`;
+      const msg = `Only ${currentActiveStock} items available in stock.`;
       setError(msg);
       setStockNotice(msg);
       toast.error("Stock Exceeded", msg);
@@ -187,17 +187,17 @@ export default function ProductCheckoutClient({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Checkout authorization failed");
+        throw new Error(data.error || "Checkout failed");
       }
 
       if (data.checkoutUrl) {
-        toast.info("Dispatch Gateway", "Opening encrypted payment portal...");
+        toast.info("Redirecting", "Opening secure checkout...");
         window.location.href = data.checkoutUrl;
         return;
       }
 
       if (data.redirectUrl) {
-        toast.success("Settlement Complete", "Decrypted license key dispatched!");
+        toast.success("Payment Completed", "Your order has been confirmed!");
         router.push(data.redirectUrl);
         return;
       }
@@ -238,10 +238,10 @@ export default function ProductCheckoutClient({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              DISPATCH RATE // TOTAL
+              Total Price
             </span>
             <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd" }}>
-              {product.type === "key" ? "DIGITAL_LICENSE" : "SERVICE_PASS"} • QTY: {quantity}
+              {product.type === "key" ? "Digital Key" : "Instant Delivery"} • Qty: {quantity}
             </span>
           </div>
 
@@ -268,7 +268,7 @@ export default function ProductCheckoutClient({
 
         {appliedCoupon && (
           <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd", display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-            <Tag size={11} /> PROMO_APPLIED: {appliedCoupon.code} (-${discountAmount.toFixed(2)})
+            <Tag size={11} /> Coupon: {appliedCoupon.code} (-${discountAmount.toFixed(2)})
           </div>
         )}
       </div>
@@ -278,11 +278,11 @@ export default function ProductCheckoutClient({
         <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
-              <Cpu size={13} /> SELECT LICENSE TERM:
+              <Clock size={13} /> Select Plan / Duration:
             </label>
             {selectedVariant && (
               <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: currentActiveStock > 0 ? "#c4b5fd" : "#ef4444", fontWeight: 700 }}>
-                {product.isUnlimitedStock ? "[INSTANT_KEY]" : currentActiveStock > 0 ? `[VAULT: ${currentActiveStock} AVAILABLE]` : "[DEPLETED]"}
+                {product.isUnlimitedStock ? "Instant Delivery" : currentActiveStock > 0 ? `${currentActiveStock} in stock` : "Out of stock"}
               </span>
             )}
           </div>
@@ -367,16 +367,16 @@ export default function ProductCheckoutClient({
         </div>
       )}
 
-      {/* Cyber Checkout Inputs */}
+      {/* Checkout Inputs */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Email input */}
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            [DESTINATION_EMAIL // DISPATCH_TARGET] *
+          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)", letterSpacing: "0.02em" }}>
+            Email Address *
           </label>
           <input
             type="email"
-            placeholder="operator@proton.me"
+            placeholder="you@example.com"
             value={buyerEmail}
             onChange={(e) => setBuyerEmail(e.target.value)}
             style={{
@@ -405,13 +405,13 @@ export default function ProductCheckoutClient({
 
         {/* Promo code input */}
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            [DISCOUNT_PROMO_HASH]
+          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)", letterSpacing: "0.02em" }}>
+            Discount Code
           </label>
           <form onSubmit={handleApplyCoupon} style={{ display: "flex", gap: 8 }}>
             <input
               type="text"
-              placeholder="e.g. DARKNET20"
+              placeholder="e.g. SAVE10"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               style={{
@@ -431,18 +431,18 @@ export default function ProductCheckoutClient({
               type="submit"
               disabled={couponLoading || !couponCode.trim()}
               style={{
-                padding: "9px 14px",
+                padding: "9px 16px",
                 borderRadius: 8,
                 background: "rgba(55, 44, 102, 0.4)",
                 color: "#c4b5fd",
                 border: "1px solid rgba(139, 92, 246, 0.4)",
-                fontSize: 11,
+                fontSize: 12,
                 fontFamily: "var(--font-mono, monospace)",
                 fontWeight: 700,
                 cursor: "pointer",
               }}
             >
-              {couponLoading ? <Loader2 size={13} className="animate-spin" /> : "[APPLY]"}
+              {couponLoading ? <Loader2 size={13} className="animate-spin" /> : "Apply"}
             </button>
           </form>
 
@@ -453,11 +453,11 @@ export default function ProductCheckoutClient({
         {!product.isUnlimitedStock && (
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase" }}>
-                [QUANTITY_UNITS]
+              <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)" }}>
+                Quantity
               </label>
               <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: stock > 0 ? "rgba(255,255,255,0.4)" : "#ef4444" }}>
-                {stock > 0 ? `VAULT: ${stock} MAX` : "DEPLETED"}
+                {stock > 0 ? `${stock} available` : "Out of stock"}
               </span>
             </div>
 
@@ -538,8 +538,8 @@ export default function ProductCheckoutClient({
 
         {/* Payment Method Selector */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase" }}>
-            [SETTLEMENT_GATEWAY]
+          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)" }}>
+            Payment Method
           </label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button
@@ -562,7 +562,7 @@ export default function ProductCheckoutClient({
                 boxShadow: paymentMethod === "stripe" ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
               }}
             >
-              <CreditCard size={14} /> STRIPE_CARD_256
+              <CreditCard size={14} /> Card (Stripe)
             </button>
 
             <button
@@ -585,14 +585,14 @@ export default function ProductCheckoutClient({
                 boxShadow: paymentMethod === "crypto" ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
               }}
             >
-              <Coins size={14} /> ON_CHAIN_CRYPTO
+              <Coins size={14} /> Crypto
             </button>
           </div>
         </div>
 
         {error && (
           <div className="animate-pop" style={{ padding: "8px 12px", borderRadius: 6, background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#ef4444", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>
-            [ERROR: {error}]
+            {error}
           </div>
         )}
 
@@ -625,8 +625,8 @@ export default function ProductCheckoutClient({
               <Zap size={15} />
               <span>
                 {stock <= 0
-                  ? "[VAULT_DEPLETED]"
-                  : `[DISPATCH_LICENSE // $${finalTotal.toFixed(2)} USD]`}
+                  ? "Out of Stock"
+                  : `Pay $${finalTotal.toFixed(2)} USD`}
               </span>
             </>
           )}
@@ -634,7 +634,7 @@ export default function ProductCheckoutClient({
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.4)" }}>
           <ShieldCheck size={13} color="#c4b5fd" />
-          <span>CRYPTOGRAPHIC 256-BIT DISPATCH • ZERO LOG RETENTION</span>
+          <span>Encrypted & Automated Checkout</span>
         </div>
       </div>
     </div>

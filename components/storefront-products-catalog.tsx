@@ -100,19 +100,19 @@ export function StorefrontProductsCatalog({
   // Aggregate category list with counts
   const categoryTabs = useMemo(() => {
     const countMap: Record<string, number> = { all: products.length };
-    const nameMap: Record<string, string> = { all: "ALL PROTOCOLS" };
+    const nameMap: Record<string, string> = { all: "All Products" };
     const iconMap: Record<string, string> = { all: "Layers" };
 
     // Register presets
     for (const p of PRESET_CATEGORIES) {
-      nameMap[p.id.toLowerCase()] = p.name.toUpperCase();
+      nameMap[p.id.toLowerCase()] = p.name;
       if (p.icon) iconMap[p.id.toLowerCase()] = p.icon;
     }
 
     // Register shop custom categories
     for (const c of shopCategories) {
       const idLower = c.id.toLowerCase();
-      nameMap[idLower] = c.name.toUpperCase();
+      nameMap[idLower] = c.name;
       if (c.icon) iconMap[idLower] = c.icon;
     }
 
@@ -122,7 +122,7 @@ export function StorefrontProductsCatalog({
         const catKey = p.category.trim().toLowerCase();
         countMap[catKey] = (countMap[catKey] || 0) + 1;
         if (!nameMap[catKey]) {
-          nameMap[catKey] = p.category.toUpperCase();
+          nameMap[catKey] = p.category;
         }
       } else {
         countMap["uncategorized"] = (countMap["uncategorized"] || 0) + 1;
@@ -130,7 +130,7 @@ export function StorefrontProductsCatalog({
     }
 
     const tabs: Array<{ id: string; name: string; count: number; icon: string }> = [
-      { id: "all", name: "ALL PROTOCOLS", count: products.length, icon: "Layers" },
+      { id: "all", name: "All Products", count: products.length, icon: "Layers" },
     ];
 
     const addedKeys = new Set<string>(["all"]);
@@ -141,7 +141,7 @@ export function StorefrontProductsCatalog({
       if (!addedKeys.has(idLower)) {
         tabs.push({
           id: idLower,
-          name: c.name.toUpperCase(),
+          name: c.name,
           count: countMap[idLower] || 0,
           icon: c.icon || "Layers",
         });
@@ -154,7 +154,7 @@ export function StorefrontProductsCatalog({
       if (!addedKeys.has(catKey) && catKey !== "uncategorized") {
         tabs.push({
           id: catKey,
-          name: nameMap[catKey] || catKey.toUpperCase(),
+          name: nameMap[catKey] || catKey,
           count,
           icon: iconMap[catKey] || "Layers",
         });
@@ -165,7 +165,7 @@ export function StorefrontProductsCatalog({
     if (countMap["uncategorized"] && tabs.length > 1) {
       tabs.push({
         id: "uncategorized",
-        name: "GENERAL / AUX",
+        name: "Other",
         count: countMap["uncategorized"],
         icon: "Layers",
       });
@@ -287,7 +287,7 @@ export function StorefrontProductsCatalog({
             />
             <input
               type="text"
-              placeholder="QUERY CATALOG PROTOCOLS... [ / ]"
+              placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -364,7 +364,7 @@ export function StorefrontProductsCatalog({
                   boxShadow: inStockOnly ? "0 0 8px #8b5cf6" : "none",
                 }}
               />
-              <span>[IN_STOCK_ONLY]</span>
+              <span>In Stock</span>
             </button>
 
             {/* Sort Dropdown */}
@@ -534,10 +534,10 @@ export function StorefrontProductsCatalog({
             <Lock size={22} />
           </div>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
-            [0_PROTOCOLS_MATCHED]
+            No Products Found
           </div>
           <p style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.5)", marginTop: 6, fontFamily: "var(--font-mono, monospace)" }}>
-            No active protocols matched your current query or category filter.
+            No products matched your search or filters.
           </p>
           {(searchQuery || selectedCategory !== "all" || inStockOnly) && (
             <button
@@ -560,12 +560,12 @@ export function StorefrontProductsCatalog({
                 cursor: "pointer",
               }}
             >
-              [RESET_ALL_FILTERS]
+              Reset Filters
             </button>
           )}
         </div>
       ) : viewMode === "grid" ? (
-        /* ─── CATALOG VIEW MODE 1: CYBER GRID MATRIX ─── */
+        /* ─── CATALOG VIEW MODE 1: GRID MATRIX ─── */
         <div
           style={{
             display: "grid",
@@ -603,22 +603,7 @@ export function StorefrontProductsCatalog({
                   transition: "all 0.2s ease",
                 }}
               >
-                {/* Cyber Corner HUD Notch */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    width: 0,
-                    height: 0,
-                    borderStyle: "solid",
-                    borderWidth: "0 24px 24px 0",
-                    borderColor: `transparent ${isOutOfStock ? "#ef4444" : "#8b5cf6"} transparent transparent`,
-                    zIndex: 10,
-                  }}
-                />
-
-                {/* Top Telemetry Header */}
+                {/* Top Header */}
                 <div
                   style={{
                     padding: "8px 12px",
@@ -631,8 +616,8 @@ export function StorefrontProductsCatalog({
                     fontFamily: "var(--font-mono, monospace)",
                   }}
                 >
-                  <span style={{ color: "rgba(255, 255, 255, 0.5)", letterSpacing: "0.06em" }}>
-                    PROTO_{pIdx.toString().padStart(3, "0")}
+                  <span style={{ color: "rgba(255, 255, 255, 0.5)", letterSpacing: "0.02em" }}>
+                    {p.type === "key" ? "Digital Key" : "Instant Delivery"}
                   </span>
 
                   <span
@@ -654,10 +639,10 @@ export function StorefrontProductsCatalog({
                       }}
                     />
                     {p.isUnlimitedStock
-                      ? "[INSTANT_KEY]"
+                      ? "Instant"
                       : isOutOfStock
-                      ? "[DEPLETED]"
-                      : `[VAULT: ${p.stock}]`}
+                      ? "Out of Stock"
+                      : `${p.stock} in Stock`}
                   </span>
                 </div>
 
@@ -838,7 +823,7 @@ export function StorefrontProductsCatalog({
                         pointerEvents: isOutOfStock ? "none" : "auto",
                       }}
                     >
-                      <span>{isOutOfStock ? "[DEPLETED]" : "[PURCHASE]"}</span>
+                      <span>{isOutOfStock ? "Out of Stock" : "Buy Now"}</span>
                     </Link>
                   </div>
                 </div>
@@ -847,7 +832,7 @@ export function StorefrontProductsCatalog({
           })}
         </div>
       ) : (
-        /* ─── CATALOG VIEW MODE 2: HIGH-DENSITY DARKNET TABLE ─── */
+        /* ─── CATALOG VIEW MODE 2: TABLE ─── */
         <div
           style={{
             background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
@@ -870,13 +855,13 @@ export function StorefrontProductsCatalog({
                     textTransform: "uppercase",
                   }}
                 >
-                  <th style={{ padding: "10px 14px" }}>INDEX</th>
-                  <th style={{ padding: "10px 14px" }}>PROTOCOL / TITLE</th>
-                  <th style={{ padding: "10px 14px" }}>CATEGORY</th>
-                  <th style={{ padding: "10px 14px" }}>VAULT STOCK</th>
-                  <th style={{ padding: "10px 14px" }}>AVAILABLE TIERS</th>
-                  <th style={{ padding: "10px 14px" }}>PRICE (USD)</th>
-                  <th style={{ padding: "10px 14px", textAlign: "right" }}>ACTION</th>
+                  <th style={{ padding: "10px 14px" }}>#</th>
+                  <th style={{ padding: "10px 14px" }}>Product</th>
+                  <th style={{ padding: "10px 14px" }}>Category</th>
+                  <th style={{ padding: "10px 14px" }}>Stock</th>
+                  <th style={{ padding: "10px 14px" }}>Plans</th>
+                  <th style={{ padding: "10px 14px" }}>Price</th>
+                  <th style={{ padding: "10px 14px", textAlign: "right" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -950,7 +935,7 @@ export function StorefrontProductsCatalog({
                             border: "1px solid rgba(139, 92, 246, 0.3)",
                           }}
                         >
-                          {p.category || "GENERAL"}
+                          {p.category || "General"}
                         </span>
                       </td>
 
@@ -963,7 +948,7 @@ export function StorefrontProductsCatalog({
                             color: isOutOfStock ? "#ef4444" : "#c4b5fd",
                           }}
                         >
-                          {p.isUnlimitedStock ? "INSTANT" : isOutOfStock ? "DEPLETED" : `${p.stock} units`}
+                          {p.isUnlimitedStock ? "Instant" : isOutOfStock ? "Out of Stock" : `${p.stock} in stock`}
                         </span>
                       </td>
 
@@ -1024,7 +1009,7 @@ export function StorefrontProductsCatalog({
                             pointerEvents: isOutOfStock ? "none" : "auto",
                           }}
                         >
-                          <span>{isOutOfStock ? "DEPLETED" : "ACQUIRE"}</span>
+                          <span>{isOutOfStock ? "Out of Stock" : "Buy Now"}</span>
                         </Link>
                       </td>
                     </tr>

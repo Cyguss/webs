@@ -108,10 +108,10 @@ export function StorefrontSidebarRecovery({
                 fontWeight: 800,
                 fontFamily: "var(--font-mono, monospace)",
                 color: "#ffffff",
-                letterSpacing: "0.06em",
+                letterSpacing: "0.04em",
               }}
             >
-              ORDER_KEY_LOOKUP
+              Find My Order
             </span>
           </div>
 
@@ -127,7 +127,7 @@ export function StorefrontSidebarRecovery({
               fontWeight: 700,
             }}
           >
-            INSTANT
+            Instant
           </span>
         </div>
 
@@ -158,7 +158,7 @@ export function StorefrontSidebarRecovery({
             />
             <input
               type="email"
-              placeholder="buyer@domain.com"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{
@@ -198,7 +198,7 @@ export function StorefrontSidebarRecovery({
               fontSize: 11,
               fontWeight: 800,
               fontFamily: "var(--font-mono, monospace)",
-              letterSpacing: "0.06em",
+              letterSpacing: "0.04em",
               cursor: loading ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
@@ -211,12 +211,12 @@ export function StorefrontSidebarRecovery({
             {loading ? (
               <>
                 <Loader2 size={12} className="animate-spin" />
-                <span>SEARCHING...</span>
+                <span>Searching...</span>
               </>
             ) : (
               <>
                 <Search size={12} />
-                <span>[FIND_MY_KEYS]</span>
+                <span>Find My Keys</span>
               </>
             )}
           </button>
@@ -224,7 +224,7 @@ export function StorefrontSidebarRecovery({
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
           <span style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-mono, monospace)" }}>
-            ZERO-LOG PROTOCOL
+            Instant Delivery
           </span>
           <Link
             href={`/${shopSlug}/lookup`}
@@ -280,7 +280,7 @@ export function StorefrontSidebarRecovery({
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <ShieldCheck size={18} color="#c4b5fd" />
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
-                  DISPATCH_VAULT // RESULTS
+                  Order Results
                 </h3>
               </div>
               <button
@@ -301,14 +301,14 @@ export function StorefrontSidebarRecovery({
             </div>
 
             <div style={{ marginBottom: 14, fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-mono, monospace)" }}>
-              Decrypted order ledger for: <strong style={{ color: "#ffffff" }}>{email}</strong>
+              Found orders for: <strong style={{ color: "#ffffff" }}>{email}</strong>
             </div>
 
             {results.length === 0 ? (
               <div style={{ textAlign: "center", padding: "32px 16px", background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.1)" }}>
                 <Lock size={28} color="#ff2a4b" style={{ margin: "0 auto 10px" }} />
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
-                  [0_RECORDS_MATCHED]
+                  No Orders Found
                 </div>
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 6, fontFamily: "var(--font-mono, monospace)" }}>
                   No completed deliveries registered under this email address for this store.
@@ -332,10 +332,10 @@ export function StorefrontSidebarRecovery({
                   >
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
-                        {ord.productTitle || "Digital License"}
+                        {ord.productTitle || "Digital Key"}
                       </div>
                       <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
-                        ORDER_ID: {ord.id} • {ord.formattedDate || new Date(ord.createdAt).toLocaleDateString()}
+                        Order ID: #{ord.id.slice(0, 10)} • {ord.formattedDate || new Date(ord.createdAt).toLocaleDateString()}
                       </div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#ffffff", fontFamily: "var(--font-mono, monospace)", marginTop: 4 }}>
                         ${parseFloat(ord.totalAmount || "0").toFixed(2)} USD
@@ -360,7 +360,7 @@ export function StorefrontSidebarRecovery({
                         flexShrink: 0,
                       }}
                     >
-                      <span>[VIEW_KEYS]</span>
+                      <span>View Key</span>
                       <ArrowRight size={12} />
                     </Link>
                   </div>

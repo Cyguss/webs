@@ -67,7 +67,7 @@ export default function GlobalOrderLookupPage() {
             }}
           >
             <ArrowLeft size={13} />
-            <span>[RETURN_TO_TERMINAL]</span>
+            <span>Back to Home</span>
           </Link>
         </div>
       </header>
@@ -79,7 +79,7 @@ export default function GlobalOrderLookupPage() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", padding: "18px 24px", textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", position: "relative", zIndex: 10 }}>
-        &copy; {new Date().getFullYear()} KRYPT PROTOCOL // AUTOMATED KEY DISPATCH DAEMON
+        &copy; {new Date().getFullYear()} KRYPT • Instant Key Delivery Protocol
       </footer>
     </div>
   );

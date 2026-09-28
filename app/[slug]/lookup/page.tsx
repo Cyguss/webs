@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { OrderLookupForm } from "@/components/order-lookup-form";
 import { ArrowLeft, Key, Terminal } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function generateMetadata({
   params,
@@ -106,25 +107,28 @@ export default async function StorefrontOrderLookupPage({
             <span>{shop.name}</span>
           </Link>
 
-          <Link
-            href={`/${shop.slug}`}
-            style={{
-              fontSize: 12,
-              fontFamily: "var(--font-mono, monospace)",
-              color: "rgba(255, 255, 255, 0.7)",
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 12px",
-              borderRadius: 6,
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <ArrowLeft size={13} />
-            <span>[BACK_TO_STORE]</span>
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <ThemeToggle />
+            <Link
+              href={`/${shop.slug}`}
+              style={{
+                fontSize: 12,
+                fontFamily: "var(--font-mono, monospace)",
+                color: "rgba(255, 255, 255, 0.7)",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 6,
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <ArrowLeft size={13} />
+              <span>Back to Store</span>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -139,7 +143,7 @@ export default async function StorefrontOrderLookupPage({
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", padding: "18px 24px", textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", position: "relative", zIndex: 10 }}>
-        &copy; {new Date().getFullYear()} {shop.name} // POWERED_BY_KRYPT_PROTOCOL
+        &copy; {new Date().getFullYear()} {shop.name} • Powered by KRYPT
       </footer>
     </div>
   );

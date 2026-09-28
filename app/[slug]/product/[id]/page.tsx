@@ -7,6 +7,7 @@ import ProductCheckoutClient from "./checkout-client";
 import { ProductGallery } from "./product-gallery";
 import { ArrowLeft, Key, Package, ShieldCheck, Zap, Star, MessageSquare, Lock, Clock, Terminal, Cpu, CheckCircle2 } from "lucide-react";
 import { getKeyDurationDisplay } from "@/lib/key-duration";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = await params;
@@ -48,12 +49,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             <div style={{ width: 52, height: 52, borderRadius: 12, background: "rgba(255,42,75,0.12)", border: "1px solid rgba(255,42,75,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#ff2a4b" }}>
               <Lock size={24} />
             </div>
-            <h1 style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", marginBottom: 8 }}>NODE_PENDING_APPROVAL</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", marginBottom: 8 }}>Store Pending Approval</h1>
             <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: 24 }}>
               <strong>{shop.name}</strong> is currently pending platform approval.
             </p>
             <Link href="/" className="krypt-btn-primary" style={{ display: "inline-flex", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 12 }}>
-              [RETURN_TO_HUB]
+              Back to Home
             </Link>
           </div>
         </div>
@@ -101,7 +102,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const reviewCount = productReviews.length;
   const avgRating = reviewCount > 0 ? (productReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewCount).toFixed(1) : null;
 
-  const bg = "#030305";
+  const bg = "var(--color-background)";
   const accent = "rgb(55, 44, 102)";
 
   let galleryImages: string[] = [];
@@ -121,8 +122,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       className="page-transition"
       style={{
         minHeight: "100vh",
-        background: bg,
-        color: "#ffffff",
+        background: "var(--color-background)",
+        color: "var(--color-foreground)",
         fontFamily: "var(--font-mono, monospace)",
         position: "relative",
       }}
@@ -170,13 +171,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               }}
             >
               <ArrowLeft size={13} />
-              <span>[BACK_TO_NODE]</span>
+              <span>Back to Store</span>
             </Link>
 
             <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.3)" }}>/</span>
 
             <span style={{ fontSize: 11, color: "#c4b5fd", fontWeight: 700 }}>
-              {shop.name.toUpperCase()}
+              {shop.name}
             </span>
 
             <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.3)" }}>/</span>
@@ -186,31 +187,34 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </span>
           </div>
 
-          {/* Quick Keys link */}
-          <Link
-            href={`/${shop.slug}/lookup`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 12px",
-              borderRadius: 6,
-              background: "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(78, 62, 140) 100%)",
-              border: "1px solid rgba(167, 139, 250, 0.4)",
-              color: "#ffffff",
-              textDecoration: "none",
-              fontSize: 11,
-              fontWeight: 800,
-              boxShadow: "0 0 12px rgba(55, 44, 102, 0.5)",
-            }}
-          >
-            <Key size={12} />
-            <span>[RECOVER_KEYS]</span>
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <ThemeToggle />
+            {/* Quick Keys link */}
+            <Link
+              href={`/${shop.slug}/lookup`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 12px",
+                borderRadius: 6,
+                background: "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(78, 62, 140) 100%)",
+                border: "1px solid rgba(167, 139, 250, 0.4)",
+                color: "#ffffff",
+                textDecoration: "none",
+                fontSize: 11,
+                fontWeight: 800,
+                boxShadow: "0 0 12px rgba(55, 44, 102, 0.5)",
+              }}
+            >
+              <Key size={12} />
+              <span>Find My Order</span>
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* ─── Main Weaponized Dual-Cockpit Grid ─── */}
+      {/* Main Grid */}
       <div
         style={{
           maxWidth: 1280,
@@ -222,9 +226,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           alignItems: "start",
         }}
       >
-        {/* ─── LEFT COCKPIT: Gallery, Specs & Verified Reviews ─── */}
+        {/* Left Column: Gallery, Specs & Reviews */}
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* Main Product Card Deck */}
+          {/* Main Product Card */}
           <div
             style={{
               background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
@@ -236,10 +240,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               boxShadow: "0 10px 35px rgba(0, 0, 0, 0.8)",
             }}
           >
-            {/* Cyber Corner HUD Notches */}
-            <div style={{ position: "absolute", top: 6, left: 6, width: 8, height: 8, borderTop: "2px solid #8b5cf6", borderLeft: "2px solid #8b5cf6" }} />
-            <div style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderTop: "2px solid #8b5cf6", borderRight: "2px solid #8b5cf6" }} />
-
             {/* Gallery Component */}
             <ProductGallery
               images={galleryImages}
@@ -276,10 +276,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   background: "rgba(255, 255, 255, 0.05)",
                   border: "1px solid rgba(255, 255, 255, 0.12)",
                   color: "#ffffff",
-                  textTransform: "uppercase",
                 }}
               >
-                {product.type === "key" ? "LICENSE_KEY" : "DIGITAL_DISPATCH"}
+                {product.type === "key" ? "Digital Key" : "Instant Delivery"}
               </span>
 
               <span
@@ -293,7 +292,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   color: stock > 0 ? "#c4b5fd" : "#ef4444",
                 }}
               >
-                {product.isUnlimitedStock ? "● INSTANT_STOCK" : stock > 0 ? `● ${stock} IN VAULT` : "● DEPLETED"}
+                {product.isUnlimitedStock ? "● Instant Delivery" : stock > 0 ? `● ${stock} in Stock` : "● Out of Stock"}
               </span>
             </div>
 
@@ -309,11 +308,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   ))}
                 </div>
                 <span style={{ fontWeight: 800, color: "#ffffff", fontSize: 13 }}>{avgRating}</span>
-                <span style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 11 }}>({reviewCount} verified purchases)</span>
+                <span style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 11 }}>({reviewCount} verified reviews)</span>
               </div>
             )}
 
-            {/* Tactical Protocol Briefing */}
+            {/* Description */}
             <div
               style={{
                 marginTop: 14,
@@ -327,47 +326,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 whiteSpace: "pre-wrap",
               }}
             >
-              {product.description || "No tactical briefing provided for this protocol."}
+              {product.description || "No description provided for this product."}
             </div>
           </div>
 
-          {/* Protocol Specifications Matrix */}
-          <div
-            style={{
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.45)",
-              borderRadius: 14,
-              padding: 20,
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", marginBottom: 14, letterSpacing: "0.08em" }}>
-              PROTOCOL_SPECIFICATIONS // TELEMETRY
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 11 }}>
-              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>DISPATCH_SPEED</div>
-                <div style={{ fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Instant (&lt; 2.4 sec)</div>
-              </div>
-
-              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>DELIVERY_GATEWAY</div>
-                <div style={{ fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>Web Terminal + Mailbox</div>
-              </div>
-
-              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>ENCRYPTION</div>
-                <div style={{ fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Zero-Knowledge TLS</div>
-              </div>
-
-              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>SUPPORT_CHANNEL</div>
-                <div style={{ fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>Official Node Relay</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Verified Customer Reviews */}
+          {/* Customer Reviews */}
           {reviewCount > 0 && (
             <div
               style={{
@@ -377,9 +340,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 padding: 20,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#ffffff", marginBottom: 14, letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#ffffff", marginBottom: 14, letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: 6 }}>
                 <MessageSquare size={14} color="#c4b5fd" />
-                <span>CUSTOMER_REVIEWS ({reviewCount})</span>
+                <span>Customer Reviews ({reviewCount})</span>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -399,7 +362,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                           <Star key={s} size={11} fill={s <= rev.rating ? "#f59e0b" : "none"} color={s <= rev.rating ? "#f59e0b" : "rgba(255,255,255,0.2)"} />
                         ))}
                       </div>
-                      <span style={{ fontSize: 10, color: "#c4b5fd" }}>VERIFIED_BUYER</span>
+                      <span style={{ fontSize: 10, color: "#c4b5fd" }}>Verified Buyer</span>
                     </div>
                     <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: 0, lineHeight: 1.4 }}>
                       {rev.comment || "No written review."}

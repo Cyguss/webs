@@ -1213,6 +1213,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </span>
               )}
             </Link>
+
+            <ThemeToggle style={{ width: 38, height: 38 }} />
           </div>
         </header>
 

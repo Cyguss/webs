@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Terminal, ShieldCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
@@ -15,18 +16,23 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     <div
       style={{
         minHeight: "100vh",
-        background: "#060709",
-        color: "#f1f3f5",
+        background: "var(--color-background)",
+        color: "var(--color-foreground)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         padding: "36px 20px",
         position: "relative",
-        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
+        backgroundImage: "radial-gradient(var(--color-border) 1px, transparent 1px)",
         backgroundSize: "32px 32px",
       }}
     >
+      {/* Top Corner Controls */}
+      <div style={{ position: "absolute", top: 20, right: 24, zIndex: 10 }}>
+        <ThemeToggle />
+      </div>
+
       {/* Brand Header */}
       <Link
         href="/"
