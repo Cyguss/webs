@@ -41,7 +41,6 @@ function DiscordLogo({ size = 16 }: { size?: number }) {
 export default function LandingPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
-  const [demoTier, setDemoTier] = useState<"day" | "month" | "lifetime">("month");
 
   const DISCORD_INVITE = "https://discord.gg/krypt";
 
@@ -387,123 +386,6 @@ export default function LandingPage() {
               </Link>
             </>
           )}
-        </div>
-
-        {/* Interactive Storefront Preview Deck */}
-        <div
-          style={{
-            maxWidth: 780,
-            margin: "0 auto 40px",
-            background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-            border: "1px solid rgba(55, 44, 102, 0.55)",
-            borderRadius: 16,
-            padding: 24,
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(55, 44, 102, 0.3)",
-            textAlign: "left",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: 14, marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
-                store.yourbrand.com • Hosted by Krypt
-              </span>
-            </div>
-            <span style={{ fontSize: 11, color: "#c4b5fd", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
-              Instant 24/7 Delivery
-            </span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, alignItems: "center" }}>
-            <div>
-              <div style={{ fontSize: 11, color: "#c4b5fd", fontFamily: "var(--font-mono, monospace)", fontWeight: 700, marginBottom: 4 }}>
-                DIGITAL PRODUCT
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#ffffff", marginBottom: 6 }}>
-                Apex Protocol Suite
-              </div>
-              <p style={{ fontSize: 12.5, color: "#8b949e", margin: "0 0 14px", lineHeight: 1.5 }}>
-                Automated license key generation with 0-second checkout dispatch.
-              </p>
-
-              {/* Interactive Duration Tabs */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                {[
-                  { id: "day", label: "1 Day", price: "$4.99", stock: "14 left" },
-                  { id: "month", label: "30 Days", price: "$24.99", stock: "8 left" },
-                  { id: "lifetime", label: "Lifetime", price: "$69.99", stock: "Instant" },
-                ].map((tier) => (
-                  <button
-                    key={tier.id}
-                    type="button"
-                    onClick={() => setDemoTier(tier.id as any)}
-                    style={{
-                      flex: 1,
-                      padding: "8px 6px",
-                      borderRadius: 6,
-                      background: demoTier === tier.id ? "rgb(55, 44, 102)" : "rgba(255, 255, 255, 0.03)",
-                      border: demoTier === tier.id ? "1px solid #8b5cf6" : "1px solid rgba(255, 255, 255, 0.08)",
-                      color: demoTier === tier.id ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
-                      cursor: "pointer",
-                      textAlign: "center",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono, monospace)" }}>{tier.label}</div>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: "#ffffff", marginTop: 2 }}>{tier.price}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Live Preview Box */}
-            <div
-              style={{
-                background: "rgba(3, 3, 5, 0.95)",
-                border: "1px solid rgba(139, 92, 246, 0.3)",
-                borderRadius: 10,
-                padding: 16,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono, monospace)" }}>Selected Plan</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#c4b5fd", fontFamily: "var(--font-mono, monospace)" }}>
-                  {demoTier === "day" ? "1 Day Pass ($4.99)" : demoTier === "month" ? "30 Days Access ($24.99)" : "Lifetime License ($69.99)"}
-                </span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono, monospace)" }}>Payment Methods</span>
-                <span style={{ fontSize: 11, color: "#ffffff", fontWeight: 700 }}>Card &bull; Crypto</span>
-              </div>
-
-              <Link
-                href="/demo-store"
-                className="krypt-btn-primary"
-                style={{
-                  width: "100%",
-                  padding: "9px",
-                  borderRadius: 6,
-                  textAlign: "center",
-                  textDecoration: "none",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  fontFamily: "var(--font-mono, monospace)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  marginTop: 4,
-                }}
-              >
-                <Zap size={13} />
-                <span>Test Live Checkout</span>
-              </Link>
-            </div>
-          </div>
         </div>
       </section>
 

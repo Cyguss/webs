@@ -21,41 +21,41 @@ export const DURATION_OPTIONS: KeyDurationMeta[] = [
   {
     id: "daily",
     label: "1 Day (Daily)",
-    shortLabel: "Daily",
+    shortLabel: "1 Day",
     days: 1,
-    badgeColor: "#38bdf8",
+    badgeColor: "#c4b5fd",
     description: "Valid for 24 hours from activation",
   },
   {
     id: "weekly",
     label: "7 Days (Weekly)",
-    shortLabel: "Weekly",
+    shortLabel: "7 Days",
     days: 7,
-    badgeColor: "#818cf8",
+    badgeColor: "#a78bfa",
     description: "Valid for 7 days from activation",
   },
   {
     id: "monthly",
     label: "30 Days (Monthly)",
-    shortLabel: "Monthly",
+    shortLabel: "30 Days",
     days: 30,
-    badgeColor: "#a855f7",
+    badgeColor: "#8b5cf6",
     description: "Valid for 30 days from activation",
   },
   {
     id: "3month",
     label: "3 Months (90 Days)",
-    shortLabel: "3 Months",
+    shortLabel: "90 Days",
     days: 90,
-    badgeColor: "#ec4899",
+    badgeColor: "#7c3aed",
     description: "Valid for 90 days from activation",
   },
   {
     id: "6month",
     label: "6 Months (180 Days)",
-    shortLabel: "6 Months",
+    shortLabel: "180 Days",
     days: 180,
-    badgeColor: "#f97316",
+    badgeColor: "#6d28d9",
     description: "Valid for 180 days from activation",
   },
   {
@@ -63,7 +63,7 @@ export const DURATION_OPTIONS: KeyDurationMeta[] = [
     label: "1 Year (365 Days)",
     shortLabel: "1 Year",
     days: 365,
-    badgeColor: "#eab308",
+    badgeColor: "#c084fc",
     description: "Valid for 365 days from activation",
   },
   {
@@ -71,7 +71,7 @@ export const DURATION_OPTIONS: KeyDurationMeta[] = [
     label: "Lifetime Access",
     shortLabel: "Lifetime",
     days: 0,
-    badgeColor: "#10b981",
+    badgeColor: "#22c55e",
     description: "Permanent license, never expires",
   },
   {
@@ -79,7 +79,7 @@ export const DURATION_OPTIONS: KeyDurationMeta[] = [
     label: "Custom Period",
     shortLabel: "Custom",
     days: 0,
-    badgeColor: "#06b6d4",
+    badgeColor: "#c4b5fd",
     description: "Custom duration set by merchant",
   },
 ];
@@ -98,7 +98,7 @@ export function getKeyDurationDisplay(
       label,
       shortLabel: customLabel?.trim() || (days > 0 ? `${days}d` : "Custom"),
       days,
-      badgeColor: "#06b6d4",
+      badgeColor: "#c4b5fd",
       isLifetime: days === 0 && !customLabel,
     };
   }
@@ -153,4 +153,3 @@ export function formatExpirationRemaining(expiresAt: Date | string | null | unde
   const minutes = Math.max(1, Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000)));
   return `Expires in ${minutes} minute${minutes > 1 ? "s" : ""}`;
 }
-

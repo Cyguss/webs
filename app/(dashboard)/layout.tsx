@@ -450,15 +450,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </span>
               <span
                 style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
+                  fontSize: 10,
+                  fontWeight: 800,
                   color: "#c4b5fd",
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                OPS // PROTOCOL
+                MARKET
               </span>
             </div>
           </Link>

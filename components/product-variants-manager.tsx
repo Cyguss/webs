@@ -20,22 +20,19 @@ export function ProductVariantsManager({
   onChangeVariants,
   basePrice,
 }: ProductVariantsManagerProps) {
-  // Count of custom duration variants
   const customVariantsCount = variants.filter((v) => v.duration === "custom").length;
-  // Set of predefined non-custom duration keys currently in use
   const usedPredefinedDurations = new Set(variants.filter((v) => v.duration !== "custom").map((v) => v.duration));
 
   function handleAddPreset(durationId: KeyDurationType) {
     if (durationId === "custom") {
-      if (customVariantsCount >= 5) return; // Max 5 custom durations
+      if (customVariantsCount >= 5) return;
     } else {
-      if (usedPredefinedDurations.has(durationId)) return; // Max 1 per predefined duration
+      if (usedPredefinedDurations.has(durationId)) return;
     }
 
     const opt = DURATION_OPTIONS.find((o) => o.id === durationId);
     if (!opt) return;
 
-    // Default suggested price factor based on base price
     const base = parseFloat(basePrice) || 10;
     let price = base;
     if (durationId === "daily") price = Math.max(1, Math.round(base * 0.25 * 100) / 100);
@@ -74,7 +71,6 @@ export function ProductVariantsManager({
   function handleToggleMode(nextState: boolean) {
     onToggleEnabled(nextState);
     if (nextState && variants.length === 0) {
-      // Initialize with standard unique default presets: Daily + Monthly + Lifetime
       const base = parseFloat(basePrice) || 20;
       onChangeVariants([
         {
@@ -112,12 +108,12 @@ export function ProductVariantsManager({
         display: "flex",
         flexDirection: "column",
         gap: 16,
-        border: enabled ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid var(--color-border)",
-        background: enabled ? "linear-gradient(180deg, rgba(99, 102, 241, 0.04) 0%, rgba(0, 0, 0, 0) 100%)" : "inherit",
+        border: enabled ? "1px solid rgba(139, 92, 246, 0.4)" : "1px solid var(--color-border)",
+        background: enabled ? "linear-gradient(180deg, rgba(55, 44, 102, 0.15) 0%, rgba(8, 8, 12, 0) 100%)" : "inherit",
         transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
-      {/* Explicit Modern Mode Switcher */}
+      {/* Modern Mode Switcher */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div
@@ -125,14 +121,14 @@ export function ProductVariantsManager({
               width: 40,
               height: 40,
               borderRadius: 10,
-              background: enabled ? "rgba(99, 102, 241, 0.15)" : "rgba(255, 255, 255, 0.05)",
-              border: enabled ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid var(--color-border)",
+              background: enabled ? "rgba(55, 44, 102, 0.4)" : "rgba(255, 255, 255, 0.05)",
+              border: enabled ? "1px solid rgba(139, 92, 246, 0.45)" : "1px solid var(--color-border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: enabled ? "#818cf8" : "var(--color-muted-foreground)",
+              color: enabled ? "#c4b5fd" : "var(--color-muted-foreground)",
               transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-              transform: enabled ? "scale(1.05)" : "scale(1)",
+              transform: enabled ? "scale(1.04)" : "scale(1)",
             }}
           >
             <Layers size={20} />
@@ -140,7 +136,7 @@ export function ProductVariantsManager({
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>
-                Multiple Duration Tiers (Daily / Weekly / Monthly / Lifetime)
+                Multi-Duration Tiers (Day / Week / Month / Lifetime)
               </h3>
               <span
                 style={{
@@ -148,10 +144,11 @@ export function ProductVariantsManager({
                   fontWeight: 800,
                   padding: "2px 7px",
                   borderRadius: 4,
-                  background: enabled ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.06)",
-                  color: enabled ? "#34d399" : "var(--color-muted-foreground)",
-                  border: enabled ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--color-border)",
+                  background: enabled ? "rgba(55, 44, 102, 0.4)" : "rgba(255, 255, 255, 0.06)",
+                  color: enabled ? "#c4b5fd" : "var(--color-muted-foreground)",
+                  border: enabled ? "1px solid rgba(139, 92, 246, 0.45)" : "1px solid var(--color-border)",
                   transition: "all 0.2s ease",
+                  fontFamily: "var(--font-mono, monospace)",
                 }}
               >
                 {enabled ? "MULTI-TIER ACTIVE" : "SINGLE DURATION"}
@@ -159,13 +156,13 @@ export function ProductVariantsManager({
             </div>
             <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "3px 0 0" }}>
               {enabled
-                ? "Customers can choose their desired access period with independent prices and categorized keys."
-                : "Product has a single fixed price and single duration. Toggle ON to offer multiple duration options."}
+                ? "Customers can choose their desired access period with independent prices and separated key stock pools."
+                : "Enable to sell 1 Day, 30 Days, or Lifetime tiers under this single product listing."}
             </p>
           </div>
         </div>
 
-        {/* Clear iOS-Style ON/OFF Toggle Switch */}
+        {/* Toggle Switch */}
         <div
           onClick={() => handleToggleMode(!enabled)}
           className="interactive-pill"
@@ -175,37 +172,38 @@ export function ProductVariantsManager({
             gap: 10,
             cursor: "pointer",
             padding: "6px 12px",
-            borderRadius: 10,
-            background: enabled ? "rgba(99, 102, 241, 0.14)" : "rgba(255, 255, 255, 0.03)",
-            border: enabled ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid var(--color-border)",
+            borderRadius: 8,
+            background: enabled ? "rgba(55, 44, 102, 0.3)" : "var(--btn-ghost-bg, rgba(255, 255, 255, 0.03))",
+            border: enabled ? "1px solid rgba(139, 92, 246, 0.5)" : "1px solid var(--color-border)",
             userSelect: "none",
-            boxShadow: enabled ? "0 0 12px rgba(99, 102, 241, 0.2)" : "none",
+            boxShadow: enabled ? "0 0 14px rgba(55, 44, 102, 0.4)" : "none",
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 700, color: enabled ? "#818cf8" : "var(--color-muted-foreground)", transition: "color 0.2s ease" }}>
-            {enabled ? "ON (Multi-Option)" : "OFF (Single Price)"}
+          <span style={{ fontSize: 11, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: enabled ? "#c4b5fd" : "var(--color-muted-foreground)", transition: "color 0.2s ease" }}>
+            {enabled ? "ENABLED" : "DISABLED"}
           </span>
           <div
             style={{
-              width: 44,
-              height: 24,
-              borderRadius: 24,
-              background: enabled ? "#6366f1" : "rgba(255, 255, 255, 0.15)",
+              width: 40,
+              height: 22,
+              borderRadius: 22,
+              background: enabled ? "rgb(55, 44, 102)" : "rgba(255, 255, 255, 0.15)",
+              border: enabled ? "1px solid #8b5cf6" : "1px solid transparent",
               position: "relative",
-              transition: "background 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              transition: "all 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             <div
               style={{
-                width: 18,
-                height: 18,
+                width: 16,
+                height: 16,
                 borderRadius: "50%",
                 background: "#ffffff",
                 position: "absolute",
-                top: 3,
-                left: enabled ? 23 : 3,
+                top: 2,
+                left: enabled ? 20 : 2,
                 transition: "left 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
               }}
             />
           </div>
@@ -219,23 +217,23 @@ export function ProductVariantsManager({
             display: "flex",
             flexDirection: "column",
             gap: 16,
-            paddingTop: 12,
+            paddingTop: 14,
             borderTop: "1px solid var(--color-border)",
           }}
         >
-          {/* Quick preset chips - strictly 1 per duration type */}
+          {/* Quick preset chips */}
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                 Add Duration Tier (Max 1 per duration):
               </span>
-              <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+              <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                 {variants.length} / {DURATION_OPTIONS.length} active
               </span>
             </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {DURATION_OPTIONS.map((opt, oIdx) => {
+              {DURATION_OPTIONS.map((opt) => {
                 const isCustom = opt.id === "custom";
                 const isAlreadyAdded = isCustom ? customVariantsCount >= 5 : usedPredefinedDurations.has(opt.id);
 
@@ -247,37 +245,32 @@ export function ProductVariantsManager({
                     onClick={() => handleAddPreset(opt.id)}
                     className={!isAlreadyAdded ? "interactive-pill" : ""}
                     style={{
-                      fontSize: 12,
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono, monospace)",
                       padding: "6px 12px",
-                      borderRadius: 8,
+                      borderRadius: 6,
                       border: isAlreadyAdded
-                        ? isCustom
-                          ? "1px solid rgba(239, 68, 68, 0.2)"
-                          : "1px solid rgba(16, 185, 129, 0.25)"
+                        ? "1px solid rgba(139, 92, 246, 0.3)"
                         : "1px solid var(--color-border)",
                       background: isAlreadyAdded
-                        ? isCustom
-                          ? "rgba(239, 68, 68, 0.05)"
-                          : "rgba(16, 185, 129, 0.08)"
+                        ? "rgba(55, 44, 102, 0.25)"
                         : "rgba(255, 255, 255, 0.03)",
                       color: isAlreadyAdded
-                        ? isCustom
-                          ? "var(--color-muted-foreground)"
-                          : "#34d399"
+                        ? "#c4b5fd"
                         : "var(--color-foreground)",
                       opacity: isAlreadyAdded ? 0.75 : 1,
                       cursor: isAlreadyAdded ? "not-allowed" : "pointer",
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
-                      fontWeight: 600,
+                      fontWeight: 700,
                       transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
                     }}
                   >
                     {!isCustom && isAlreadyAdded ? (
-                      <span className="animate-checkmark"><Check size={13} strokeWidth={3} /></span>
+                      <span className="animate-checkmark"><Check size={12} strokeWidth={3} /></span>
                     ) : (
-                      <Plus size={13} />
+                      <Plus size={12} />
                     )}
                     <span>{isCustom ? `Custom Tier (${customVariantsCount}/5)` : opt.shortLabel}</span>
                   </button>
@@ -291,17 +284,17 @@ export function ProductVariantsManager({
             <div
               className="animate-pop"
               style={{
-                padding: 28,
+                padding: 24,
                 textAlign: "center",
                 border: "1px dashed var(--color-border)",
-                borderRadius: 12,
+                borderRadius: 10,
                 color: "var(--color-muted-foreground)",
-                fontSize: 13,
+                fontSize: 12.5,
                 background: "rgba(255, 255, 255, 0.01)",
               }}
             >
-              <AlertCircle size={22} style={{ margin: "0 auto 8px", color: "#f59e0b" }} />
-              <div>No duration tiers added yet. Click above to add options like <strong>Daily</strong>, <strong>Weekly</strong>, or <strong>Monthly</strong>.</div>
+              <AlertCircle size={20} style={{ margin: "0 auto 8px", color: "#f59e0b" }} />
+              <div>No duration tiers added yet. Click above to add options like <strong>1 Day</strong>, <strong>30 Days</strong>, or <strong>Lifetime</strong>.</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -317,12 +310,12 @@ export function ProductVariantsManager({
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: 14,
-                      padding: "14px 16px",
-                      borderRadius: 12,
+                      padding: "12px 16px",
+                      borderRadius: 10,
                       background: "var(--color-surface-2)",
                       border: "1px solid var(--color-border)",
                       flexWrap: "wrap",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
                       animationDelay: `${Math.min(idx * 0.04, 0.24)}s`,
                     }}
                   >
@@ -334,11 +327,11 @@ export function ProductVariantsManager({
                           fontWeight: 800,
                           padding: "4px 10px",
                           borderRadius: 6,
-                          background: `${meta.badgeColor}20`,
-                          border: `1px solid ${meta.badgeColor}45`,
-                          color: meta.badgeColor,
+                          background: "rgba(55, 44, 102, 0.35)",
+                          border: "1px solid rgba(139, 92, 246, 0.45)",
+                          color: "#c4b5fd",
                           whiteSpace: "nowrap",
-                          fontFamily: "monospace",
+                          fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
                         {meta.shortLabel.toUpperCase()}
@@ -351,12 +344,12 @@ export function ProductVariantsManager({
                           onChange={(e) => handleUpdateVariant(idx, { label: e.target.value })}
                           className="input"
                           placeholder="Option label displayed to buyer"
-                          style={{ fontSize: 13, height: 36, padding: "0 12px", width: "100%" }}
+                          style={{ fontSize: 13, height: 36, padding: "0 12px", width: "100%", fontFamily: "var(--font-mono, monospace)" }}
                         />
 
                         {isCustom && (
                           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }} className="animate-pop">
-                            <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 600 }}>Days:</span>
+                            <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>Days:</span>
                             <input
                               type="number"
                               min="1"
@@ -370,7 +363,7 @@ export function ProductVariantsManager({
                                 });
                               }}
                               className="input"
-                              style={{ width: 64, height: 36, fontSize: 13, textAlign: "center", padding: "0 6px" }}
+                              style={{ width: 64, height: 36, fontSize: 13, textAlign: "center", padding: "0 6px", fontFamily: "var(--font-mono, monospace)" }}
                             />
                           </div>
                         )}
@@ -389,25 +382,19 @@ export function ProductVariantsManager({
                           onChange={(e) => handleUpdateVariant(idx, { price: parseFloat(e.target.value) || 0 })}
                           className="input"
                           placeholder="0.00"
-                          style={{ width: 100, height: 36, fontSize: 14, fontWeight: 700, padding: "0 10px", textAlign: "right" }}
+                          style={{ width: 96, height: 36, fontSize: 14, fontWeight: 800, padding: "0 10px", textAlign: "right", fontFamily: "var(--font-mono, monospace)" }}
                         />
-                        <span style={{ fontSize: 12, color: "var(--color-muted-foreground)", fontWeight: 600 }}>USD</span>
+                        <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>USD</span>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => handleRemoveVariant(idx)}
                         className="btn btn-ghost"
-                        style={{ padding: "8px", color: "#f87171", borderRadius: 8, transition: "transform 0.15s ease, background 0.15s ease" }}
+                        style={{ padding: "8px", color: "var(--color-danger)", borderRadius: 6, transition: "transform 0.15s ease, background 0.15s ease" }}
                         title="Remove duration option"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = "scale(1.1)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "scale(1)";
-                        }}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>

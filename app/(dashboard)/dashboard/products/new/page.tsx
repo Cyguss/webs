@@ -97,6 +97,8 @@ export default function NewProductPage() {
     return keysList;
   }, [variantsEnabled, variants, categorizedKeys, currentVariantId, keysList]);
 
+  const previewKeys = useMemo(() => currentActiveKeys.slice(0, 5), [currentActiveKeys]);
+
   // Total keys across all categories
   const totalKeysCount = useMemo(() => {
     if (variantsEnabled && variants.length > 0) {
@@ -262,7 +264,6 @@ export default function NewProductPage() {
     }
   }
 
-  const previewKeys = currentActiveKeys.slice(0, 5);
   const filteredAllKeys = keysList.filter((k) =>
     !searchFilter.trim() || k.toLowerCase().includes(searchFilter.toLowerCase())
   );
@@ -531,45 +532,72 @@ export default function NewProductPage() {
         />
 
         {/* Redesigned Inventory / License Keys Section */}
-        <div className="card" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="card interactive-card" style={{ display: "flex", flexDirection: "column", gap: 18, border: "1px solid var(--color-border)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "rgba(55, 44, 102, 0.4)",
+                    border: "1px solid rgba(139, 92, 246, 0.45)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#c4b5fd",
+                  }}
+                >
+                  <Key size={16} />
+                </div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--color-foreground)", margin: 0 }}>
-                  License Keys & Stock
+                  License Keys & Inventory Stock
                 </h3>
                 {variantsEnabled && variants.length > 0 && (
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: 800,
                       padding: "2px 8px",
                       borderRadius: 4,
-                      background: "rgba(99, 102, 241, 0.15)",
-                      color: "#818cf8",
-                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      background: "rgba(55, 44, 102, 0.4)",
+                      color: "#c4b5fd",
+                      border: "1px solid rgba(139, 92, 246, 0.45)",
+                      fontFamily: "var(--font-mono, monospace)",
                     }}
                   >
-                    CATEGORIZED BY DURATION
+                    TIER-CATEGORIZED
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: "4px 0 0" }}>
+              <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "4px 0 0" }}>
                 {variantsEnabled && variants.length > 0
                   ? "Manage and paste stock separated for each duration variant tier."
-                  : "Add codes to deliver automatically to buyers upon checkout."}
+                  : "Add codes to deliver automatically to buyers upon instant checkout."}
               </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className={`badge ${totalKeysCount > 0 ? "badge-primary" : "badge-neutral"}`}>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  fontFamily: "var(--font-mono, monospace)",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: totalKeysCount > 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                  border: totalKeysCount > 0 ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid var(--color-border)",
+                  color: totalKeysCount > 0 ? "#34d399" : "var(--color-muted-foreground)",
+                }}
+              >
                 {totalKeysCount} Total Keys
               </span>
               <button
                 type="button"
                 onClick={handleOpenBulkModal}
                 className="btn btn-secondary"
-                style={{ fontSize: 12, padding: "6px 12px", gap: 6 }}
+                style={{ fontSize: 12, padding: "6px 14px", gap: 6 }}
               >
                 <FileText size={14} /> Bulk Paste
               </button>
@@ -579,7 +607,7 @@ export default function NewProductPage() {
           {/* If Multi-Duration is enabled: Category Tabs */}
           {variantsEnabled && variants.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 Select Duration Category to Add / View Keys:
               </span>
               <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
@@ -592,20 +620,22 @@ export default function NewProductPage() {
                       key={v.id}
                       type="button"
                       onClick={() => setActiveVariantTabId(v.id)}
+                      className="interactive-pill"
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
                         padding: "8px 14px",
-                        borderRadius: 10,
-                        border: isSelected ? `2px solid ${dMeta.badgeColor}` : "1px solid var(--color-border)",
-                        background: isSelected ? `${dMeta.badgeColor}15` : "var(--color-surface-2)",
-                        color: isSelected ? "var(--color-foreground)" : "var(--color-muted-foreground)",
+                        borderRadius: 8,
+                        border: isSelected ? "1px solid rgba(139, 92, 246, 0.65)" : "1px solid var(--color-border)",
+                        background: isSelected ? "linear-gradient(180deg, rgba(55, 44, 102, 0.4) 0%, rgba(30, 24, 60, 0.25) 100%)" : "var(--color-surface)",
+                        color: isSelected ? "#ffffff" : "var(--color-muted-foreground)",
                         fontWeight: isSelected ? 700 : 500,
-                        fontSize: 13,
+                        fontSize: 12,
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                         whiteSpace: "nowrap",
+                        boxShadow: isSelected ? "0 0 12px rgba(55, 44, 102, 0.3)" : "none",
                       }}
                     >
                       <span
@@ -614,8 +644,9 @@ export default function NewProductPage() {
                           fontWeight: 800,
                           padding: "2px 6px",
                           borderRadius: 4,
-                          background: `${dMeta.badgeColor}25`,
-                          color: dMeta.badgeColor,
+                          background: isSelected ? "rgba(55, 44, 102, 0.8)" : "rgba(255, 255, 255, 0.06)",
+                          color: isSelected ? "#c4b5fd" : "var(--color-muted-foreground)",
+                          fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
                         {dMeta.shortLabel}
@@ -625,10 +656,12 @@ export default function NewProductPage() {
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
+                          fontFamily: "var(--font-mono, monospace)",
                           padding: "2px 7px",
                           borderRadius: 12,
-                          background: vKeys.length > 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.08)",
+                          background: vKeys.length > 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(255, 255, 255, 0.06)",
                           color: vKeys.length > 0 ? "#34d399" : "var(--color-muted-foreground)",
+                          border: vKeys.length > 0 ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid transparent",
                         }}
                       >
                         {vKeys.length} keys
@@ -660,7 +693,7 @@ export default function NewProductPage() {
                     handleAddKey();
                   }
                 }}
-                style={{ paddingLeft: 36, fontFamily: "monospace", fontSize: 13 }}
+                style={{ paddingLeft: 36, fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}
               />
             </div>
             <button
@@ -680,7 +713,7 @@ export default function NewProductPage() {
               style={{
                 padding: "28px 16px",
                 textAlign: "center",
-                background: "rgba(255,255,255,0.02)",
+                background: "rgba(255,255,255,0.015)",
                 border: "1px dashed var(--color-border)",
                 borderRadius: "var(--radius-md)",
                 color: "var(--color-muted-foreground)",
@@ -712,13 +745,14 @@ export default function NewProductPage() {
                 {previewKeys.map((k, idx) => (
                   <div
                     key={idx}
+                    className="interactive-pill"
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      background: "var(--color-surface-2)",
+                      background: "var(--color-surface)",
                       border: "1px solid var(--color-border)",
                       fontSize: 13,
                     }}
@@ -728,6 +762,7 @@ export default function NewProductPage() {
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
+                          fontFamily: "var(--font-mono, monospace)",
                           color: "var(--color-muted-foreground)",
                           minWidth: 24,
                         }}
@@ -736,7 +771,7 @@ export default function NewProductPage() {
                       </span>
                       <code
                         style={{
-                          fontFamily: "monospace",
+                          fontFamily: "var(--font-mono, monospace)",
                           color: "var(--color-foreground)",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -755,7 +790,7 @@ export default function NewProductPage() {
                         style={{ padding: "4px 8px" }}
                         title="Copy key"
                       >
-                        {copiedIndex === idx ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                        {copiedIndex === idx ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
                       </button>
                       <button
                         type="button"
@@ -774,7 +809,7 @@ export default function NewProductPage() {
               {/* View All button if more than 5 */}
               {currentActiveKeys.length > 5 && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
-                  <span style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
+                  <span style={{ fontSize: 12, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                     Showing 5 of {currentActiveKeys.length} loaded keys for {currentVariant?.label || "this product"}
                   </span>
                   <button
@@ -820,8 +855,8 @@ export default function NewProductPage() {
             position: "fixed",
             inset: 0,
             zIndex: 999,
-            background: "rgba(0,0,0,0.72)",
-            backdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -831,22 +866,39 @@ export default function NewProductPage() {
           <div
             className="card"
             style={{
-              maxWidth: variantsEnabled && variants.length > 0 ? 680 : 500,
+              maxWidth: variantsEnabled && variants.length > 0 ? 680 : 520,
               width: "100%",
               padding: 24,
-              border: "1px solid var(--color-border)",
-              boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+              border: "1px solid rgba(139, 92, 246, 0.35)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
               maxHeight: "90vh",
               display: "flex",
               flexDirection: "column",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div>
-                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Bulk Import License Keys</h3>
-                <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
-                  Paste serial keys separated by newlines or commas.
-                </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    background: "rgba(55, 44, 102, 0.4)",
+                    border: "1px solid rgba(139, 92, 246, 0.45)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#c4b5fd",
+                  }}
+                >
+                  <FileText size={17} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>Bulk Import License Keys</h3>
+                  <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
+                    Paste serial keys separated by newlines or commas.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -885,7 +937,7 @@ export default function NewProductPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                 {variantsEnabled && variants.length > 0 && (
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)", marginBottom: 6, display: "block" }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                       Target Duration Category:
                     </label>
                     <select
@@ -909,7 +961,7 @@ export default function NewProductPage() {
                   placeholder={"XXXX-YYYY-ZZZZ-1111\nXXXX-YYYY-ZZZZ-2222\nXXXX-YYYY-ZZZZ-3333"}
                   value={bulkInput}
                   onChange={(e) => setBulkInput(e.target.value)}
-                  style={{ fontFamily: "monospace", fontSize: 13 }}
+                  style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}
                 />
               </div>
             )}
@@ -920,15 +972,15 @@ export default function NewProductPage() {
                 {variants.map((v) => {
                   const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
                   return (
-                    <div key={v.id} style={{ background: "var(--color-surface-2)", padding: 12, borderRadius: 10, border: "1px solid var(--color-border)" }}>
+                    <div key={v.id} style={{ background: "var(--color-surface)", padding: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: `${dMeta.badgeColor}25`, color: dMeta.badgeColor }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
                             {dMeta.shortLabel}
                           </span>
                           <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
                         </div>
-                        <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                        <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                           {(bulkMultiCategoryInputs[v.id] || "").split(/[\r\n,]+/).filter(Boolean).length} keys in draft
                         </span>
                       </div>
@@ -943,7 +995,7 @@ export default function NewProductPage() {
                             [v.id]: e.target.value,
                           })
                         }
-                        style={{ fontFamily: "monospace", fontSize: 12 }}
+                        style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
                       />
                     </div>
                   );
@@ -978,8 +1030,8 @@ export default function NewProductPage() {
             position: "fixed",
             inset: 0,
             zIndex: 999,
-            background: "rgba(0,0,0,0.72)",
-            backdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -992,8 +1044,8 @@ export default function NewProductPage() {
               maxWidth: 680,
               width: "100%",
               padding: 24,
-              border: "1px solid var(--color-border)",
-              boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+              border: "1px solid rgba(139, 92, 246, 0.35)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
               display: "flex",
               flexDirection: "column",
               maxHeight: "85vh",
@@ -1001,7 +1053,7 @@ export default function NewProductPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>All Loaded License Keys</h3>
+                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>All Loaded License Keys</h3>
                 <span className="badge badge-primary">{totalKeysCount} Total</span>
               </div>
               <button
@@ -1040,7 +1092,7 @@ export default function NewProductPage() {
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
                   className="input"
-                  style={{ paddingLeft: 32, fontSize: 13, height: 36 }}
+                  style={{ paddingLeft: 32, fontSize: 13, height: 36, fontFamily: "var(--font-mono, monospace)" }}
                 />
               </div>
             </div>
@@ -1085,21 +1137,21 @@ export default function NewProductPage() {
                       justifyContent: "space-between",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      background: "var(--color-surface-2)",
+                      background: "var(--color-surface)",
                       border: "1px solid var(--color-border)",
                       fontSize: 13,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", minWidth: 30 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", minWidth: 30 }}>
                         #{idx + 1}
                       </span>
                       {variantsEnabled && variants.length > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(99, 102, 241, 0.15)", color: "#818cf8" }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
                           {item.varLabel}
                         </span>
                       )}
-                      <code style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <code style={{ fontFamily: "var(--font-mono, monospace)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {item.key}
                       </code>
                     </div>
@@ -1111,7 +1163,7 @@ export default function NewProductPage() {
                         style={{ padding: "4px 8px" }}
                         title="Copy key"
                       >
-                        {copiedIndex === `${item.varId}_${item.origIdx}` ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                        {copiedIndex === `${item.varId}_${item.origIdx}` ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
                       </button>
                       <button
                         type="button"

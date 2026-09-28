@@ -410,10 +410,36 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--color-foreground)", letterSpacing: "-0.02em", margin: 0 }}>
-                {product?.title || "Product"} — Categorized Key Inventory
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Key size={18} />
+              </div>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--color-foreground)", letterSpacing: "-0.02em", margin: 0 }}>
+                {product?.title || "Product"} — Key Vault & Inventory
               </h1>
-              <span className="badge badge-primary">
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  fontFamily: "var(--font-mono, monospace)",
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  color: "#c4b5fd",
+                }}
+              >
                 ${product?.price || "0.00"} USD
               </span>
               {productVariants.length > 0 ? (
@@ -423,9 +449,10 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                     fontWeight: 800,
                     padding: "3px 8px",
                     borderRadius: 4,
-                    background: "rgba(99, 102, 241, 0.15)",
-                    border: "1px solid rgba(99, 102, 241, 0.3)",
-                    color: "#818cf8",
+                    background: "rgba(55, 44, 102, 0.35)",
+                    border: "1px solid rgba(139, 92, 246, 0.45)",
+                    color: "#c4b5fd",
+                    fontFamily: "var(--font-mono, monospace)",
                   }}
                 >
                   {productVariants.length} DURATION TIERS
@@ -437,16 +464,17 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                     fontWeight: 800,
                     padding: "3px 8px",
                     borderRadius: 4,
-                    background: "rgba(16, 185, 129, 0.15)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                    background: "rgba(34, 197, 94, 0.15)",
+                    border: "1px solid rgba(34, 197, 94, 0.3)",
                     color: "#34d399",
+                    fontFamily: "var(--font-mono, monospace)",
                   }}
                 >
                   SINGLE DURATION
                 </span>
               )}
             </div>
-            <p style={{ color: "var(--color-muted-foreground)", fontSize: 13, marginTop: 4 }}>
+            <p style={{ color: "var(--color-muted-foreground)", fontSize: 13, marginTop: 6 }}>
               License keys are categorized by duration for precision automated delivery.
             </p>
           </div>
@@ -475,35 +503,37 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
 
       {/* Categorized Duration Stock Breakdown Cards */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-          <Layers size={14} color="#818cf8" /> Duration Category Breakdown & Live Stock:
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+          <Layers size={14} color="#c4b5fd" /> Duration Category Breakdown & Live Stock:
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           {/* All Durations Card */}
           <div
             onClick={() => setActiveDurationCategory("all")}
+            className="interactive-pill"
             style={{
               padding: "14px 16px",
-              borderRadius: 12,
-              background: activeDurationCategory === "all" ? "rgba(99, 102, 241, 0.12)" : "var(--color-surface-2)",
-              border: activeDurationCategory === "all" ? "2px solid #6366f1" : "1px solid var(--color-border)",
+              borderRadius: 10,
+              background: activeDurationCategory === "all" ? "linear-gradient(180deg, rgba(55, 44, 102, 0.4) 0%, rgba(30, 24, 60, 0.25) 100%)" : "var(--color-surface)",
+              border: activeDurationCategory === "all" ? "1px solid rgba(139, 92, 246, 0.65)" : "1px solid var(--color-border)",
               cursor: "pointer",
               transition: "all 0.18s ease",
+              boxShadow: activeDurationCategory === "all" ? "0 0 14px rgba(55, 44, 102, 0.35)" : "none",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: activeDurationCategory === "all" ? "#fff" : "var(--color-foreground)" }}>
                 All Categories
               </span>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)", color: "var(--color-muted-foreground)" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "rgba(255,255,255,0.06)", color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                 TOTAL
               </span>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: unusedCount > 0 ? "#34d399" : "#f87171", marginTop: 4 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: unusedCount > 0 ? "#34d399" : "#f87171", marginTop: 4 }}>
               {unusedCount} <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-muted-foreground)" }}>available</span>
             </div>
-            <div style={{ fontSize: 11, color: "var(--color-muted-foreground)", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: "var(--color-muted-foreground)", marginTop: 2, fontFamily: "var(--font-mono, monospace)" }}>
               {keys.length} total • {usedCount} delivered
             </div>
           </div>
@@ -515,14 +545,16 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
               <div
                 key={durKey}
                 onClick={() => setActiveDurationCategory(durKey)}
+                className="interactive-pill"
                 style={{
                   padding: "14px 16px",
-                  borderRadius: 12,
-                  background: isSelected ? `${data.badgeColor}15` : "var(--color-surface-2)",
-                  border: isSelected ? `2px solid ${data.badgeColor}` : "1px solid var(--color-border)",
+                  borderRadius: 10,
+                  background: isSelected ? "linear-gradient(180deg, rgba(55, 44, 102, 0.4) 0%, rgba(30, 24, 60, 0.25) 100%)" : "var(--color-surface)",
+                  border: isSelected ? "1px solid rgba(139, 92, 246, 0.65)" : "1px solid var(--color-border)",
                   cursor: "pointer",
                   transition: "all 0.18s ease",
                   transform: isSelected ? "translateY(-1px)" : "none",
+                  boxShadow: isSelected ? "0 0 14px rgba(55, 44, 102, 0.35)" : "none",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -535,19 +567,19 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                       fontWeight: 800,
                       padding: "1px 5px",
                       borderRadius: 3,
-                      background: `${data.badgeColor}25`,
-                      color: data.badgeColor,
-                      fontFamily: "monospace",
+                      background: isSelected ? "rgba(55, 44, 102, 0.8)" : "rgba(255, 255, 255, 0.06)",
+                      color: isSelected ? "#c4b5fd" : "var(--color-muted-foreground)",
+                      fontFamily: "var(--font-mono, monospace)",
                       textTransform: "uppercase",
                     }}
                   >
                     {durKey}
                   </span>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: data.available > 0 ? "#34d399" : "#f87171", marginTop: 4 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: data.available > 0 ? "#34d399" : "#f87171", marginTop: 4 }}>
                   {data.available} <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-muted-foreground)" }}>avail</span>
                 </div>
-                <div style={{ fontSize: 11, color: "var(--color-muted-foreground)", marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: "var(--color-muted-foreground)", marginTop: 2, fontFamily: "var(--font-mono, monospace)" }}>
                   {data.total} loaded • {data.delivered} delivered
                 </div>
               </div>
@@ -557,10 +589,10 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Quick Add Key with Target Duration Category */}
-      <div className="card" style={{ padding: 20, marginBottom: 24 }}>
+      <div className="card interactive-card" style={{ padding: 20, marginBottom: 24, border: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={16} color="#818cf8" /> Quick Add Key to Duration Category
+          <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6, color: "var(--color-foreground)" }}>
+            <Plus size={16} color="#c4b5fd" /> Quick Add Key to Duration Category
           </h3>
 
           {/* Duration category target selector */}
@@ -616,7 +648,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                   handleAddSingleKey();
                 }
               }}
-              style={{ paddingLeft: 38, fontFamily: "monospace", fontSize: 13 }}
+              style={{ paddingLeft: 38, fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}
             />
           </div>
           <button
@@ -633,10 +665,10 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Keys List with Filter Tabs & Search */}
-      <div className="card" style={{ display: "flex", flexDirection: "column", gap: 16, padding: 20 }}>
+      <div className="card" style={{ display: "flex", flexDirection: "column", gap: 16, padding: 20, border: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           {/* Status Tabs */}
-          <div style={{ display: "flex", background: "var(--color-surface-2)", padding: 3, borderRadius: 8, gap: 4 }}>
+          <div style={{ display: "flex", background: "var(--color-surface-2)", padding: 3, borderRadius: 8, gap: 4, border: "1px solid var(--color-border)" }}>
             <button
               type="button"
               onClick={() => setFilterTab("all")}
@@ -706,7 +738,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="input"
-                style={{ paddingLeft: 30, height: 34, fontSize: 12, width: 220 }}
+                style={{ paddingLeft: 30, height: 34, fontSize: 12, width: 220, fontFamily: "var(--font-mono, monospace)" }}
               />
             </div>
           </div>
@@ -730,14 +762,15 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
               return (
                 <div
                   key={k.id}
+                  className="interactive-pill"
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "12px 14px",
-                    borderRadius: 10,
-                    background: "var(--color-surface-2)",
-                    border: k.isUsed ? "1px solid var(--color-border)" : "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: 8,
+                    background: "var(--color-surface)",
+                    border: k.isUsed ? "1px solid var(--color-border)" : "1px solid var(--color-border)",
                     gap: 12,
                     flexWrap: "wrap",
                   }}
@@ -748,12 +781,12 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                       style={{
                         fontSize: 10,
                         fontWeight: 800,
-                        fontFamily: "monospace",
+                        fontFamily: "var(--font-mono, monospace)",
                         padding: "3px 8px",
                         borderRadius: 4,
-                        background: `${dMeta.badgeColor}20`,
-                        border: `1px solid ${dMeta.badgeColor}40`,
-                        color: dMeta.badgeColor,
+                        background: "rgba(55, 44, 102, 0.4)",
+                        border: "1px solid rgba(139, 92, 246, 0.45)",
+                        color: "#c4b5fd",
                         textTransform: "uppercase",
                         whiteSpace: "nowrap",
                       }}
@@ -763,7 +796,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
 
                     <span
                       style={{
-                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                        fontFamily: "var(--font-mono, monospace)",
                         fontSize: 13,
                         fontWeight: 700,
                         color: k.isUsed ? "var(--color-muted-foreground)" : "var(--color-foreground)",
@@ -785,6 +818,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                           borderRadius: 4,
                           background: "rgba(255,255,255,0.06)",
                           color: "var(--color-muted-foreground)",
+                          fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
                         Delivered
@@ -799,13 +833,14 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                           background: "rgba(34, 197, 94, 0.15)",
                           border: "1px solid rgba(34, 197, 94, 0.3)",
                           color: "#34d399",
+                          fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
                         Available
                       </span>
                     )}
 
-                    <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                    <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                       {new Date(k.createdAt).toLocaleDateString()}
                     </span>
 
@@ -843,8 +878,8 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(6px)",
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -858,9 +893,8 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
               maxWidth: 640,
               width: "100%",
               padding: 26,
-              background: "#0d0e14",
-              border: "1px solid rgba(99, 102, 241, 0.3)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+              border: "1px solid rgba(139, 92, 246, 0.35)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
               display: "flex",
               flexDirection: "column",
               gap: 16,
@@ -868,11 +902,23 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(99, 102, 241, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#818cf8" }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    background: "rgba(55, 44, 102, 0.4)",
+                    border: "1px solid rgba(139, 92, 246, 0.45)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#c4b5fd",
+                  }}
+                >
                   <FileText size={18} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: "var(--color-foreground)" }}>
                     Bulk License Key Importer (500+ Keys)
                   </h3>
                   <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
@@ -916,8 +962,8 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
             {(!productVariants.length || bulkModalMode === "single") && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {/* Target Duration Category Selector */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "rgba(255,255,255,0.02)", padding: "12px 14px", borderRadius: 10, border: "1px solid var(--color-border)" }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: "var(--color-foreground)" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "var(--color-surface)", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)" }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     Target Duration Category / Variant:
                   </label>
                   <select
@@ -965,7 +1011,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                     className="input"
                     style={{
                       width: "100%",
-                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                      fontFamily: "var(--font-mono, monospace)",
                       fontSize: 12,
                       resize: "vertical",
                       minHeight: 160,
@@ -974,7 +1020,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Live Stats */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "rgba(255,255,255,0.03)", padding: "10px 14px", borderRadius: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "var(--color-surface)", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-border)", fontFamily: "var(--font-mono, monospace)" }}>
                   <div style={{ display: "flex", gap: 14 }}>
                     <span>
                       Valid Unique: <strong style={{ color: "#34d399" }}>{bulkStats.validKeys.length}</strong>
@@ -1029,15 +1075,15 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                     const countInDraft = currentDraft.split(/[\r\n,]+/).filter(Boolean).length;
 
                     return (
-                      <div key={v.id} style={{ background: "var(--color-surface-2)", padding: 12, borderRadius: 10, border: "1px solid var(--color-border)" }}>
+                      <div key={v.id} style={{ background: "var(--color-surface)", padding: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: `${dMeta.badgeColor}25`, color: dMeta.badgeColor }}>
+                            <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
                               {dMeta.shortLabel}
                             </span>
                             <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
                           </div>
-                          <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                          <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
                             {countInDraft} keys in draft
                           </span>
                         </div>
@@ -1052,7 +1098,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
                               [v.id]: e.target.value,
                             })
                           }
-                          style={{ fontFamily: "monospace", fontSize: 12 }}
+                          style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
                         />
                       </div>
                     );
