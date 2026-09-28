@@ -6,7 +6,8 @@ import { sellerBalances, payoutRequests, balanceTransactions } from "@/lib/db/sc
 import { and, eq, sql } from "drizzle-orm";
 import { createPayoutSchema } from "@/lib/validations/payout";
 
-const PLATFORM_FEE_PERCENTAGE = 0.05; // 5% fee on payouts
+// Platform fee (5%) was already deducted on completed orders before entering available balance.
+// Payouts incur 0% additional platform fee.
 const MIN_PAYOUT_AMOUNT = 10.0; // $10 minimum
 
 export async function POST(req: Request) {
@@ -31,8 +32,9 @@ export async function POST(req: Request) {
     const { amount, method, destinationAddress, cryptoCurrency } = result.data;
     const requestedAmount = amount;
 
-    const feeAmount = requestedAmount * PLATFORM_FEE_PERCENTAGE;
-    const amountSent = requestedAmount - feeAmount;
+    // Zero withdrawal fee — platform fee is already settled from gross sales
+    const feeAmount = 0;
+    const amountSent = requestedAmount;
     const payoutId = crypto.randomUUID();
 
     // Atomic Transaction: Eliminates Double-Spending Race Condition via row-level locking

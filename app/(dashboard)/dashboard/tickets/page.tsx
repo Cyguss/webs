@@ -14,8 +14,8 @@ function DiscordLogo({ size = 20 }: { size?: number }) {
 
 export default function DashboardSupportTicketsPage() {
   const toast = useToast();
-  const [supportEmail, setSupportEmail] = useState("support@vaultly.io");
-  const [discordInvite, setDiscordInvite] = useState("https://discord.gg/vaultly");
+  const [supportEmail, setSupportEmail] = useState("support@krypt.market");
+  const [discordInvite, setDiscordInvite] = useState("https://discord.gg/krypt");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function DashboardSupportTicketsPage() {
           Platform Support & Assistance
         </h1>
         <p style={{ color: "var(--color-muted-foreground)", fontSize: 14, marginTop: 4 }}>
-          Connect with the Vaultly administration team directly via our official Discord community or via verified email.
+          Connect with the KRYPT administration team directly via our official Discord community or via verified email.
         </p>
       </div>
 
@@ -209,7 +209,7 @@ export default function DashboardSupportTicketsPage() {
       >
         <ShieldCheck size={20} color="#10b981" style={{ flexShrink: 0 }} />
         <span>
-          Vaultly administrators will never ask for your private encryption keys or account passwords. Official communications are only sent from verified channels.
+          KRYPT administrators will never ask for your private encryption keys or account passwords. Official communications are only sent from verified channels.
         </span>
       </div>
     </div>

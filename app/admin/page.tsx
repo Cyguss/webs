@@ -7,7 +7,7 @@ import { user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export const metadata: Metadata = {
-  title: "Admin Master Control | Vaultly",
+  title: "Admin Master Control | KRYPT",
   description: "Platform Administration and Security",
 };
 

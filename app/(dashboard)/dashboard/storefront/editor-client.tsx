@@ -256,9 +256,9 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
         body: JSON.stringify({
           embeds: [
             {
-              title: "Vaultly Webhook Test",
+              title: "KRYPT Webhook Test",
               description: `Webhook connected successfully for **${name}**`,
-              color: 0x6366f1,
+              color: 0x00ff66,
             },
           ],
         }),

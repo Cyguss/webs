@@ -349,8 +349,8 @@ export function AdminBotConfigTab({
             <input
               type="email"
               className="input"
-              placeholder="support@vaultly.io"
-              value={botConfig.support_email ?? "support@vaultly.io"}
+              placeholder="support@krypt.market"
+              value={botConfig.support_email ?? "support@krypt.market"}
               onChange={(e) => setBotConfig({ ...botConfig, support_email: e.target.value })}
               style={{ fontFamily: "monospace", fontSize: 12 }}
             />

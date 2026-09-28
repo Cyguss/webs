@@ -63,8 +63,14 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { url, events } = body;
 
-    if (!url || typeof url !== "string" || !url.startsWith("http")) {
-      return NextResponse.json({ error: "Valid HTTP/HTTPS webhook URL is required" }, { status: 400 });
+    if (!url || typeof url !== "string") {
+      return NextResponse.json({ error: "Webhook URL is required" }, { status: 400 });
+    }
+
+    const { validateWebhookUrl } = await import("@/lib/webhooks");
+    const urlValidation = validateWebhookUrl(url.trim());
+    if (!urlValidation.valid) {
+      return NextResponse.json({ error: urlValidation.error || "Invalid webhook destination URL" }, { status: 400 });
     }
 
     const id = `whe_${crypto.randomUUID().slice(0, 12)}`;

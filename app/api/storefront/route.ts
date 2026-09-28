@@ -36,6 +36,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { isStoreCreationAllowed } = await import("@/lib/platform-settings");
+    const allowed = await isStoreCreationAllowed();
+    const isSuperAdmin = (session.user as any).role === "superadmin";
+
+    if (!allowed && !isSuperAdmin) {
+      return NextResponse.json(
+        {
+          error: "Store creation is temporarily disabled by platform administrators for maintenance. Please check back shortly.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Multi-store support enabled for expansion
     const existingShops = await db.query.shops.findMany({
       where: eq(shops.userId, session.user.id),
@@ -75,7 +88,7 @@ export async function POST(req: Request) {
 
     if (RESERVED_SLUGS.includes(slug)) {
       return NextResponse.json(
-        { error: "This slug is reserved by the Vaultly system" },
+        { error: "This slug is reserved by the KRYPT Protocol" },
         { status: 400 }
       );
     }
@@ -334,6 +347,37 @@ export async function PUT(req: Request) {
       }
     }
 
+    // Validate + normalize customDomain
+    let cleanCustomDomain = userShop.customDomain;
+    if (customDomain !== undefined) {
+      const trimmed = customDomain ? customDomain.trim() : "";
+      if (!trimmed) {
+        cleanCustomDomain = null;
+      } else {
+        cleanCustomDomain = trimmed
+          .toLowerCase()
+          .replace(/^https?:\/\//i, "")
+          .replace(/\/.*$/, "")
+          .replace(/:\d+$/, "");
+
+        // Basic domain validation: alphanumeric with dots and hyphens
+        if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(cleanCustomDomain)) {
+          return NextResponse.json({ error: "Invalid domain format (e.g. store.yourbrand.com)" }, { status: 400 });
+        }
+
+        // Check if customDomain is taken by another store
+        const domainTaken = await db.query.shops.findFirst({
+          where: eq(shops.customDomain, cleanCustomDomain),
+        });
+        if (domainTaken && domainTaken.id !== userShop.id) {
+          return NextResponse.json(
+            { error: `The domain "${cleanCustomDomain}" is already bound to another store.` },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     await db
       .update(shops)
       .set({
@@ -351,7 +395,7 @@ export async function PUT(req: Request) {
         telegramUrl: telegramUrl ?? userShop.telegramUrl,
         metaTitle: metaTitle ?? userShop.metaTitle,
         metaDescription: metaDescription ?? userShop.metaDescription,
-        customDomain: customDomain ?? userShop.customDomain,
+        customDomain: cleanCustomDomain,
         fontStyle: fontStyle ?? userShop.fontStyle,
         discordWebhookUrl: discordWebhookUrl ?? userShop.discordWebhookUrl,
         customFontUrl: customFontUrl !== undefined ? (customFontUrl ? customFontUrl.trim() : null) : userShop.customFontUrl,
@@ -360,6 +404,7 @@ export async function PUT(req: Request) {
         cardColor: cardColor ?? userShop.cardColor,
         borderColor: borderColor ?? userShop.borderColor,
         themeMode: themeMode ?? userShop.themeMode ?? "dark",
+        categories: body.categories !== undefined ? (typeof body.categories === "string" ? body.categories : JSON.stringify(body.categories)) : userShop.categories,
         updatedAt: new Date(),
       })
       .where(eq(shops.id, userShop.id));

@@ -23,6 +23,7 @@ export const user = mysqlTable("user", {
   discordUsername: varchar("discord_username", { length: 100 }),
   discordRoles: text("discord_roles"),
   adminPermissionsActive: boolean("admin_permissions_active").notNull().default(true),
+  adminPermissions: text("admin_permissions"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -123,6 +124,7 @@ export const shops = mysqlTable(
     isActive: boolean("is_active").notNull().default(true),
     // Approval system: stores are private until admin accepts them
     isAccepted: boolean("is_accepted").notNull().default(false),
+    categories: text("categories"), // JSON array of custom categories: [{ id, name, icon, description }]
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -169,6 +171,7 @@ export const products = mysqlTable(
       .references(() => shops.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
+    category: varchar("category", { length: 100 }), // category slug or name (e.g. "softwares", "scripts", or custom)
     type: varchar("type", { length: 50 }).notNull(), // "key" | "service" | "file"
     price: varchar("price", { length: 32 }).notNull(),
     currency: varchar("currency", { length: 10 }).notNull().default("USD"),
@@ -178,6 +181,10 @@ export const products = mysqlTable(
     images: text("images"),
     isActive: boolean("is_active").notNull().default(true),
     receiptNote: text("receipt_note"),
+    duration: varchar("duration", { length: 50 }).notNull().default("lifetime"),
+    durationDays: int("duration_days").notNull().default(0),
+    customDurationLabel: varchar("custom_duration_label", { length: 100 }),
+    variants: text("variants"), // JSON array of variants: [{ id, label, duration, durationDays, price }]
     sortOrder: int("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -185,6 +192,7 @@ export const products = mysqlTable(
   (table) => [
     index("products_shop_id_idx").on(table.shopId),
     index("products_is_active_idx").on(table.isActive),
+    index("products_category_idx").on(table.category),
   ]
 );
 
@@ -195,7 +203,11 @@ export const inventoryKeys = mysqlTable(
     productId: varchar("product_id", { length: 36 })
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
+    variantId: varchar("variant_id", { length: 50 }),
     keyValue: text("key_value").notNull(),
+    duration: varchar("duration", { length: 50 }).default("lifetime"),
+    durationDays: int("duration_days").default(0),
+    customDurationLabel: varchar("custom_duration_label", { length: 100 }),
     isUsed: boolean("is_used").notNull().default(false),
     usedAt: timestamp("used_at"),
     orderId: varchar("order_id", { length: 36 }),
@@ -269,6 +281,10 @@ export const orders = mysqlTable(
     stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
     cryptoPaymentId: varchar("crypto_payment_id", { length: 255 }),
     fulfilledAt: timestamp("fulfilled_at"),
+    variantId: varchar("variant_id", { length: 50 }),
+    keyDuration: varchar("key_duration", { length: 50 }),
+    keyDurationDays: int("key_duration_days"),
+    keyExpiresAt: timestamp("key_expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

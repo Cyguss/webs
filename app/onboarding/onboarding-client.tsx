@@ -172,17 +172,21 @@ export default function OnboardingClient({ user }: { user: any }) {
             style={{
               width: 36,
               height: 36,
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              borderRadius: 8,
+              background: "#030305",
+              border: "1px solid rgba(139, 92, 246, 0.4)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 0 16px rgba(99, 102, 241, 0.4)",
+              color: "#c4b5fd",
+              boxShadow: "0 0 16px rgba(55, 44, 102, 0.4)",
             }}
           >
-            <ShoppingBag size={18} color="white" />
+            <ShoppingBag size={18} color="#c4b5fd" />
           </div>
-          <span style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-0.02em" }}>Vaultly</span>
+          <span style={{ fontWeight: 900, fontSize: 19, letterSpacing: "0.04em", fontFamily: "var(--font-mono)" }}>
+            KRYPT<span style={{ color: "#c4b5fd" }}>.MARKET</span>
+          </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -245,7 +249,7 @@ export default function OnboardingClient({ user }: { user: any }) {
         }}
       >
         {createdShop ? (
-          /* Redesigned Vaultly Obsidian Success Screen */
+          /* Redesigned KRYPT Protocol Success Screen */
           <div
             className="card animate-fade-in"
             style={{
@@ -356,11 +360,11 @@ export default function OnboardingClient({ user }: { user: any }) {
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, overflow: "hidden" }}>
-                  <Lock size={13} style={{ color: "#10b981", flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: "var(--color-muted-foreground)", flexShrink: 0 }}>
-                    vaultly.io/
+                  <Lock size={13} style={{ color: "#c4b5fd", flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: "var(--color-muted-foreground)", flexShrink: 0, fontFamily: "var(--font-mono)" }}>
+                    krypt.market/
                   </span>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--color-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: "#ffffff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }}>
                     {createdShop.slug}
                   </span>
                 </div>
@@ -605,10 +609,11 @@ export default function OnboardingClient({ user }: { user: any }) {
                         color: "var(--color-muted-foreground)",
                         fontSize: 13,
                         fontWeight: 500,
+                        fontFamily: "var(--font-mono)",
                         userSelect: "none",
                       }}
                     >
-                      vaultly.io/
+                      krypt.market/
                     </span>
                     <input
                       type="text"
@@ -625,6 +630,7 @@ export default function OnboardingClient({ user }: { user: any }) {
                         color: "var(--color-foreground)",
                         fontSize: 14,
                         fontWeight: 600,
+                        fontFamily: "var(--font-mono)",
                         outline: "none",
                       }}
                     />
@@ -633,8 +639,8 @@ export default function OnboardingClient({ user }: { user: any }) {
                     <span style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
                       Lowercase letters, numbers, and hyphens only.
                     </span>
-                    <span style={{ fontSize: 12, color: "var(--color-primary-light)", fontWeight: 600 }}>
-                      {slug ? `vaultly.io/${slug}` : ""}
+                    <span style={{ fontSize: 12, color: "#c4b5fd", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
+                      {slug ? `krypt.market/${slug}` : ""}
                     </span>
                   </div>
                 </div>

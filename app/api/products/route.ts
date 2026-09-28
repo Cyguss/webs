@@ -33,7 +33,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const { title, description, price, currency, keys, thumbnailUrl, images, receiptNote } = result.data;
+    const {
+      title,
+      description,
+      category,
+      price,
+      currency,
+      keys,
+      structuredKeys,
+      categorizedKeys,
+      thumbnailUrl,
+      images,
+      receiptNote,
+      duration,
+      durationDays,
+      customDurationLabel,
+      variants,
+    } = result.data;
     const productId = crypto.randomUUID();
 
     const processedImages = Array.isArray(images)
@@ -41,12 +57,40 @@ export async function POST(req: Request) {
       : [];
     const primaryThumb = thumbnailUrl || processedImages[0] || null;
 
+    const prodCategory = category?.trim() || null;
+    const prodDuration = duration || "lifetime";
+    const prodDurationDays = durationDays ?? 0;
+    const prodCustomLabel = customDurationLabel?.trim() || null;
+
+    let prodVariants = null;
+    if (Array.isArray(variants) && variants.length > 0) {
+      const seenPredefined = new Set<string>();
+      let customCount = 0;
+      const unique = [];
+      for (const v of variants) {
+        if (!v || !v.duration) continue;
+        if (v.duration === "custom") {
+          if (customCount < 5) {
+            customCount++;
+            unique.push(v);
+          }
+        } else {
+          if (!seenPredefined.has(v.duration)) {
+            seenPredefined.add(v.duration);
+            unique.push(v);
+          }
+        }
+      }
+      prodVariants = unique.length > 0 ? JSON.stringify(unique) : null;
+    }
+
     // Insert product — keys only platform
     await db.insert(products).values({
       id: productId,
       shopId: userShop.id,
       title,
       description: description || null,
+      category: prodCategory,
       receiptNote: receiptNote || null,
       type: "key",
       price: price.toString(),
@@ -55,23 +99,91 @@ export async function POST(req: Request) {
       stockLimit: null,
       thumbnailUrl: primaryThumb,
       images: processedImages.length > 0 ? JSON.stringify(processedImages) : null,
+      duration: prodDuration,
+      durationDays: prodDurationDays,
+      customDurationLabel: prodCustomLabel,
+      variants: prodVariants,
       isActive: true,
     });
 
-    // Insert inventory keys
-    if (Array.isArray(keys) && keys.length > 0) {
-      const keysToInsert = keys
-        .map((k: string) => k.trim())
-        .filter((k: string) => k.length > 0)
-        .map((keyValue: string) => ({
-          id: crypto.randomUUID(),
-          productId: productId,
-          keyValue,
-          isUsed: false,
-        }));
+    // Insert inventory keys (supporting flat, categorized, and structured keys)
+    const allKeysToInsert: any[] = [];
 
-      if (keysToInsert.length > 0) {
-        await db.insert(inventoryKeys).values(keysToInsert);
+    // 1. Structured keys with explicit duration / variant
+    if (Array.isArray(structuredKeys) && structuredKeys.length > 0) {
+      for (const sk of structuredKeys) {
+        if (sk && sk.keyValue && sk.keyValue.trim()) {
+          allKeysToInsert.push({
+            id: crypto.randomUUID(),
+            productId,
+            variantId: sk.variantId || null,
+            keyValue: sk.keyValue.trim(),
+            duration: sk.duration || prodDuration,
+            durationDays: sk.durationDays ?? prodDurationDays,
+            customDurationLabel: prodCustomLabel,
+            isUsed: false,
+          });
+        }
+      }
+    }
+
+    // 2. Categorized keys record: { [durationOrVariantId]: string[] }
+    if (categorizedKeys && typeof categorizedKeys === "object") {
+      const parsedVarList = Array.isArray(variants) ? variants : [];
+      for (const [catKey, keyList] of Object.entries(categorizedKeys)) {
+        if (Array.isArray(keyList)) {
+          const matchingVariant = parsedVarList.find((v) => v.id === catKey || v.duration === catKey);
+          const catDuration = matchingVariant?.duration || catKey || prodDuration;
+          const catDays = matchingVariant?.durationDays ?? prodDurationDays;
+          const catVarId = matchingVariant?.id || (catKey.includes("_") ? catKey : null);
+
+          for (const rawKey of keyList) {
+            if (typeof rawKey === "string" && rawKey.trim()) {
+              allKeysToInsert.push({
+                id: crypto.randomUUID(),
+                productId,
+                variantId: catVarId,
+                keyValue: rawKey.trim(),
+                duration: catDuration,
+                durationDays: catDays,
+                customDurationLabel: prodCustomLabel,
+                isUsed: false,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Fallback flat keys array
+    if (allKeysToInsert.length === 0 && Array.isArray(keys) && keys.length > 0) {
+      for (const k of keys) {
+        if (typeof k === "string" && k.trim()) {
+          allKeysToInsert.push({
+            id: crypto.randomUUID(),
+            productId,
+            keyValue: k.trim(),
+            duration: prodDuration,
+            durationDays: prodDurationDays,
+            customDurationLabel: prodCustomLabel,
+            isUsed: false,
+          });
+        }
+      }
+    }
+
+    if (allKeysToInsert.length > 0) {
+      // Deduplicate key values
+      const seenKeyStrings = new Set<string>();
+      const deduplicatedKeys = allKeysToInsert.filter((item) => {
+        if (seenKeyStrings.has(item.keyValue)) return false;
+        seenKeyStrings.add(item.keyValue);
+        return true;
+      });
+
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < deduplicatedKeys.length; i += BATCH_SIZE) {
+        await db.insert(inventoryKeys).values(deduplicatedKeys.slice(i, i + BATCH_SIZE));
       }
     }
 
@@ -163,12 +275,21 @@ export async function GET(req: Request) {
         parsedImages = [product.thumbnailUrl];
       }
 
+      let parsedVariants: any[] = [];
+      if (product.variants) {
+        try {
+          parsedVariants = JSON.parse(product.variants);
+        } catch {
+          parsedVariants = [];
+        }
+      }
+
       const keys = await db
         .select()
         .from(inventoryKeys)
         .where(eq(inventoryKeys.productId, productId));
 
-      return NextResponse.json({ product: { ...product, parsedImages }, keys });
+      return NextResponse.json({ product: { ...product, parsedImages, parsedVariants }, keys });
     }
 
     const allProducts = await db
@@ -202,7 +323,24 @@ export async function PUT(req: Request) {
       );
     }
 
-    const { id, title, description, price, thumbnailUrl, images, isActive, newKeys, receiptNote } = result.data;
+    const {
+      id,
+      title,
+      description,
+      category,
+      price,
+      thumbnailUrl,
+      images,
+      isActive,
+      newKeys,
+      structuredKeys,
+      categorizedKeys,
+      receiptNote,
+      duration,
+      durationDays,
+      customDurationLabel,
+      variants,
+    } = result.data;
 
     const userShop = await getActiveMerchantShop(session.user.id);
 
@@ -221,8 +359,36 @@ export async function PUT(req: Request) {
     const updateData: Record<string, any> = { updatedAt: new Date() };
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
+    if (category !== undefined) updateData.category = category ? category.trim() : null;
     if (price !== undefined) updateData.price = price.toString();
     if (receiptNote !== undefined) updateData.receiptNote = receiptNote || null;
+    if (duration !== undefined) updateData.duration = duration;
+    if (durationDays !== undefined) updateData.durationDays = durationDays;
+    if (customDurationLabel !== undefined) updateData.customDurationLabel = customDurationLabel?.trim() || null;
+    if (variants !== undefined) {
+      if (Array.isArray(variants) && variants.length > 0) {
+        const seenPredefined = new Set<string>();
+        let customCount = 0;
+        const unique = [];
+        for (const v of variants) {
+          if (!v || !v.duration) continue;
+          if (v.duration === "custom") {
+            if (customCount < 5) {
+              customCount++;
+              unique.push(v);
+            }
+          } else {
+            if (!seenPredefined.has(v.duration)) {
+              seenPredefined.add(v.duration);
+              unique.push(v);
+            }
+          }
+        }
+        updateData.variants = unique.length > 0 ? JSON.stringify(unique) : null;
+      } else {
+        updateData.variants = null;
+      }
+    }
     if (images !== undefined) {
       const processedImages = Array.isArray(images)
         ? images.map((u: string) => (typeof u === "string" ? u.trim() : "")).filter(Boolean).slice(0, 5)
@@ -237,19 +403,83 @@ export async function PUT(req: Request) {
 
     await db.update(products).set(updateData).where(eq(products.id, id));
 
-    if (Array.isArray(newKeys) && newKeys.length > 0) {
-      const keysToInsert = newKeys
-        .map((k: string) => k.trim())
-        .filter((k: string) => k.length > 0)
-        .map((keyValue: string) => ({
-          id: crypto.randomUUID(),
-          productId: id,
-          keyValue,
-          isUsed: false,
-        }));
+    // Insert keys (supporting structuredKeys, categorizedKeys, and newKeys)
+    const allKeysToInsert: any[] = [];
+    const prodDuration = duration || existingProduct.duration || "lifetime";
+    const prodDurationDays = durationDays !== undefined ? durationDays : (existingProduct.durationDays ?? 0);
+    const prodCustomLabel = customDurationLabel !== undefined ? (customDurationLabel?.trim() || null) : existingProduct.customDurationLabel;
 
-      if (keysToInsert.length > 0) {
-        await db.insert(inventoryKeys).values(keysToInsert);
+    if (Array.isArray(structuredKeys) && structuredKeys.length > 0) {
+      for (const sk of structuredKeys) {
+        if (sk && sk.keyValue && sk.keyValue.trim()) {
+          allKeysToInsert.push({
+            id: crypto.randomUUID(),
+            productId: id,
+            variantId: sk.variantId || null,
+            keyValue: sk.keyValue.trim(),
+            duration: sk.duration || prodDuration,
+            durationDays: sk.durationDays ?? prodDurationDays,
+            customDurationLabel: prodCustomLabel,
+            isUsed: false,
+          });
+        }
+      }
+    }
+
+    if (categorizedKeys && typeof categorizedKeys === "object") {
+      const parsedVarList = Array.isArray(variants) ? variants : [];
+      for (const [catKey, keyList] of Object.entries(categorizedKeys)) {
+        if (Array.isArray(keyList)) {
+          const matchingVariant = parsedVarList.find((v) => v.id === catKey || v.duration === catKey);
+          const catDuration = matchingVariant?.duration || catKey || prodDuration;
+          const catDays = matchingVariant?.durationDays ?? prodDurationDays;
+          const catVarId = matchingVariant?.id || (catKey.includes("_") ? catKey : null);
+
+          for (const rawKey of keyList) {
+            if (typeof rawKey === "string" && rawKey.trim()) {
+              allKeysToInsert.push({
+                id: crypto.randomUUID(),
+                productId: id,
+                variantId: catVarId,
+                keyValue: rawKey.trim(),
+                duration: catDuration,
+                durationDays: catDays,
+                customDurationLabel: prodCustomLabel,
+                isUsed: false,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (allKeysToInsert.length === 0 && Array.isArray(newKeys) && newKeys.length > 0) {
+      for (const k of newKeys) {
+        if (typeof k === "string" && k.trim()) {
+          allKeysToInsert.push({
+            id: crypto.randomUUID(),
+            productId: id,
+            keyValue: k.trim(),
+            duration: prodDuration,
+            durationDays: prodDurationDays,
+            customDurationLabel: prodCustomLabel,
+            isUsed: false,
+          });
+        }
+      }
+    }
+
+    if (allKeysToInsert.length > 0) {
+      const seenKeyStrings = new Set<string>();
+      const deduplicatedKeys = allKeysToInsert.filter((item) => {
+        if (seenKeyStrings.has(item.keyValue)) return false;
+        seenKeyStrings.add(item.keyValue);
+        return true;
+      });
+
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < deduplicatedKeys.length; i += BATCH_SIZE) {
+        await db.insert(inventoryKeys).values(deduplicatedKeys.slice(i, i + BATCH_SIZE));
       }
     }
 

@@ -33,13 +33,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Webhook endpoint not found" }, { status: 404 });
     }
 
+    const { validateWebhookUrl } = await import("@/lib/webhooks");
+    const urlValidation = validateWebhookUrl(endpoint.url);
+    if (!urlValidation.valid) {
+      return NextResponse.json({ error: `Destination blocked: ${urlValidation.error}` }, { status: 400 });
+    }
+
     const testPayload = {
       id: `evt_test_${crypto.randomUUID().slice(0, 12)}`,
       event: "test.ping",
       createdAt: new Date().toISOString(),
       shopId: shop.id,
       data: {
-        message: "This is a test webhook from Vaultly Digital Commerce.",
+        message: "This is a test webhook from KRYPT MARKET Protocol.",
         shopName: shop.name,
         shopSlug: shop.slug,
         timestamp: Date.now(),
@@ -60,19 +66,19 @@ export async function POST(req: Request) {
 
     if (isDiscord) {
       outgoingBody = JSON.stringify({
-        username: "Vaultly Webhooks",
-        content: `🔔 **[Vaultly Test Ping]** Webhook connection verified successfully for **${shop.name}**!`,
+        username: "KRYPT Webhooks",
+        content: `⚡ **[KRYPT Test Ping]** Webhook connection verified successfully for **${shop.name}**!`,
         embeds: [
           {
             title: "⚡ Webhook Test Verified",
-            description: `Your Discord webhook endpoint is active and ready to receive real-time event notifications from Vaultly.`,
-            color: 0x6366f1,
+            description: `Your Discord webhook endpoint is active and ready to receive real-time event notifications from KRYPT.`,
+            color: 0x00ff66,
             fields: [
               { name: "Event", value: "`test.ping`", inline: true },
               { name: "Store", value: shop.name, inline: true },
               { name: "Timestamp", value: new Date().toUTCString(), inline: false },
             ],
-            footer: { text: "Vaultly Digital Commerce • Developer Platform" },
+            footer: { text: "KRYPT MARKET • Developer Platform" },
           },
         ],
       });
@@ -93,7 +99,9 @@ export async function POST(req: Request) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "User-Agent": "Vaultly-Webhooks/1.0",
+          "User-Agent": "KRYPT-Webhooks/2.0",
+          "X-Krypt-Event": "test.ping",
+          "X-Krypt-Signature": `sha256=${signature}`,
           "X-Vaultly-Event": "test.ping",
           "X-Vaultly-Signature": `sha256=${signature}`,
         },

@@ -448,7 +448,7 @@ export function AdminRejectModal({
               "Missing logo, banner or store branding",
               "Invalid or misleading product descriptions",
               "Suspicious activity or prohibited digital goods",
-              "Violates Vaultly Merchant Terms of Service",
+              "Violates KRYPT Merchant Terms of Service",
             ].map((preset) => (
               <button
                 key={preset}

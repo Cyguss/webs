@@ -101,7 +101,7 @@ export function AdminLockdownBanner({
     );
   }
 
-  // Ordinary Discord Staff Admin view
+  // Ordinary Discord Staff Admin view: Show status badge without duplicate kill-switch button
   return (
     <div
       style={{
@@ -118,18 +118,15 @@ export function AdminLockdownBanner({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <ShieldCheck size={18} color="#ffffff" />
+        <ShieldCheck size={18} color="#34d399" />
         <span style={{ fontSize: 13, color: "var(--color-foreground)" }}>
           Signed in as <strong>Discord Staff</strong> (@{discordUsername || "Staff"}). Live role check enforced via Discord Bot API.
         </span>
       </div>
-      <button
-        onClick={onShowPanicModal}
-        className="btn btn-danger"
-        style={{ fontSize: 12, padding: "6px 14px" }}
-      >
-        Panic Lockdown (Kill-Switch)
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-muted-foreground)" }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
+        <span>Staff Session Active</span>
+      </div>
     </div>
   );
 }

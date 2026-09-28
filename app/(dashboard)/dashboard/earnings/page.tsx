@@ -108,13 +108,13 @@ export default async function EarningsPage() {
 
         <div className="card">
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-muted-foreground)", fontSize: 13, fontWeight: 600 }}>
-            <ShieldCheck size={16} color="var(--color-success)" /> Lifetime Earned
+            <ShieldCheck size={16} color="var(--color-success)" /> Lifetime Volume
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: "var(--color-foreground)", marginTop: 12 }}>
             ${totalEarned.toFixed(2)}
           </div>
           <div style={{ fontSize: 12, color: "var(--color-muted-foreground)", marginTop: 4 }}>
-            Gross revenue processed
+            Net earnings: ${(totalEarned * 0.95).toFixed(2)} (after 5% fee)
           </div>
         </div>
 
@@ -149,7 +149,7 @@ export default async function EarningsPage() {
                   <th>Requested</th>
                   <th>Method</th>
                   <th>Destination</th>
-                  <th>Fee (5%)</th>
+                  <th>Withdrawal Fee</th>
                   <th>Net Sent</th>
                   <th>Status</th>
                   <th>Date</th>

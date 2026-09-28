@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,8 +19,17 @@ import {
   ShieldCheck,
   AlertCircle,
   AlertTriangle,
+  Layers,
+  Sparkles,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/components/toast-context";
+import KeyDurationSelector from "@/components/key-duration-selector";
+import { DURATION_OPTIONS, getKeyDurationDisplay, KeyDurationType } from "@/lib/key-duration";
+import { ProductVariantsManager } from "@/components/product-variants-manager";
+import { ProductVariant } from "@/lib/validations/product";
+import { ProductCategorySelector } from "@/components/product-category-selector";
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: productId } = use(params);
@@ -32,6 +41,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<string | null>(null);
   const [receiptNote, setReceiptNote] = useState("");
   const [price, setPrice] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
@@ -39,14 +49,27 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [images, setImages] = useState<string[]>([]);
   const [imageInput, setImageInput] = useState("");
 
+  // Key duration state
+  const [duration, setDuration] = useState<KeyDurationType>("lifetime");
+  const [durationDays, setDurationDays] = useState<number>(0);
+  const [customDurationLabel, setCustomDurationLabel] = useState("");
+
+  // Multi-duration variants state
+  const [variantsEnabled, setVariantsEnabled] = useState(false);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+
   // Unsaved changes state
   const [initialState, setInitialState] = useState<{
     title: string;
     description: string;
+    category: string | null;
     receiptNote: string;
     price: string;
     isActive: boolean;
     images: string[];
+    duration: KeyDurationType;
+    durationDays: number;
+    customDurationLabel: string;
   } | null>(null);
   const [confirmExitOpen, setConfirmExitOpen] = useState(false);
 
@@ -72,14 +95,33 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   // License keys from DB
   const [dbKeys, setDbKeys] = useState<any[]>([]);
+  // Single-duration newly added keys
   const [newKeysList, setNewKeysList] = useState<string[]>([]);
+  // Multi-duration newly added keys: { [variantId]: string[] }
+  const [categorizedNewKeys, setCategorizedNewKeys] = useState<Record<string, string[]>>({});
+  const [activeVariantTabId, setActiveVariantTabId] = useState<string>("");
+
   const [keyInput, setKeyInput] = useState("");
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkInput, setBulkInput] = useState("");
+  const [bulkTargetVariantId, setBulkTargetVariantId] = useState<string>("");
+  const [bulkMultiCategoryInputs, setBulkMultiCategoryInputs] = useState<Record<string, string>>({});
+  const [bulkModalMode, setBulkModalMode] = useState<"single" | "multi">("single");
+
   const [showAllModal, setShowAllModal] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
+  const [allModalCategoryFilter, setAllModalCategoryFilter] = useState<string>("all");
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const [deletingKeyId, setDeletingKeyId] = useState<string | null>(null);
+
+  // Active variant resolution
+  const currentVariant = useMemo(() => {
+    if (!variantsEnabled || variants.length === 0) return null;
+    const found = variants.find((v) => v.id === activeVariantTabId);
+    return found || variants[0];
+  }, [variantsEnabled, variants, activeVariantTabId]);
+
+  const currentVariantId = currentVariant?.id || "";
 
   useEffect(() => {
     async function loadProduct() {
@@ -105,13 +147,36 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             setImages(loadedImages);
           }
 
+          const loadedDuration = (data.product.duration || "lifetime") as KeyDurationType;
+          const loadedDays = data.product.durationDays ?? 0;
+          const loadedLabel = data.product.customDurationLabel || "";
+          const loadedCategory = data.product.category || null;
+          setCategory(loadedCategory);
+          setDuration(loadedDuration);
+          setDurationDays(loadedDays);
+          setCustomDurationLabel(loadedLabel);
+
+          let loadedVariants: ProductVariant[] = [];
+          if (Array.isArray(data.product.parsedVariants) && data.product.parsedVariants.length > 0) {
+            loadedVariants = data.product.parsedVariants;
+            setVariants(loadedVariants);
+            setVariantsEnabled(true);
+            if (loadedVariants.length > 0) {
+              setActiveVariantTabId(loadedVariants[0].id);
+            }
+          }
+
           setInitialState({
             title: data.product.title || "",
             description: data.product.description || "",
+            category: loadedCategory,
             receiptNote: data.product.receiptNote || "",
             price: (data.product.price || "").toString(),
             isActive: data.product.isActive ?? true,
             images: loadedImages,
+            duration: loadedDuration,
+            durationDays: loadedDays,
+            customDurationLabel: loadedLabel,
           });
         }
         if (Array.isArray(data.keys)) {
@@ -132,23 +197,88 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       .split(/[\n,]/)
       .map((k) => k.trim())
       .filter((k) => k.length > 0);
-    setNewKeysList((prev) => [...prev, ...splitKeys]);
+
+    if (variantsEnabled && variants.length > 0 && currentVariantId) {
+      const existing = categorizedNewKeys[currentVariantId] || [];
+      const uniqueNew = splitKeys.filter((k) => !existing.includes(k));
+      setCategorizedNewKeys({
+        ...categorizedNewKeys,
+        [currentVariantId]: [...existing, ...uniqueNew],
+      });
+    } else {
+      setNewKeysList((prev) => [...prev, ...splitKeys]);
+    }
     setKeyInput("");
   }
 
+  function handleOpenBulkModal() {
+    setBulkTargetVariantId(currentVariantId || (variants[0]?.id ?? ""));
+    setBulkInput("");
+    const initialMulti: Record<string, string> = {};
+    for (const v of variants) {
+      initialMulti[v.id] = "";
+    }
+    setBulkMultiCategoryInputs(initialMulti);
+    setShowBulkModal(true);
+  }
+
   function handleAddBulk() {
-    if (!bulkInput.trim()) return;
-    const splitKeys = bulkInput
-      .split("\n")
-      .map((k) => k.trim())
-      .filter((k) => k.length > 0);
-    setNewKeysList((prev) => [...prev, ...splitKeys]);
+    if (variantsEnabled && variants.length > 0) {
+      if (bulkModalMode === "multi") {
+        const nextCategorized = { ...categorizedNewKeys };
+        let addedCount = 0;
+        for (const [vId, text] of Object.entries(bulkMultiCategoryInputs)) {
+          if (!text.trim()) continue;
+          const split = text
+            .split(/[\r\n,]+/)
+            .map((k) => k.trim())
+            .filter((k) => k.length > 0);
+          const existing = nextCategorized[vId] || [];
+          const uniqueNew = split.filter((k) => !existing.includes(k));
+          nextCategorized[vId] = [...existing, ...uniqueNew];
+          addedCount += uniqueNew.length;
+        }
+        setCategorizedNewKeys(nextCategorized);
+        toast.success("Bulk Keys Added", `Staged ${addedCount} keys across duration tiers.`);
+      } else {
+        const targetVId = bulkTargetVariantId || currentVariantId;
+        if (!bulkInput.trim() || !targetVId) return;
+        const splitKeys = bulkInput
+          .split(/[\r\n,]+/)
+          .map((k) => k.trim())
+          .filter((k) => k.length > 0);
+        const existing = categorizedNewKeys[targetVId] || [];
+        const uniqueNew = splitKeys.filter((k) => !existing.includes(k));
+        setCategorizedNewKeys({
+          ...categorizedNewKeys,
+          [targetVId]: [...existing, ...uniqueNew],
+        });
+        toast.success("Keys Staged", `Added ${uniqueNew.length} keys to duration category.`);
+      }
+    } else {
+      if (!bulkInput.trim()) return;
+      const splitKeys = bulkInput
+        .split(/[\r\n,]+/)
+        .map((k) => k.trim())
+        .filter((k) => k.length > 0);
+      setNewKeysList((prev) => [...prev, ...splitKeys]);
+      toast.success("Keys Staged", `Added ${splitKeys.length} new keys.`);
+    }
     setBulkInput("");
     setShowBulkModal(false);
   }
 
-  function handleRemoveNewKey(idx: number) {
-    setNewKeysList((prev) => prev.filter((_, i) => i !== idx));
+  function handleRemoveNewKey(idx: number, varId?: string) {
+    if (variantsEnabled && variants.length > 0) {
+      const vId = varId || currentVariantId;
+      const existing = categorizedNewKeys[vId] || [];
+      setCategorizedNewKeys({
+        ...categorizedNewKeys,
+        [vId]: existing.filter((_, i) => i !== idx),
+      });
+    } else {
+      setNewKeysList((prev) => prev.filter((_, i) => i !== idx));
+    }
   }
 
   async function handleDeleteDbKey(keyId: string) {
@@ -187,6 +317,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
     setSaving(true);
     try {
+      const isMulti = variantsEnabled && variants.length > 0;
       const res = await fetch("/api/products", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -194,12 +325,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           id: productId,
           title,
           description,
+          category: category?.trim() || null,
           receiptNote: receiptNote.trim() || null,
           price: parseFloat(price),
           thumbnailUrl: images[0] || thumbnailUrl || null,
           images,
+          duration,
+          durationDays: duration === "lifetime" ? 0 : durationDays,
+          customDurationLabel: duration === "custom" ? customDurationLabel.trim() || null : null,
+          variants: isMulti ? variants : null,
           isActive,
-          newKeys: newKeysList,
+          newKeys: !isMulti ? newKeysList : [],
+          categorizedKeys: isMulti ? categorizedNewKeys : null,
         }),
       });
 
@@ -212,12 +349,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       setInitialState({
         title,
         description,
+        category,
         receiptNote,
         price,
         isActive,
         images,
+        duration,
+        durationDays,
+        customDurationLabel,
       });
       setNewKeysList([]);
+      setCategorizedNewKeys({});
       // Reload keys
       const keysRes = await fetch(`/api/products/${productId}/keys`);
       if (keysRes.ok) {
@@ -233,14 +375,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  const stagedNewCount = variantsEnabled && variants.length > 0
+    ? Object.values(categorizedNewKeys).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0)
+    : newKeysList.length;
+
   const isDirty = Boolean(
     initialState &&
       (title !== initialState.title ||
         description !== initialState.description ||
+        category !== initialState.category ||
+        receiptNote !== initialState.receiptNote ||
         price !== initialState.price ||
         isActive !== initialState.isActive ||
+        duration !== initialState.duration ||
+        durationDays !== initialState.durationDays ||
+        customDurationLabel !== initialState.customDurationLabel ||
         JSON.stringify(images) !== JSON.stringify(initialState.images) ||
-        newKeysList.length > 0)
+        stagedNewCount > 0)
   );
 
   useEffect(() => {
@@ -378,6 +529,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             />
           </div>
 
+          {/* Category Selector */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label className="label" style={{ margin: 0 }}>Category</label>
+              <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                Organize product into custom storefront tabs (e.g. Softwares, Scripts)
+              </span>
+            </div>
+            <ProductCategorySelector
+              value={category}
+              onChange={setCategory}
+            />
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label className="label">Description</label>
             <textarea
@@ -397,7 +562,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             <textarea
               className="input"
               rows={3}
-              placeholder="e.g. Thank you for your purchase! Join discord.gg/vaultly to claim your role, or review the activation manual at docs.vaultly.io"
+              placeholder="e.g. Thank you for your purchase! Join discord.gg/krypt to claim your role, or review the activation manual at docs.krypt.market"
               value={receiptNote}
               onChange={(e) => setReceiptNote(e.target.value)}
             />
@@ -543,26 +708,72 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
+        {/* License Key Duration & Validity Settings */}
+        {!variantsEnabled && (
+          <div className="card">
+            <KeyDurationSelector
+              value={duration}
+              durationDays={durationDays}
+              customDurationLabel={customDurationLabel}
+              onChange={(newDuration, newDays, newLabel) => {
+                setDuration(newDuration);
+                setDurationDays(newDays);
+                setCustomDurationLabel(newLabel);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Multi-Duration Key Variants */}
+        <ProductVariantsManager
+          enabled={variantsEnabled}
+          onToggleEnabled={setVariantsEnabled}
+          variants={variants}
+          onChangeVariants={setVariants}
+          basePrice={price}
+        />
+
         {/* License Keys & Stock Manager */}
         <div className="card" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--color-foreground)", margin: 0 }}>
-                License Keys & Stock Management
-              </h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--color-foreground)", margin: 0 }}>
+                  License Keys & Stock Inventory
+                </h3>
+                {variantsEnabled && variants.length > 0 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      background: "rgba(99, 102, 241, 0.15)",
+                      color: "#818cf8",
+                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                    }}
+                  >
+                    CATEGORIZED BY DURATION
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: "4px 0 0" }}>
-                {unusedDbKeys.length} keys in stock • {usedDbKeys.length} delivered
-                {newKeysList.length > 0 && ` • +${newKeysList.length} ready to save`}
+                {unusedDbKeys.length} in stock • {usedDbKeys.length} delivered
+                {stagedNewCount > 0 && ` • +${stagedNewCount} ready to save`}
               </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className={`badge ${unusedDbKeys.length > 0 ? "badge-success" : "badge-danger"}`}>
-                {unusedDbKeys.length + newKeysList.length} Available
-              </span>
+              <Link
+                href={`/dashboard/products/${productId}/keys`}
+                className="btn btn-ghost"
+                style={{ fontSize: 12, padding: "6px 12px", gap: 6, color: "#818cf8" }}
+              >
+                <Layers size={14} /> Open Keys Vault
+              </Link>
               <button
                 type="button"
-                onClick={() => setShowBulkModal(true)}
+                onClick={handleOpenBulkModal}
                 className="btn btn-secondary"
                 style={{ fontSize: 12, padding: "6px 12px", gap: 6 }}
               >
@@ -571,6 +782,74 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
 
+          {/* If Multi-Duration is enabled: Category Tabs */}
+          {variantsEnabled && variants.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)" }}>
+                Filter & Add Keys by Duration Tier:
+              </span>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                {variants.map((v) => {
+                  const isSelected = v.id === currentVariantId;
+                  const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
+                  const vDbUnused = dbKeys.filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration)).length;
+                  const vStaged = (categorizedNewKeys[v.id] || []).length;
+                  const totalV = vDbUnused + vStaged;
+
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setActiveVariantTabId(v.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 14px",
+                        borderRadius: 10,
+                        border: isSelected ? `2px solid ${dMeta.badgeColor}` : "1px solid var(--color-border)",
+                        background: isSelected ? `${dMeta.badgeColor}15` : "var(--color-surface-2)",
+                        color: isSelected ? "var(--color-foreground)" : "var(--color-muted-foreground)",
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          background: `${dMeta.badgeColor}25`,
+                          color: dMeta.badgeColor,
+                        }}
+                      >
+                        {dMeta.shortLabel}
+                      </span>
+                      <span>{v.label}</span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: "2px 7px",
+                          borderRadius: 12,
+                          background: totalV > 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.08)",
+                          color: totalV > 0 ? "#34d399" : "var(--color-muted-foreground)",
+                        }}
+                      >
+                        {totalV} keys
+                        {vStaged > 0 && <span style={{ color: "#818cf8", marginLeft: 4 }}>(+{vStaged})</span>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Add Key Input */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div style={{ position: "relative", flex: 1 }}>
@@ -578,7 +857,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <input
                 type="text"
                 className="input"
-                placeholder="Type new license code and press Add"
+                placeholder={
+                  variantsEnabled && currentVariant
+                    ? `Enter serial key for [${currentVariant.label}] and press Add...`
+                    : "Type new license code (e.g. VIP-2026-ABCD-1234) and press Add"
+                }
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -602,101 +885,146 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Preview list (max 5) */}
-          {combinedUnused.length === 0 ? (
-            <div
-              style={{
-                padding: "26px 16px",
-                textAlign: "center",
-                background: "rgba(255,255,255,0.02)",
-                border: "1px dashed var(--color-border)",
-                borderRadius: "var(--radius-md)",
-                color: "var(--color-muted-foreground)",
-                fontSize: 13,
-              }}
-            >
-              No available license keys in stock. Add codes above to replenish inventory.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {previewKeys.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: item.isNew ? "rgba(99, 102, 241, 0.08)" : "var(--color-surface-2)",
-                      border: item.isNew ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid var(--color-border)",
-                      fontSize: 13,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", minWidth: 26 }}>
-                        #{idx + 1}
-                      </span>
-                      <code style={{ fontFamily: "monospace", color: "var(--color-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {item.value}
-                      </code>
-                      {item.isNew && (
-                        <span className="badge badge-primary" style={{ fontSize: 9, padding: "1px 5px" }}>
-                          New
-                        </span>
-                      )}
-                    </div>
+          {(() => {
+            let activeItems: Array<{ id: string; value: string; isNew: boolean; varId?: string; varLabel?: string }> = [];
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => copyKeyText(item.value, item.id)}
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 8px" }}
-                        title="Copy key"
-                      >
-                        {copiedKeyId === item.id ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.isNew) {
-                            const newIdx = parseInt(item.id.replace("new_", ""), 10);
-                            handleRemoveNewKey(newIdx);
-                          } else {
-                            handleDeleteDbKey(item.id);
-                          }
-                        }}
-                        disabled={deletingKeyId === item.id}
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 8px", color: "var(--color-danger)" }}
-                        title="Remove key"
-                      >
-                        {deletingKeyId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            if (variantsEnabled && variants.length > 0 && currentVariant) {
+              const matchingDb = dbKeys
+                .filter((k) => !k.isUsed && (k.variantId === currentVariant.id || k.duration === currentVariant.duration))
+                .map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: currentVariant.id, varLabel: currentVariant.label }));
+              const matchingStaged = (categorizedNewKeys[currentVariant.id] || []).map((k, idx) => ({
+                id: `new_${currentVariant.id}_${idx}`,
+                value: k,
+                isNew: true,
+                varId: currentVariant.id,
+                varLabel: currentVariant.label,
+              }));
+              activeItems = [...matchingDb, ...matchingStaged];
+            } else {
+              activeItems = [
+                ...unusedDbKeys.map((k) => ({ id: k.id, value: k.keyValue, isNew: false })),
+                ...newKeysList.map((k, idx) => ({ id: `new_${idx}`, value: k, isNew: true })),
+              ];
+            }
 
-              {/* View All Keys Button */}
-              {combinedUnused.length > 5 && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
-                  <span style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
-                    Showing 5 of {combinedUnused.length} available keys
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllModal(true)}
-                    className="btn btn-secondary"
-                    style={{ fontSize: 12, padding: "5px 12px", gap: 6 }}
-                  >
-                    <ExternalLink size={13} /> View All {combinedUnused.length} Keys
-                  </button>
+            if (activeItems.length === 0) {
+              return (
+                <div
+                  style={{
+                    padding: "26px 16px",
+                    textAlign: "center",
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px dashed var(--color-border)",
+                    borderRadius: "var(--radius-md)",
+                    color: "var(--color-muted-foreground)",
+                    fontSize: 13,
+                  }}
+                >
+                  {variantsEnabled && currentVariant ? (
+                    <div>
+                      No available keys in stock for <strong>{currentVariant.label}</strong>. Type a code above or use <strong>Bulk Paste</strong>.
+                    </div>
+                  ) : (
+                    <div>
+                      No available license keys in stock. Add codes above to replenish inventory.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              );
+            }
+
+            const previewSlice = activeItems.slice(0, 5);
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {previewSlice.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: item.isNew ? "rgba(99, 102, 241, 0.08)" : "var(--color-surface-2)",
+                        border: item.isNew ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid var(--color-border)",
+                        fontSize: 13,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", minWidth: 26 }}>
+                          #{idx + 1}
+                        </span>
+                        <code style={{ fontFamily: "monospace", color: "var(--color-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {item.value}
+                        </code>
+                        {item.isNew && (
+                          <span className="badge badge-primary" style={{ fontSize: 9, padding: "1px 5px" }}>
+                            New (Unsaved)
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => copyKeyText(item.value, item.id)}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 8px" }}
+                          title="Copy key"
+                        >
+                          {copiedKeyId === item.id ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (item.isNew) {
+                              if (variantsEnabled && item.varId) {
+                                const idxInVar = (categorizedNewKeys[item.varId] || []).indexOf(item.value);
+                                if (idxInVar >= 0) handleRemoveNewKey(idxInVar, item.varId);
+                              } else {
+                                const idxInFlat = newKeysList.indexOf(item.value);
+                                if (idxInFlat >= 0) handleRemoveNewKey(idxInFlat);
+                              }
+                            } else {
+                              handleDeleteDbKey(item.id);
+                            }
+                          }}
+                          disabled={deletingKeyId === item.id}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 8px", color: "var(--color-danger)" }}
+                          title="Remove key"
+                        >
+                          {deletingKeyId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* View All Keys Button */}
+                {activeItems.length > 5 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
+                    <span style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
+                      Showing 5 of {activeItems.length} available keys for {currentVariant?.label || "this product"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAllModalCategoryFilter(variantsEnabled ? currentVariantId : "all");
+                        setShowAllModal(true);
+                      }}
+                      className="btn btn-secondary"
+                      style={{ fontSize: 12, padding: "5px 12px", gap: 6 }}
+                    >
+                      <ExternalLink size={13} /> View All {unusedDbKeys.length + stagedNewCount} Available Keys
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Submit Actions */}
@@ -736,15 +1064,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           <div
             className="card"
             style={{
-              maxWidth: 500,
+              maxWidth: variantsEnabled && variants.length > 0 ? 680 : 500,
               width: "100%",
               padding: 24,
               border: "1px solid var(--color-border)",
               boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Bulk Import Keys</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Bulk Import Keys</h3>
+                <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
+                  Paste serial keys separated by newlines or commas.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowBulkModal(false)}
@@ -755,20 +1091,100 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </button>
             </div>
 
-            <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", marginBottom: 12 }}>
-              Paste your serial keys below, one key per line:
-            </p>
+            {/* Mode selector if multi-variants */}
+            {variantsEnabled && variants.length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setBulkModalMode("single")}
+                  className={bulkModalMode === "single" ? "btn btn-primary" : "btn btn-secondary"}
+                  style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
+                >
+                  Single Category Paste
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkModalMode("multi")}
+                  className={bulkModalMode === "multi" ? "btn btn-primary" : "btn btn-secondary"}
+                  style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
+                >
+                  Multi-Category Batch Paste
+                </button>
+              </div>
+            )}
 
-            <textarea
-              className="input"
-              rows={8}
-              placeholder={"XXXX-YYYY-ZZZZ-1111\nXXXX-YYYY-ZZZZ-2222\nXXXX-YYYY-ZZZZ-3333"}
-              value={bulkInput}
-              onChange={(e) => setBulkInput(e.target.value)}
-              style={{ fontFamily: "monospace", fontSize: 13, marginBottom: 16 }}
-            />
+            {/* Single category paste or single product */}
+            {(!variantsEnabled || variants.length === 0 || bulkModalMode === "single") && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+                {variantsEnabled && variants.length > 0 && (
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)", marginBottom: 6, display: "block" }}>
+                      Target Duration Category:
+                    </label>
+                    <select
+                      className="input"
+                      value={bulkTargetVariantId}
+                      onChange={(e) => setBulkTargetVariantId(e.target.value)}
+                      style={{ fontSize: 13, height: 38 }}
+                    >
+                      {variants.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.label} (${v.price} USD)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <textarea
+                  className="input"
+                  rows={8}
+                  placeholder={"XXXX-YYYY-ZZZZ-1111\nXXXX-YYYY-ZZZZ-2222\nXXXX-YYYY-ZZZZ-3333"}
+                  value={bulkInput}
+                  onChange={(e) => setBulkInput(e.target.value)}
+                  style={{ fontFamily: "monospace", fontSize: 13 }}
+                />
+              </div>
+            )}
+
+            {/* Multi-category batch paste */}
+            {variantsEnabled && variants.length > 0 && bulkModalMode === "multi" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, overflowY: "auto", paddingRight: 4 }}>
+                {variants.map((v) => {
+                  const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
+                  return (
+                    <div key={v.id} style={{ background: "var(--color-surface-2)", padding: 12, borderRadius: 10, border: "1px solid var(--color-border)" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: `${dMeta.badgeColor}25`, color: dMeta.badgeColor }}>
+                            {dMeta.shortLabel}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
+                        </div>
+                        <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                          {(bulkMultiCategoryInputs[v.id] || "").split(/[\r\n,]+/).filter(Boolean).length} keys in draft
+                        </span>
+                      </div>
+                      <textarea
+                        className="input"
+                        rows={3}
+                        placeholder={`Paste serial keys for ${v.label} here...`}
+                        value={bulkMultiCategoryInputs[v.id] || ""}
+                        onChange={(e) =>
+                          setBulkMultiCategoryInputs({
+                            ...bulkMultiCategoryInputs,
+                            [v.id]: e.target.value,
+                          })
+                        }
+                        style={{ fontFamily: "monospace", fontSize: 12 }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>
               <button
                 type="button"
                 onClick={() => setShowBulkModal(false)}
@@ -779,10 +1195,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               <button
                 type="button"
                 onClick={handleAddBulk}
-                disabled={!bulkInput.trim()}
                 className="btn btn-primary"
               >
-                Add to Product
+                Stage Keys
               </button>
             </div>
           </div>
@@ -807,7 +1222,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           <div
             className="card"
             style={{
-              maxWidth: 600,
+              maxWidth: 680,
               width: "100%",
               padding: 24,
               border: "1px solid var(--color-border)",
@@ -819,8 +1234,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>All Available Keys</h3>
-                <span className="badge badge-primary">{combinedUnused.length} Total</span>
+                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>All Available Inventory Keys</h3>
+                <span className="badge badge-primary">{unusedDbKeys.length + stagedNewCount} Available</span>
               </div>
               <button
                 type="button"
@@ -832,77 +1247,148 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </button>
             </div>
 
-            {/* Filter Search */}
-            <div style={{ position: "relative", marginBottom: 14 }}>
-              <Search size={14} style={{ position: "absolute", left: 10, top: 11, color: "var(--color-muted-foreground)" }} />
-              <input
-                type="text"
-                placeholder="Filter keys..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="input"
-                style={{ paddingLeft: 32, fontSize: 13, height: 36 }}
-              />
+            {/* Filter Search & Category Filter */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              {variantsEnabled && variants.length > 0 && (
+                <select
+                  className="input"
+                  value={allModalCategoryFilter}
+                  onChange={(e) => setAllModalCategoryFilter(e.target.value)}
+                  style={{ width: 180, fontSize: 13, height: 36 }}
+                >
+                  <option value="all">All Tiers ({unusedDbKeys.length + stagedNewCount})</option>
+                  {variants.map((v) => {
+                    const dbCount = dbKeys.filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration)).length;
+                    const stgCount = (categorizedNewKeys[v.id] || []).length;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.label} ({dbCount + stgCount})
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
+
+              <div style={{ position: "relative", flex: 1 }}>
+                <Search size={14} style={{ position: "absolute", left: 10, top: 11, color: "var(--color-muted-foreground)" }} />
+                <input
+                  type="text"
+                  placeholder="Filter keys by code..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="input"
+                  style={{ paddingLeft: 32, fontSize: 13, height: 36 }}
+                />
+              </div>
             </div>
 
             {/* Full Keys List */}
             <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6, paddingRight: 4 }}>
-              {filteredAllKeys.map((item, idx) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "var(--color-surface-2)",
-                    border: "1px solid var(--color-border)",
-                    fontSize: 13,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", minWidth: 26 }}>
-                      #{idx + 1}
-                    </span>
-                    <code style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {item.value}
-                    </code>
-                    {item.isNew && (
-                      <span className="badge badge-primary" style={{ fontSize: 9, padding: "1px 5px" }}>
-                        New
+              {(() => {
+                const listToDisplay: Array<{ id: string; value: string; isNew: boolean; varId?: string; varLabel?: string }> = [];
+
+                if (variantsEnabled && variants.length > 0) {
+                  for (const v of variants) {
+                    if (allModalCategoryFilter !== "all" && allModalCategoryFilter !== v.id) continue;
+                    const dbMatching = dbKeys
+                      .filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration))
+                      .map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: v.id, varLabel: v.label }));
+                    const stagedMatching = (categorizedNewKeys[v.id] || []).map((k, idx) => ({
+                      id: `new_${v.id}_${idx}`,
+                      value: k,
+                      isNew: true,
+                      varId: v.id,
+                      varLabel: v.label,
+                    }));
+                    listToDisplay.push(...dbMatching, ...stagedMatching);
+                  }
+                } else {
+                  listToDisplay.push(
+                    ...unusedDbKeys.map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: "default", varLabel: "Single Duration" })),
+                    ...newKeysList.map((k, idx) => ({ id: `new_${idx}`, value: k, isNew: true, varId: "default", varLabel: "Single Duration" }))
+                  );
+                }
+
+                const filtered = listToDisplay.filter((item) =>
+                  !searchFilter.trim() || item.value.toLowerCase().includes(searchFilter.toLowerCase())
+                );
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ padding: 24, textAlign: "center", color: "var(--color-muted-foreground)", fontSize: 13 }}>
+                      No matching keys found.
+                    </div>
+                  );
+                }
+
+                return filtered.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      background: item.isNew ? "rgba(99, 102, 241, 0.08)" : "var(--color-surface-2)",
+                      border: item.isNew ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid var(--color-border)",
+                      fontSize: 13,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", minWidth: 26 }}>
+                        #{idx + 1}
                       </span>
-                    )}
+                      {variantsEnabled && variants.length > 0 && item.varLabel && (
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(99, 102, 241, 0.15)", color: "#818cf8" }}>
+                          {item.varLabel}
+                        </span>
+                      )}
+                      <code style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.value}
+                      </code>
+                      {item.isNew && (
+                        <span className="badge badge-primary" style={{ fontSize: 9, padding: "1px 5px" }}>
+                          New
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => copyKeyText(item.value, item.id)}
+                        className="btn btn-ghost"
+                        style={{ padding: "4px 8px" }}
+                        title="Copy key"
+                      >
+                        {copiedKeyId === item.id ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (item.isNew) {
+                            if (variantsEnabled && item.varId) {
+                              const idxInVar = (categorizedNewKeys[item.varId] || []).indexOf(item.value);
+                              if (idxInVar >= 0) handleRemoveNewKey(idxInVar, item.varId);
+                            } else {
+                              const idxInFlat = newKeysList.indexOf(item.value);
+                              if (idxInFlat >= 0) handleRemoveNewKey(idxInFlat);
+                            }
+                          } else {
+                            handleDeleteDbKey(item.id);
+                          }
+                        }}
+                        disabled={deletingKeyId === item.id}
+                        className="btn btn-ghost"
+                        style={{ padding: "4px 8px", color: "var(--color-danger)" }}
+                        title="Remove key"
+                      >
+                        {deletingKeyId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => copyKeyText(item.value, item.id)}
-                      className="btn btn-ghost"
-                      style={{ padding: "4px 8px" }}
-                      title="Copy key"
-                    >
-                      {copiedKeyId === item.id ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (item.isNew) {
-                          const newIdx = parseInt(item.id.replace("new_", ""), 10);
-                          handleRemoveNewKey(newIdx);
-                        } else {
-                          handleDeleteDbKey(item.id);
-                        }
-                      }}
-                      className="btn btn-ghost"
-                      style={{ padding: "4px 8px", color: "var(--color-danger)" }}
-                      title="Remove key"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>

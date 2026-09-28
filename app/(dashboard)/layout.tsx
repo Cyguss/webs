@@ -398,7 +398,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
-        {/* Brand Header — Clicking Vaultly goes to Home ('/') */}
+        {/* Brand Header — Clicking KRYPT goes to Home ('/') */}
         <div
           style={{
             padding: "20px 18px 16px",
@@ -410,7 +410,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           <Link
             href="/"
-            title="Return to Vaultly Home"
+            title="Return to KRYPT Market Home"
             style={{
               textDecoration: "none",
               display: "flex",
@@ -424,12 +424,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 width: 32,
                 height: 32,
                 borderRadius: "var(--radius-sm)",
-                background: "var(--color-surface-2)",
-                border: "1px solid var(--color-border)",
+                background: "rgba(55, 44, 102, 0.4)",
+                border: "1px solid rgba(139, 92, 246, 0.4)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--color-foreground)",
+                color: "#c4b5fd",
+                boxShadow: "0 0 10px rgba(55, 44, 102, 0.3)",
               }}
             >
               <Terminal size={17} />
@@ -437,25 +438,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span
                 style={{
-                  fontWeight: 800,
-                  fontSize: 17,
+                  fontWeight: 900,
+                  fontSize: 16,
                   color: "var(--color-foreground)",
-                  letterSpacing: "-0.03em",
+                  letterSpacing: "0.04em",
                   lineHeight: 1.1,
+                  fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                VAULTLY
+                KRYPT
               </span>
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "var(--color-muted-foreground)",
-                  letterSpacing: "0.06em",
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  color: "#c4b5fd",
+                  letterSpacing: "0.08em",
                   textTransform: "uppercase",
+                  fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                Merchant Ops
+                OPS // PROTOCOL
               </span>
             </div>
           </Link>
@@ -898,7 +901,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {session?.user?.name || "Merchant"}
                 </div>
                 <div style={{ fontSize: 11, color: "var(--color-muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {session?.user?.email || "merchant@vaultly.io"}
+                  {session?.user?.email || "merchant@krypt.market"}
                 </div>
               </div>
             </div>
@@ -1343,8 +1346,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   Subdomain Slug
                 </label>
                 <div style={{ display: "flex", alignItems: "center" }}>
-                  <span style={{ padding: "0 10px", fontSize: 13, color: "var(--color-muted-foreground)", background: "rgba(255,255,255,0.03)", border: "1px solid var(--color-border)", borderRight: "none", height: 42, display: "flex", alignItems: "center", borderRadius: "var(--radius-sm) 0 0 var(--radius-sm)" }}>
-                    vaultly.io/
+                  <span style={{ padding: "0 10px", fontSize: 13, color: "var(--color-muted-foreground)", background: "rgba(255,255,255,0.03)", border: "1px solid var(--color-border)", borderRight: "none", height: 42, display: "flex", alignItems: "center", borderRadius: "var(--radius-sm) 0 0 var(--radius-sm)", fontFamily: "var(--font-mono, monospace)" }}>
+                    krypt.market/
                   </span>
                   <input
                     type="text"
@@ -1353,7 +1356,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     value={newStoreSlug}
                     onChange={(e) => setNewStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                     required
-                    style={{ height: 42, fontSize: 14, borderRadius: "0 var(--radius-sm) var(--radius-sm) 0" }}
+                    style={{ height: 42, fontSize: 14, borderRadius: "0 var(--radius-sm) var(--radius-sm) 0", fontFamily: "var(--font-mono, monospace)" }}
                   />
                 </div>
               </div>

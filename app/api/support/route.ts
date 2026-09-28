@@ -9,8 +9,8 @@ export async function GET() {
       where: eq(platformSettings.settingKey, "support_email"),
     });
 
-    const supportEmail = emailRow?.settingValue?.trim() || "support@vaultly.io";
-    const discordInvite = "https://discord.gg/vaultly";
+    const supportEmail = emailRow?.settingValue?.trim() || "support@krypt.market";
+    const discordInvite = "https://discord.gg/krypt";
 
     return NextResponse.json({
       supportEmail,
@@ -18,8 +18,8 @@ export async function GET() {
     });
   } catch (err: any) {
     return NextResponse.json({
-      supportEmail: "support@vaultly.io",
-      discordInvite: "https://discord.gg/vaultly",
+      supportEmail: "support@krypt.market",
+      discordInvite: "https://discord.gg/krypt",
     });
   }
 }

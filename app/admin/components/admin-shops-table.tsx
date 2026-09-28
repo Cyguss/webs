@@ -37,7 +37,7 @@ export function AdminShopsTable({
         <div>
           <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>Platform Stores</h2>
           <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "3px 0 0" }}>
-            All merchant digital storefronts deployed on Vaultly.
+            All merchant digital storefronts deployed on KRYPT MARKET.
           </p>
         </div>
         <div style={{ position: "relative", width: 280 }}>

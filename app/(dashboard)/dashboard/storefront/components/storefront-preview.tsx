@@ -256,54 +256,6 @@ export function StorefrontPreview({
                   <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: textColor || previewText }}>
                     {name || "Store Name"}
                   </h2>
-                  {trustpilotUrl && (
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        background: lum > 0.55 ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.05)",
-                        padding: "2px 6px",
-                        borderRadius: 6,
-                        border: `1px solid ${lum > 0.55 ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.1)"}`,
-                      }}
-                    >
-                      <div style={{ display: "inline-flex", gap: 1 }}>
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <span
-                            key={s}
-                            style={{
-                              width: 10,
-                              height: 10,
-                              background: "#00b67a",
-                              borderRadius: 2,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "#fff",
-                              fontSize: 6,
-                            }}
-                          >
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: "#34d399" }}>4.8</span>
-                      <span
-                        style={{
-                          fontSize: 8,
-                          padding: "1px 5px",
-                          borderRadius: 4,
-                          background: "rgba(0,182,122,0.16)",
-                          border: "1px solid rgba(0,182,122,0.35)",
-                          color: "#34d399",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Reviews
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <div style={{ fontSize: 11, color: previewMuted, marginTop: 2 }}>
                   {description || "Store tagline..."}

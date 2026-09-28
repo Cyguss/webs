@@ -17,6 +17,7 @@ import { AdminOrdersTable } from "./components/admin-orders-table";
 import { AdminPayoutsTable } from "./components/admin-payouts-table";
 import { AdminStaffTab } from "./components/admin-staff-tab";
 import { AdminBotConfigTab } from "./components/admin-bot-config-tab";
+import { AdminPlatformSettingsTab } from "./components/admin-platform-settings-tab";
 import { AdminPanicModal, AdminMasterModal, AdminRejectModal, AdminKillSwitchModal } from "./components/admin-modals";
 
 interface AdminPortalProps {
@@ -673,7 +674,17 @@ export default function AdminPortal({
             discordAdmins={discordAdmins}
             blockAllAdmins={Boolean(adminData?.blockAllAdmins)}
             isSuperAdmin={Boolean(adminData?.isSuperAdmin)}
+            ticket={ticket}
             onToggleAdminPermissions={handleToggleAdminPermissions}
+            onRefresh={() => fetchAdminData(ticket)}
+          />
+        )}
+
+        {activeTab === "settings" && (
+          <AdminPlatformSettingsTab
+            isSuperAdmin={Boolean(adminData?.isSuperAdmin || initialIsSuperAdmin)}
+            ticket={ticket}
+            onShowMasterModal={() => setShowMasterModal(true)}
           />
         )}
 

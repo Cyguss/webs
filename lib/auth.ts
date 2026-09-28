@@ -9,7 +9,7 @@ import { isDisposableEmail } from "@/lib/anti-fraud/disposable-email";
 
 const resend = features.resend ? new Resend(env.RESEND_API_KEY) : null;
 
-const resendFromEmail = process.env.RESEND_FROM_EMAIL || "Vaultly <onboarding@resend.dev>";
+const resendFromEmail = process.env.RESEND_FROM_EMAIL || "KRYPT MARKET <onboarding@resend.dev>";
 
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
@@ -77,7 +77,7 @@ export const auth = betterAuth({
         await resend.emails.send({
           from: resendFromEmail,
           to: user.email,
-          subject: "Reset your Vaultly password",
+          subject: "Reset your KRYPT password",
           html: `<p>Click here to reset your password: <a href="${url}">${url}</a></p>`,
         });
       } else {
@@ -92,7 +92,7 @@ export const auth = betterAuth({
           from: resendFromEmail,
           to: user.email,
           subject: "Verify your email address",
-          html: `<p>Welcome to Vaultly! Verify your email: <a href="${url}">${url}</a></p>`,
+          html: `<p>Welcome to KRYPT MARKET! Verify your email: <a href="${url}">${url}</a></p>`,
         });
       } else {
         console.log(`[Dev Auth] Email verification link for ${user.email}: ${url}`);
@@ -120,7 +120,7 @@ export const auth = betterAuth({
   },
   plugins: [
     twoFactor({
-      issuer: "Vaultly",
+      issuer: "KRYPT",
       otpOptions: {
         sendOTP: async ({ user, otp }) => {
           if (resend) {
@@ -128,15 +128,15 @@ export const auth = betterAuth({
               await resend.emails.send({
                 from: resendFromEmail,
                 to: user.email,
-                subject: "Your Vaultly 2FA Verification Code",
+                subject: "Your KRYPT 2FA Verification Code",
                 html: `
-                  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #111; max-width: 500px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px;">
-                    <h2 style="color: #4f46e5; margin-top: 0;">Vaultly Security Verification</h2>
-                    <p style="font-size: 15px; color: #374151;">Your 2-factor authentication code is:</p>
-                    <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; padding: 14px 24px; background: #f3f4f6; border-radius: 8px; width: fit-content; margin: 18px 0; color: #1f2937;">
+                  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #ffffff; max-width: 500px; margin: 0 auto; border: 1px solid rgba(55, 44, 102, 0.6); border-radius: 12px; background: #08080c;">
+                    <h2 style="color: #c4b5fd; margin-top: 0; font-family: monospace;">KRYPT PROTOCOL SECURITY</h2>
+                    <p style="font-size: 14px; color: #9ca3af;">Your hardware authorization OTP code is:</p>
+                    <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; padding: 14px 24px; background: #030305; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 8px; width: fit-content; margin: 18px 0; color: #ffffff; font-family: monospace;">
                       ${otp}
                     </div>
-                    <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">This code expires in 3 minutes. If you did not attempt to sign in to Vaultly, please change your password immediately.</p>
+                    <p style="color: #6b7280; font-size: 12px; line-height: 1.5; font-family: monospace;">Valid for 180 seconds. If you did not initiate this authorization, revoke your merchant node immediately.</p>
                   </div>
                 `,
               });
@@ -145,7 +145,7 @@ export const auth = betterAuth({
             }
           }
           if (process.env.NODE_ENV !== "production") {
-            console.log(`\n========================================\n[VAULTLY 2FA OTP] Code for ${user.email}: ${otp}\n========================================\n`);
+            console.log(`\n========================================\n[KRYPT 2FA OTP] Code for ${user.email}: ${otp}\n========================================\n`);
           }
         },
       },

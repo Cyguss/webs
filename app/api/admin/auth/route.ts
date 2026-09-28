@@ -8,14 +8,7 @@ import {
   generateAdminSessionTicket,
   verifyAdminSessionTicket,
 } from "@/lib/admin-gate";
-
-function getClientIp(headersList: Headers): string {
-  const forwarded = headersList.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-  return headersList.get("x-real-ip") || "127.0.0.1";
-}
+import { getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {

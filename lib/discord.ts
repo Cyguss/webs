@@ -139,7 +139,7 @@ export async function syncUserDiscord(
       success: false,
       linked: false,
       isAdmin: false,
-      error: `Użytkownik Discord (${discordId}) nie został znaleziony na oficjalnym serwerze Vaultly. Dołącz najpierw do serwera Discord!`,
+      error: `Użytkownik Discord (${discordId}) nie został znaleziony na oficjalnym serwerze KRYPT. Dołącz najpierw do serwera Discord!`,
     };
   }
 

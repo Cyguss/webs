@@ -822,8 +822,8 @@ export function DeveloperClient({ shop }: { shop: any }) {
                 <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>
                   REST API & Verification Quickstart
                 </h3>
-                <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--color-muted-foreground)" }}>
-                  Base URL: <code style={{ color: "#818cf8" }}>{typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1</code>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" }}>
+                  Base URL: <code style={{ color: "#c4b5fd" }}>{typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1</code>
                 </p>
               </div>
 
@@ -876,10 +876,10 @@ export function DeveloperClient({ shop }: { shop: any }) {
                   onClick={() =>
                     handleCopy(
                       docsLang === "curl"
-                        ? `curl -X POST "${typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1/licenses/verify" \\\n  -H "Authorization: Bearer vlt_live_YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"key": "CYBER-KEY-1111"}'`
+                        ? `curl -X POST "${typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1/licenses/verify" \\\n  -H "Authorization: Bearer kpt_live_YOUR_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"key": "CYBER-KEY-1111"}'`
                         : docsLang === "node"
-                        ? `const res = await fetch("${typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1/licenses/verify", {\n  method: "POST",\n  headers: {\n    "Authorization": "Bearer vlt_live_YOUR_KEY",\n    "Content-Type": "application/json"\n  },\n  body: JSON.stringify({ key: "CYBER-KEY-1111" })\n});\nconst data = await res.json();\nconsole.log(data.valid);`
-                        : `import requests\n\nres = requests.post(\n  "${typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1/licenses/verify",\n  headers={"Authorization": "Bearer vlt_live_YOUR_KEY"},\n  json={"key": "CYBER-KEY-1111"}\n)\nprint(res.json())`,
+                        ? `const res = await fetch("${typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1/licenses/verify", {\n  method: "POST",\n  headers: {\n    "Authorization": "Bearer kpt_live_YOUR_KEY",\n    "Content-Type": "application/json"\n  },\n  body: JSON.stringify({ key: "CYBER-KEY-1111" })\n});\nconst data = await res.json();\nconsole.log(data.valid);`
+                        : `import requests\n\nres = requests.post(\n  "${typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1/licenses/verify",\n  headers={"Authorization": "Bearer kpt_live_YOUR_KEY"},\n  json={"key": "CYBER-KEY-1111"}\n)\nprint(res.json())`,
                       "Code Snippet"
                     )
                   }
@@ -910,18 +910,18 @@ export function DeveloperClient({ shop }: { shop: any }) {
                 }}
               >
                 {docsLang === "curl" && (
-                  `curl -X POST "${typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1/licenses/verify" \\
-  -H "Authorization: Bearer vlt_live_YOUR_KEY" \\
+                  `curl -X POST "${typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1/licenses/verify" \\
+  -H "Authorization: Bearer kpt_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"key": "CYBER-KEY-1111"}'`
                 )}
 
                 {docsLang === "node" && (
                   `// Node.js 18+ (Fetch API)
-const response = await fetch("${typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1/licenses/verify", {
+const response = await fetch("${typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1/licenses/verify", {
   method: "POST",
   headers: {
-    "Authorization": "Bearer vlt_live_YOUR_KEY",
+    "Authorization": "Bearer kpt_live_YOUR_KEY",
     "Content-Type": "application/json"
   },
   body: JSON.stringify({ key: "CYBER-KEY-1111" })
@@ -940,8 +940,8 @@ if (result.valid) {
 import requests
 
 response = requests.post(
-    "${typeof window !== "undefined" ? window.location.origin : "https://vaultly.dev"}/api/v1/licenses/verify",
-    headers={"Authorization": "Bearer vlt_live_YOUR_KEY"},
+    "${typeof window !== "undefined" ? window.location.origin : "https://krypt.market"}/api/v1/licenses/verify",
+    headers={"Authorization": "Bearer kpt_live_YOUR_KEY"},
     json={"key": "CYBER-KEY-1111"}
 )
 
@@ -1196,13 +1196,13 @@ if data.get("valid"):
                   >
                     <span>🎮</span>
                     <span>
-                      Discord Webhook Detected — Vaultly will automatically format notifications as rich Discord embeds with color badges!
+                      Discord Webhook Detected — KRYPT will automatically format notifications as rich Discord embeds with color badges!
                     </span>
                   </div>
                 ) : (
                   <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "6px 0 0" }}>
-                    Vaultly will dispatch JSON payloads signed with your unique HMAC secret in the{" "}
-                    <code style={{ color: "#818cf8" }}>X-Vaultly-Signature</code> header.
+                    KRYPT will dispatch JSON payloads signed with your unique HMAC secret in the{" "}
+                    <code style={{ color: "#c4b5fd" }}>X-Krypt-Signature</code> header.
                   </p>
                 )}
               </div>

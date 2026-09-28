@@ -149,12 +149,14 @@ export async function GET() {
     const userStats = allUsers.map((u) => {
       const userShopList = allShops.filter((s) => s.userId === u.id);
       const balance = allBalances.find((b) => b.userId === u.id);
+      const { parseAdminPermissions } = require("@/lib/admin-gate");
       return {
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.role,
         adminPermissionsActive: u.adminPermissionsActive !== false,
+        adminPermissions: parseAdminPermissions(u.adminPermissions),
         discordId: u.discordId,
         discordUsername: u.discordUsername,
         createdAt: u.createdAt,
@@ -209,12 +211,25 @@ export async function GET() {
       };
     });
 
+    const { parseAdminPermissions } = await import("@/lib/admin-gate");
+    const currentUserPermissions = isSuperAdmin
+      ? {
+          canApproveShops: true,
+          canDeleteShops: true,
+          canManageUsers: true,
+          canManagePayouts: true,
+          canViewFinancials: true,
+          canManageSettings: true,
+        }
+      : parseAdminPermissions(currentDbUser?.adminPermissions);
+
     return NextResponse.json({
       success: true,
       isSuperAdmin,
       isDiscordAdmin,
       blockAllAdmins,
       discordUsername: currentDbUser?.discordUsername || session?.user?.name || null,
+      currentUserPermissions,
       stats: {
         totalUsers: allUsers.length,
         totalShops: allShops.length,

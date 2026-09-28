@@ -48,7 +48,14 @@ export async function GET(req: Request) {
       .orderBy(desc(orders.createdAt))
       .limit(limit);
 
-    return NextResponse.json({ orders: rawOrders });
+    const { count } = await import("drizzle-orm");
+    const [countResult] = await db
+      .select({ count: count() })
+      .from(orders)
+      .where(eq(orders.shopId, userShop.id));
+    const totalCount = countResult?.count || 0;
+
+    return NextResponse.json({ orders: rawOrders, totalCount });
   } catch (err: any) {
     console.error("Error fetching orders:", err);
     return NextResponse.json({ error: err.message || "Failed to fetch orders" }, { status: 500 });

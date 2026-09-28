@@ -4,9 +4,22 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shops, coupons } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { rateLimit, rateLimitPresets, getClientIp, createRateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
   try {
+    const headersList = await headers();
+    const clientIp = getClientIp(headersList);
+
+    // Rate Limiting: Prevent coupon code enumeration and dictionary attacks
+    const rateCheck = rateLimit({
+      key: `coupon_check:${clientIp}`,
+      ...rateLimitPresets.coupon,
+    });
+    if (!rateCheck.allowed) {
+      return createRateLimitResponse(rateCheck, "Too many coupon validation attempts. Please slow down.");
+    }
+
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code")?.trim().toUpperCase();
     const shopId = searchParams.get("shopId");
@@ -98,6 +111,23 @@ export async function DELETE(req: Request) {
     const id = searchParams.get("id");
 
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+    const userShop = await db.query.shops.findFirst({
+      where: eq(shops.userId, session.user.id),
+    });
+
+    if (!userShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    // IDOR Protection: Verify coupon belongs to user's shop
+    const existingCoupon = await db.query.coupons.findFirst({
+      where: and(eq(coupons.id, id), eq(coupons.shopId, userShop.id)),
+    });
+
+    if (!existingCoupon) {
+      return NextResponse.json({ error: "Coupon not found or access denied" }, { status: 404 });
+    }
 
     await db.delete(coupons).where(eq(coupons.id, id));
 

@@ -15,7 +15,7 @@ export async function GET() {
     // 0. Ensure schema & all tables exist
     await ensureDatabaseSchema(pool);
 
-    const demoEmail = "demo@vaultly.io";
+    const demoEmail = "demo@krypt.market";
     const demoPassword = "Password123!";
     const demoUserId = "user_demo_123";
     const demoShopId = "shp_demo_101";
@@ -62,11 +62,11 @@ export async function GET() {
         slug: "demo-store",
         name: "Apex Digital Vault",
         description: "Instant license keys, digital passes, and custom gaming services.",
-        backgroundColor: "#0d0f17",
-        accentColor: "#6366f1",
-        twitterUrl: "https://x.com/vaultly",
-        discordUrl: "https://discord.gg/vaultly",
-        telegramUrl: "https://t.me/vaultly",
+        backgroundColor: "#030407",
+        accentColor: "#00ff66",
+        twitterUrl: "https://x.com/kryptmarket",
+        discordUrl: "https://discord.gg/krypt",
+        telegramUrl: "https://t.me/kryptmarket",
         isAccepted: true,
         isActive: true,
       });

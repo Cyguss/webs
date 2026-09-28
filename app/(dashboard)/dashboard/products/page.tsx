@@ -5,8 +5,9 @@ import { db } from "@/lib/db";
 import { shops, products, inventoryKeys } from "@/lib/db/schema";
 import { eq, count, and, inArray } from "drizzle-orm";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Key, Package, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Key, Package, Edit, Trash2, ToggleLeft, ToggleRight, Layers } from "lucide-react";
 import Link from "next/link";
+import { getKeyDurationDisplay } from "@/lib/key-duration";
 
 export default async function ProductsPage() {
   const headersList = await headers();
@@ -104,7 +105,29 @@ export default async function ProductsPage() {
                         )}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 500 }}>{product.title}</div>
+                        <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>{product.title}</span>
+                          {product.category && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                background: "rgba(99,102,241,0.12)",
+                                color: "#818cf8",
+                                border: "1px solid rgba(99,102,241,0.25)",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                textTransform: "capitalize",
+                              }}
+                            >
+                              <Layers size={9} />
+                              <span>{product.category}</span>
+                            </span>
+                          )}
+                        </div>
                         {product.description && (
                           <div style={{ fontSize: 12, color: "var(--color-muted-foreground)", marginTop: 2, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {product.description}
@@ -114,13 +137,39 @@ export default async function ProductsPage() {
                     </div>
                   </td>
                   <td>
-                    <span className={`badge ${product.type === "key" ? "badge-primary" : "badge-muted"}`}>
-                      {product.type === "key" ? (
-                        <><Key size={11} /> Keys</>
-                      ) : (
-                        <><Package size={11} /> Manual</>
-                      )}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                      <span className={`badge ${product.type === "key" ? "badge-primary" : "badge-muted"}`}>
+                        {product.type === "key" ? (
+                          <><Key size={11} /> Keys</>
+                        ) : (
+                          <><Package size={11} /> Manual</>
+                        )}
+                      </span>
+                      {(() => {
+                        const dMeta = getKeyDurationDisplay(
+                          product.duration,
+                          product.durationDays,
+                          product.customDurationLabel
+                        );
+                        return (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontFamily: "monospace",
+                              fontWeight: 700,
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                              background: `${dMeta.badgeColor}18`,
+                              color: dMeta.badgeColor,
+                              border: `1px solid ${dMeta.badgeColor}35`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {dMeta.shortLabel}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </td>
                   <td style={{ fontWeight: 600 }}>
                     {formatCurrency(parseFloat(product.price))}

@@ -41,6 +41,9 @@ export async function GET(
       .select({
         id: inventoryKeys.id,
         keyValue: inventoryKeys.keyValue,
+        duration: inventoryKeys.duration,
+        durationDays: inventoryKeys.durationDays,
+        customDurationLabel: inventoryKeys.customDurationLabel,
         isUsed: inventoryKeys.isUsed,
         usedAt: inventoryKeys.usedAt,
         orderId: inventoryKeys.orderId,
@@ -88,27 +91,58 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { keys } = body;
+    const { keys, duration, durationDays, customDurationLabel, variantId } = body;
 
     if (!Array.isArray(keys) || keys.length === 0) {
       return NextResponse.json({ error: "No keys provided" }, { status: 400 });
     }
 
-    const keysToInsert = keys
-      .map((k: string) => k.trim())
-      .filter((k: string) => k.length > 0)
-      .map((keyValue: string) => ({
-        id: crypto.randomUUID(),
-        productId,
-        keyValue,
-        isUsed: false,
-      }));
+    const keyDuration = duration || product.duration || "lifetime";
+    const keyDurationDays = durationDays !== undefined ? durationDays : (product.durationDays ?? 0);
+    const keyCustomLabel = customDurationLabel !== undefined ? (customDurationLabel?.trim() || null) : product.customDurationLabel;
+    const keyVariantId = variantId || null;
 
-    if (keysToInsert.length > 0) {
-      await db.insert(inventoryKeys).values(keysToInsert);
+    // Filter, clean whitespace, and deduplicate
+    const uniqueKeysSet = new Set<string>();
+    const cleanedKeys: string[] = [];
+
+    for (const rawKey of keys) {
+      if (typeof rawKey === "string") {
+        const trimmed = rawKey.trim();
+        if (trimmed.length > 0 && !uniqueKeysSet.has(trimmed)) {
+          uniqueKeysSet.add(trimmed);
+          cleanedKeys.push(trimmed);
+        }
+      }
     }
 
-    return NextResponse.json({ success: true, count: keysToInsert.length });
+    if (cleanedKeys.length === 0) {
+      return NextResponse.json({ error: "No valid unique keys found" }, { status: 400 });
+    }
+
+    const keysToInsert = cleanedKeys.map((keyValue: string) => ({
+      id: crypto.randomUUID(),
+      productId,
+      variantId: keyVariantId,
+      keyValue,
+      duration: keyDuration,
+      durationDays: keyDurationDays,
+      customDurationLabel: keyCustomLabel,
+      isUsed: false,
+    }));
+
+    // Insert in batches of 100 to avoid packet size or transaction limits on large bulk uploads
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < keysToInsert.length; i += BATCH_SIZE) {
+      const chunk = keysToInsert.slice(i, i + BATCH_SIZE);
+      await db.insert(inventoryKeys).values(chunk);
+    }
+
+    return NextResponse.json({
+      success: true,
+      count: keysToInsert.length,
+      duplicatesFiltered: keys.length - cleanedKeys.length,
+    });
   } catch (err: any) {
     console.error("Error adding product keys:", err);
     return NextResponse.json({ error: err.message || "Failed to add keys" }, { status: 500 });

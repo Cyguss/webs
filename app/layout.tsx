@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme";
 import { ToastProvider } from "@/components/toast-context";
 import "./globals.css";
@@ -10,17 +10,23 @@ const inter = Inter({
   display: "swap",
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "Vaultly — Sell Digital Products Instantly",
-    template: "%s | Vaultly",
+    default: "KRYPT MARKET — Automated Black Market & Digital Key Protocol",
+    template: "%s | KRYPT MARKET",
   },
   description:
-    "Create your storefront in minutes. Sell license keys, digital goods, and services. Accept card and crypto payments with instant automated delivery.",
-  keywords: ["digital products", "sell online", "license keys", "storefront", "crypto payments"],
+    "Deploy your high-security digital node. Sell software serials, license keys, and automated digital goods. Instant on-chain crypto and encrypted card settlement.",
+  keywords: ["krypt", "krypt market", "digital goods", "license vault", "black market", "crypto payments", "instant serial delivery"],
   openGraph: {
-    title: "Vaultly — Sell Digital Products Instantly",
-    description: "Create your storefront in minutes. Accept card and crypto payments.",
+    title: "KRYPT MARKET — Automated Black Market & Digital Key Protocol",
+    description: "Deploy your high-security digital node. Instant automated key dispatch.",
     type: "website",
   },
 };
@@ -31,13 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const t = localStorage.getItem('vaultly-theme') || 'dark';
+                const t = localStorage.getItem('krypt-theme') || localStorage.getItem('vaultly-theme') || 'dark';
                 document.documentElement.setAttribute('data-theme', t);
                 document.documentElement.classList.add(t);
                 document.documentElement.style.colorScheme = t;

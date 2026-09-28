@@ -12,6 +12,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { sendOrderDeliveryEmail } from "@/lib/email";
 import { dispatchWebhookEvent, sendDiscordSaleNotification } from "@/lib/webhooks";
+import { calculateExpirationDate, getKeyDurationDisplay } from "@/lib/key-duration";
 
 export interface FulfillOrderResult {
   success: boolean;
@@ -59,20 +60,47 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
 
       const quantity = order.quantity || 1;
       const totalAmountNum = parseFloat(order.totalAmount);
+      const now = new Date();
+
+      let assignedDuration = order.keyDuration || product.duration || "lifetime";
+      let assignedDurationDays = order.keyDurationDays ?? product.durationDays ?? 0;
+      let keyExpiresAt: Date | null = null;
 
       // 2. Assign digital keys if product type is 'key' (Atomic row-level lock prevents double-spend)
       if (product.type === "key") {
-        const availableKeys = await tx
-          .select()
-          .from(inventoryKeys)
-          .where(
-            and(
-              eq(inventoryKeys.productId, product.id),
-              eq(inventoryKeys.isUsed, false)
+        // Try to find keys matching specific duration variant first, or fallback to any available unused key
+        let availableKeys: any[] = [];
+        if (order.variantId || order.keyDuration) {
+          availableKeys = await tx
+            .select()
+            .from(inventoryKeys)
+            .where(
+              and(
+                eq(inventoryKeys.productId, product.id),
+                eq(inventoryKeys.isUsed, false),
+                order.variantId
+                  ? eq(inventoryKeys.variantId, order.variantId)
+                  : eq(inventoryKeys.duration, order.keyDuration || "lifetime")
+              )
             )
-          )
-          .limit(quantity)
-          .for("update");
+            .limit(quantity)
+            .for("update");
+        }
+
+        if (availableKeys.length < quantity) {
+          // Fallback to any unused keys for this product
+          availableKeys = await tx
+            .select()
+            .from(inventoryKeys)
+            .where(
+              and(
+                eq(inventoryKeys.productId, product.id),
+                eq(inventoryKeys.isUsed, false)
+              )
+            )
+            .limit(quantity)
+            .for("update");
+        }
 
         if (availableKeys.length < quantity) {
           throw new Error(
@@ -80,10 +108,15 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
           );
         }
 
+        // Inherit key duration from assigned key, order, or product
+        assignedDuration = availableKeys[0]?.duration || order.keyDuration || product.duration || "lifetime";
+        assignedDurationDays = availableKeys[0]?.durationDays ?? order.keyDurationDays ?? product.durationDays ?? 0;
+        keyExpiresAt = calculateExpirationDate(now, assignedDuration, assignedDurationDays);
+
         for (const key of availableKeys) {
           await tx
             .update(inventoryKeys)
-            .set({ isUsed: true, usedAt: new Date(), orderId: order.id })
+            .set({ isUsed: true, usedAt: now, orderId: order.id })
             .where(and(eq(inventoryKeys.id, key.id), eq(inventoryKeys.isUsed, false)));
         }
 
@@ -105,13 +138,16 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
         });
       }
 
-      // 3. Mark order as completed
+      // 3. Mark order as completed with calculated key validity
       await tx
         .update(orders)
         .set({
           paymentStatus: "completed",
-          fulfilledAt: new Date(),
-          updatedAt: new Date(),
+          fulfilledAt: now,
+          keyDuration: assignedDuration,
+          keyDurationDays: assignedDurationDays,
+          keyExpiresAt: keyExpiresAt,
+          updatedAt: now,
         })
         .where(eq(orders.id, order.id));
 
@@ -133,12 +169,21 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
         const sellerId = shop.userId;
         const isStripe = order.paymentMethod === "stripe" || order.paymentMethod === "card";
         const gatewayFee = isStripe ? (totalAmountNum * 0.029 + 0.3) : (totalAmountNum * 0.01);
-        const platformFeePercent = parseFloat(process.env.PLATFORM_FEE_PERCENT || "5") / 100;
+        
+        // Fetch dynamic platform fee percent from platform settings
+        let feePercent = 5.0;
+        try {
+          const { getPlatformFeePercent } = await import("@/lib/platform-settings");
+          feePercent = await getPlatformFeePercent();
+        } catch {
+          feePercent = parseFloat(process.env.PLATFORM_FEE_PERCENT || "5");
+        }
+        const platformFeePercent = (isNaN(feePercent) ? 5.0 : feePercent) / 100;
         const platformFee = totalAmountNum * platformFeePercent;
         const totalFees = gatewayFee + platformFee;
         const netSellerCredit = Math.max(0, totalAmountNum - totalFees);
 
-        let sellerBal = await tx.query.sellerBalances.findFirst({
+        const sellerBal = await tx.query.sellerBalances.findFirst({
           where: eq(sellerBalances.userId, sellerId),
         });
 
@@ -182,6 +227,7 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
           description: `Sale (${quantity}x): ${product.title} (${order.buyerEmail}) [Fee: $${totalFees.toFixed(2)}]`,
         });
 
+        const durationInfo = getKeyDurationDisplay(assignedDuration, assignedDurationDays, product.customDurationLabel);
         emailPayload = {
           orderId: order.id,
           shopId: order.shopId,
@@ -193,6 +239,8 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
           totalAmount: totalAmountNum,
           currency: product.currency || "USD",
           paymentMethod: order.paymentMethod,
+          keyDuration: durationInfo.label,
+          keyExpiresAt: keyExpiresAt ? keyExpiresAt.toISOString() : null,
           keys:
             deliveredKeyValues.length > 0
               ? deliveredKeyValues

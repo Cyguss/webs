@@ -306,7 +306,7 @@ export default function CryptoSandboxClient({
             <Zap size={15} /> Developer Sandbox Trigger
           </div>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", margin: "0 0 14px", lineHeight: 1.5 }}>
-            Simulate a real blockchain payment. This sends a cryptographically signed (MD5) Cryptomus IPN webhook to Vaultly, validates the secret key, and automatically triggers atomic order fulfillment.
+            Simulate a real blockchain payment. This sends a cryptographically signed (MD5) Cryptomus IPN webhook to KRYPT MARKET, validates the secret key, and automatically triggers atomic order fulfillment.
           </p>
 
           <button

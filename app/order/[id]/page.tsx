@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import OrderReceiptClient from "./order-receipt-client";
-import { CheckCircle2, Key, Package, ShieldCheck, Lock, Mail, ArrowRight } from "lucide-react";
+import { CheckCircle2, Key, Package, ShieldCheck, Lock, Mail, ArrowRight, Terminal, Cpu } from "lucide-react";
 import { verifyOrderAccessToken } from "@/lib/order-auth";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -83,167 +83,283 @@ export default async function OrderReceiptPage({
   // If unauthorized, render high-end privacy gate protecting keys
   if (!isAuthorized) {
     return (
-      <div className="page-transition" style={{ minHeight: "100vh", background: "#08090c", color: "#fff", fontFamily: "Inter, sans-serif", padding: "80px 24px" }}>
-        <div style={{ maxWidth: 520, margin: "0 auto", textAlign: "center" }}>
+      <div
+        className="page-transition"
+        style={{
+          minHeight: "100vh",
+          background: "#030305",
+          color: "#fff",
+          fontFamily: "Inter, sans-serif",
+          padding: "80px 24px",
+          position: "relative",
+        }}
+      >
+        <div
+          className="krypt-grid-bg"
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.25,
+            pointerEvents: "none",
+          }}
+        />
+
+        <div style={{ maxWidth: 520, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 10 }}>
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              background: "rgba(99, 102, 241, 0.12)",
-              border: "1px solid rgba(99, 102, 241, 0.3)",
+              width: 60,
+              height: 60,
+              borderRadius: 14,
+              background: "rgba(255, 42, 75, 0.12)",
+              border: "1px solid rgba(255, 42, 75, 0.3)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#818cf8",
+              color: "#ff2a4b",
               margin: "0 auto 20px",
+              boxShadow: "0 0 20px rgba(255, 42, 75, 0.2)",
             }}
           >
-            <Lock size={30} />
+            <Lock size={28} />
           </div>
 
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 10 }}>
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#ff2a4b", letterSpacing: "0.08em", marginBottom: 6 }}>
+            // PROTOCOL_GATE: ENCRYPTED_DELIVERY_VAULT
+          </div>
+
+          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.01em", marginBottom: 10, color: "#fff" }}>
             Order Receipt Protected
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
-            For your security and privacy, digital license keys and sensitive order details are locked. Please open the secure delivery link sent directly to your purchase email address.
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, lineHeight: 1.6, marginBottom: 26 }}>
+            For privacy and fraud prevention, decrypted license keys are locked. Open the secure magic link dispatched to your purchase mailbox.
           </p>
 
           <div
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 16,
-              padding: 24,
+              background: "rgba(8, 8, 12, 0.95)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: 12,
+              padding: 20,
               textAlign: "left",
               marginBottom: 24,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 8 }}>
-              <Mail size={18} color="#818cf8" />
-              <span>Sent to buyer email address on record</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, marginBottom: 6 }}>
+              <Mail size={16} color="#c4b5fd" />
+              <span>Dispatched to customer mailbox on record</span>
             </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
-              Order Reference: <strong style={{ color: "#fff", fontFamily: "monospace" }}>#{order.id.slice(0, 10)}</strong>
+            <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.45)" }}>
+              TXID REFERENCE: <strong style={{ color: "#ffffff" }}>#{order.id.slice(0, 12)}</strong>
             </div>
           </div>
 
-          {shop && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
             <Link
-              href={`/${shop.slug}`}
+              href={shop ? `/${shop.slug}/lookup` : "/lookup"}
+              className="krypt-btn-primary"
               style={{
+                width: "100%",
+                maxWidth: 320,
+                padding: "11px",
+                fontSize: 12,
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 800,
                 display: "inline-flex",
+                justifyContent: "center",
                 alignItems: "center",
                 gap: 8,
-                color: "#818cf8",
+                borderRadius: 8,
                 textDecoration: "none",
-                fontWeight: 600,
-                fontSize: 14,
               }}
             >
-              Return to {shop.name} Storefront →
+              <Mail size={14} />
+              <span>[RESEND_ACCESS_LINK // LOOKUP]</span>
             </Link>
-          )}
+
+            {shop && (
+              <Link
+                href={`/${shop.slug}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                  fontSize: 12,
+                  fontFamily: "var(--font-mono, monospace)",
+                  marginTop: 6,
+                }}
+              >
+                ← Return to {shop.name} Storefront
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-transition" style={{ minHeight: "100vh", background: "#0a0a0c", color: "#fff", fontFamily: "Inter, sans-serif", padding: "60px 24px" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+    <div
+      className="page-transition"
+      style={{
+        minHeight: "100vh",
+        background: "#030305",
+        color: "#fff",
+        fontFamily: "Inter, sans-serif",
+        padding: "60px 24px",
+        position: "relative",
+      }}
+    >
+      {/* Tactical Background Grid */}
+      <div
+        className="krypt-grid-bg"
+        style={{
+          position: "absolute",
+          inset: 0,
+          opacity: 0.25,
+          pointerEvents: "none",
+        }}
+      />
+
+      <div style={{ maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 10 }}>
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <div style={{ textAlign: "center", marginBottom: 30 }}>
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              background: "rgba(16, 185, 129, 0.15)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: "rgba(55, 44, 102, 0.4)",
+              border: "1px solid rgba(139, 92, 246, 0.4)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#34d399",
-              margin: "0 auto 16px",
+              color: "#c4b5fd",
+              margin: "0 auto 14px",
+              boxShadow: "0 0 24px rgba(55, 44, 102, 0.5)",
             }}
           >
-            <CheckCircle2 size={36} />
+            <CheckCircle2 size={30} />
           </div>
 
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>
-            Payment Successful!
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#a78bfa", letterSpacing: "0.08em", marginBottom: 4 }}>
+            // SETTLEMENT_VERIFIED: DISPATCH_CONFIRMED
+          </div>
+
+          <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: "-0.01em", color: "#fff" }}>
+            Payment Successful & Keys Dispatched
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, marginTop: 6 }}>
-            Thank you for your purchase from <strong style={{ color: "#fff" }}>{shop?.name}</strong>
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginTop: 4 }}>
+            Direct fulfillment receipt from <strong style={{ color: "#ffffff" }}>{shop?.name}</strong>
           </p>
         </div>
 
         {/* Order Delivery Box */}
         <div
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 20,
-            padding: 28,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+            background: "rgba(8, 8, 12, 0.95)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: 16,
+            padding: 24,
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.9)",
             marginBottom: 24,
+            position: "relative",
+            overflow: "hidden",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 16, marginBottom: 20 }}>
+          {/* Tactical Top LED Accent */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              background: "linear-gradient(90deg, transparent 0%, rgb(55, 44, 102) 25%, #8b5cf6 50%, rgb(55, 44, 102) 75%, transparent 100%)",
+            }}
+          />
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 14, marginBottom: 18 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {product?.type === "key" ? <Key size={22} color="#818cf8" /> : <Package size={22} color="#818cf8" />}
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.35)",
+                  border: "1px solid rgba(139, 92, 246, 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                {product?.type === "key" ? <Key size={18} /> : <Package size={18} />}
+              </div>
               <div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>Your Product Delivery</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>{product?.title}</div>
+                <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
+                  DISPATCHED PROTOCOL PRODUCT
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{product?.title}</div>
               </div>
             </div>
             {order.quantity > 1 && (
               <span
                 style={{
-                  background: "rgba(99, 102, 241, 0.15)",
-                  border: "1px solid rgba(99, 102, 241, 0.3)",
-                  color: "#a5b4fc",
-                  padding: "4px 10px",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.4)",
+                  color: "#c4b5fd",
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontWeight: 800,
                 }}
               >
-                Qty: {order.quantity}
+                QTY: {order.quantity}
               </span>
             )}
           </div>
 
           {/* Key Value Display */}
           {delivery && delivery.deliveryValue ? (
-            <OrderReceiptClient deliveryValue={delivery.deliveryValue} orderId={order.id} />
+            <OrderReceiptClient
+              deliveryValue={delivery.deliveryValue}
+              orderId={order.id}
+              duration={order.keyDuration || product?.duration}
+              durationDays={order.keyDurationDays ?? product?.durationDays}
+              customDurationLabel={product?.customDurationLabel}
+              expiresAt={order.keyExpiresAt ? order.keyExpiresAt.toISOString() : null}
+            />
           ) : (
-            <div style={{ padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
-              Order is being processed. Key will be sent to <strong>{order.buyerEmail}</strong> shortly.
+            <div style={{ padding: 14, borderRadius: 8, background: "rgba(3, 3, 5, 0.9)", color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "var(--font-mono, monospace)" }}>
+              Order daemon processing. Key dispatched to <strong>{order.buyerEmail}</strong>.
             </div>
           )}
 
-          {/* Receipt Info */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13 }}>
+          {/* Telemetry Receipt Info */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>
             <div>
-              <span style={{ color: "rgba(255,255,255,0.5)", display: "block" }}>Order Reference</span>
-              <span style={{ fontFamily: "monospace", color: "#fff" }}>#{order.id.slice(0, 12)}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>TXID REFERENCE</span>
+              <span style={{ color: "#ffffff", fontWeight: 700 }}>#{order.id.slice(0, 14)}</span>
             </div>
 
             <div>
-              <span style={{ color: "rgba(255,255,255,0.5)", display: "block" }}>Buyer Email</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>CUSTOMER MAILBOX</span>
               <span style={{ color: "#fff" }}>{order.buyerEmail}</span>
             </div>
 
             <div>
-              <span style={{ color: "rgba(255,255,255,0.5)", display: "block" }}>Total Paid ({order.quantity} item{order.quantity > 1 ? "s" : ""})</span>
-              <span style={{ fontWeight: 700, color: "#10b981", fontSize: 15 }}>${parseFloat(order.totalAmount).toFixed(2)} USD</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>SETTLED AMOUNT ({order.quantity} ITEM{order.quantity > 1 ? "S" : ""})</span>
+              <span style={{ fontWeight: 800, color: "#ffffff", fontSize: 14 }}>${parseFloat(order.totalAmount).toFixed(2)} USD</span>
             </div>
 
             <div>
-              <span style={{ color: "rgba(255,255,255,0.5)", display: "block" }}>Payment Method</span>
-              <span style={{ textTransform: "uppercase", color: "#fff", fontWeight: 600 }}>{order.paymentMethod}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", display: "block", fontSize: 10 }}>PAYMENT GATEWAY</span>
+              <span style={{ textTransform: "uppercase", color: "#c4b5fd", fontWeight: 700 }}>{order.paymentMethod}</span>
             </div>
           </div>
         </div>
@@ -256,14 +372,15 @@ export default async function OrderReceiptPage({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 8,
-                color: "#818cf8",
+                gap: 6,
+                color: "#c4b5fd",
                 textDecoration: "none",
-                fontWeight: 600,
-                fontSize: 14,
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: "var(--font-mono, monospace)",
               }}
             >
-              Return to {shop.name} Storefront →
+              ← Return to {shop.name} Storefront
             </Link>
           )}
         </div>
@@ -271,3 +388,4 @@ export default async function OrderReceiptPage({
     </div>
   );
 }
+

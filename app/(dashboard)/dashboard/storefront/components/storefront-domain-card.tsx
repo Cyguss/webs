@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Globe, Search, Webhook, ArrowRight, Loader2, CheckCircle2, MessageSquare } from "lucide-react";
+import { Globe, Search, Webhook, ArrowRight, Loader2, CheckCircle2, MessageSquare, Copy, Check, Server } from "lucide-react";
 
 interface StorefrontDomainCardProps {
   name: string;
@@ -35,25 +35,50 @@ export function StorefrontDomainCard({
   onVerifyWebhook,
   onTestWebhook,
 }: StorefrontDomainCardProps) {
+  const [copiedTarget, setCopiedTarget] = useState(false);
+  const cnameTarget = "cname.krypt.market";
+
+  const cleanDomain = customDomain ? customDomain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") : "";
+  const parts = cleanDomain.split(".");
+  const hostRecord = parts.length > 2 ? parts[0] : "@";
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(cnameTarget);
+    setCopiedTarget(true);
+    setTimeout(() => setCopiedTarget(false), 2000);
+  };
+
   return (
     <>
       {/* Custom Domain */}
       <div className="card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <h3
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--color-foreground)",
-            margin: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <Globe size={16} color="var(--color-primary-light)" /> Custom Domain
-        </h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: "var(--color-foreground)",
+              margin: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <Globe size={16} color="var(--color-primary-light)" /> Custom Domain (DNS)
+          </h3>
+          <span className="badge badge-secondary text-[11px]">
+            {cleanDomain ? "DNS Ready" : "Optional"}
+          </span>
+        </div>
+
+        <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0 }}>
+          Connect your own branded domain to your store. Your standard subdomain{" "}
+          <code style={{ fontSize: 12, padding: "2px 6px", borderRadius: 4, background: "var(--color-surface-2)", fontFamily: "var(--font-mono)" }}>{shopSlug}.krypt.market</code>{" "}
+          will always remain active as a fallback.
+        </p>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label className="label">Your Domain</label>
+          <label className="label">Custom Hostname</label>
           <input
             type="text"
             className="input"
@@ -63,35 +88,59 @@ export function StorefrontDomainCard({
             style={{ fontFamily: "monospace" }}
           />
         </div>
-        {customDomain && (
+
+        {cleanDomain && (
           <div
             style={{
-              padding: "14px 16px",
+              padding: 16,
               borderRadius: "var(--radius-md)",
-              background: "var(--color-primary-subtle)",
-              border: "1px solid rgba(99,102,241,0.2)",
+              background: "var(--color-surface-2)",
+              border: "1px solid var(--color-border)",
               fontSize: 13,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
             }}
           >
-            <div style={{ fontWeight: 700, color: "var(--color-foreground)", marginBottom: 8 }}>
-              DNS Configuration Required
-            </div>
-            <div style={{ color: "var(--color-muted-foreground)", display: "flex", flexDirection: "column", gap: 4 }}>
-              <div>
-                Add a <strong>CNAME record</strong> at your DNS provider:
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontWeight: 700, color: "var(--color-foreground)", display: "flex", alignItems: "center", gap: 6 }}>
+                <Server size={15} color="var(--color-primary)" /> Required DNS Record
               </div>
-              <code
-                style={{
-                  background: "var(--color-surface-2)",
-                  padding: "6px 10px",
-                  borderRadius: 6,
-                  display: "block",
-                  marginTop: 4,
-                }}
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="btn btn-secondary"
+                style={{ padding: "4px 10px", fontSize: 12, gap: 6 }}
               >
-                {customDomain} → cname.vaultly.io
-              </code>
-              <div style={{ marginTop: 6 }}>DNS changes may take up to 48 hours to propagate.</div>
+                {copiedTarget ? <Check size={13} color="var(--color-success)" /> : <Copy size={13} />}
+                {copiedTarget ? "Copied Target" : "Copy Target"}
+              </button>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ color: "var(--color-muted-foreground)", textAlign: "left", borderBottom: "1px solid var(--color-border)" }}>
+                    <th style={{ padding: "6px 8px" }}>Type</th>
+                    <th style={{ padding: "6px 8px" }}>Name / Host</th>
+                    <th style={{ padding: "6px 8px" }}>Value / Target</th>
+                    <th style={{ padding: "6px 8px" }}>TTL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: "8px", fontWeight: 700, color: "var(--color-primary-light)" }}>CNAME</td>
+                    <td style={{ padding: "8px", fontFamily: "monospace", color: "var(--color-foreground)" }}>{hostRecord}</td>
+                    <td style={{ padding: "8px", fontFamily: "monospace", color: "var(--color-foreground)" }}>{cnameTarget}</td>
+                    <td style={{ padding: "8px", color: "var(--color-muted-foreground)" }}>Automatic / 3600</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ fontSize: 12, color: "var(--color-muted-foreground)", lineHeight: 1.5, borderTop: "1px solid var(--color-border)", paddingTop: 10 }}>
+              • If using <strong>Cloudflare</strong>, ensure proxy status is set to <strong>DNS Only (Grey Cloud)</strong> and SSL mode is <strong>Full (Strict)</strong>.<br />
+              • Once DNS propagates (typically 5-30 minutes), visitors heading to <strong>{cleanDomain}</strong> will be served your storefront directly.
             </div>
           </div>
         )}
@@ -163,7 +212,7 @@ export function StorefrontDomainCard({
           <div style={{ fontSize: 18, color: "#1a0dab", fontWeight: 400, marginBottom: 2 }}>
             {metaTitle || `${name || "My Store"} — Digital Products`}
           </div>
-          <div style={{ fontSize: 13, color: "#006621", marginBottom: 2 }}>vaultly.io/{shopSlug}</div>
+          <div style={{ fontSize: 13, color: "#006621", marginBottom: 2, fontFamily: "var(--font-mono)" }}>krypt.market/{shopSlug}</div>
           <div style={{ fontSize: 13, color: "#545454" }}>
             {metaDescription || "Your storefront description will appear here in search results."}
           </div>

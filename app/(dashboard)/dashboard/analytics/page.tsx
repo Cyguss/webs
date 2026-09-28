@@ -97,8 +97,21 @@ export default function AnalyticsPage() {
               <div style={{ fontSize: 28, fontWeight: 800, color: "var(--color-foreground)", marginBottom: 4 }}>
                 ${data?.totalRevenue || "0.00"}
               </div>
-              <div style={{ fontSize: 12, color: "#22c55e", display: "flex", alignItems: "center", gap: 4 }}>
-                <TrendingUp size={14} /> +14.2% vs last month
+              <div
+                style={{
+                  fontSize: 12,
+                  color:
+                    data?.growthDirection === "up"
+                      ? "#22c55e"
+                      : data?.growthDirection === "down"
+                      ? "#ef4444"
+                      : "var(--color-muted-foreground)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <TrendingUp size={14} /> {data?.revenueGrowth || "0.0%"} {data?.growthLabel || "vs last month"}
               </div>
             </div>
 
@@ -164,7 +177,7 @@ export default function AnalyticsPage() {
             <div className="card" style={{ padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-muted-foreground)" }}>
-                  Est. Store Conversion
+                  Checkout Conversion
                 </span>
                 <div
                   style={{
@@ -183,8 +196,8 @@ export default function AnalyticsPage() {
               <div style={{ fontSize: 28, fontWeight: 800, color: "var(--color-foreground)", marginBottom: 4 }}>
                 {data?.conversionRate || "0.0"}%
               </div>
-              <div style={{ fontSize: 12, color: "#22c55e", display: "flex", alignItems: "center", gap: 4 }}>
-                Top 5% of digital stores
+              <div style={{ fontSize: 12, color: "var(--color-muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+                Completed checkouts ratio
               </div>
             </div>
           </div>
@@ -284,15 +297,6 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-              <div style={{ padding: 14, borderRadius: "var(--radius-md)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-foreground)", marginBottom: 2, display: "flex", alignItems: "center", gap: 5 }}>
-                  <Sparkles size={13} />
-                  <span>Conversion Insight</span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
-                  Offering both Crypto and Credit Card payments boosts checkout conversions by up to 34%.
-                </div>
-              </div>
             </div>
           </div>
         </div>

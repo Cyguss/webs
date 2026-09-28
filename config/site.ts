@@ -4,10 +4,10 @@
  */
 
 export const siteConfig = {
-  name: "Vaultly",
-  tagline: "Sell Digital Products Instantly",
+  name: "KRYPT MARKET",
+  tagline: "Automated Black Market & Digital Key Protocol",
   description:
-    "Next-generation digital marketplace platform inspired by SellAuth & Billgang. Automated key delivery, crypto and card payments, and instant storefronts.",
+    "Next-generation digital marketplace protocol. Automated key delivery, crypto and card payments, and encrypted merchant storefronts.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   domain: process.env.NEXT_PUBLIC_APP_DOMAIN || "localhost:3000",
 
@@ -22,18 +22,18 @@ export const siteConfig = {
 
   // Social & Community Links
   links: {
-    twitter: "https://x.com/vaultly",
-    discord: "https://discord.gg/vaultly",
-    telegram: "https://t.me/vaultly",
+    twitter: "https://x.com/kryptmarket",
+    discord: "https://discord.gg/krypt",
+    telegram: "https://t.me/kryptmarket",
     github: "https://github.com",
-    supportEmail: "support@vaultly.com",
+    supportEmail: "support@krypt.market",
   },
 
   // Storefront Themes
   theme: {
-    defaultAccent: "#6366f1",
-    defaultBackground: "#0f0f0f",
-    defaultFontStyle: "inter",
+    defaultAccent: "rgb(55, 44, 102)",
+    defaultBackground: "#030305",
+    defaultFontStyle: "jetbrains",
   },
 };
 

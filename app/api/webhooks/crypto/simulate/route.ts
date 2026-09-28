@@ -8,6 +8,14 @@ import crypto from "crypto";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // CRITICAL SECURITY GUARD: Simulation is strictly disabled in production
+  if (process.env.NODE_ENV === "production" || process.env.CRYPTOMUS_SANDBOX === "false") {
+    return NextResponse.json(
+      { error: "Payment simulation is strictly forbidden in production mode." },
+      { status: 403 }
+    );
+  }
+
   try {
     const { orderId } = await req.json();
     if (!orderId) {

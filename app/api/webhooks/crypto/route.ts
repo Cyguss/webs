@@ -18,15 +18,20 @@ export async function POST(req: Request) {
     const paymentKey = (process.env.CRYPTOMUS_PAYMENT_KEY || "").trim();
     const sign = body.sign || req.headers.get("sign") || "";
 
-    // Signature verification
-    if (paymentKey) {
+    // Signature verification (Strict fail-closed security)
+    if (process.env.NODE_ENV === "production" || paymentKey) {
+      if (!paymentKey || !sign) {
+        console.error("[Cryptomus Webhook] Missing CRYPTOMUS_PAYMENT_KEY or signature header.");
+        return NextResponse.json({ error: "Missing webhook secret or signature" }, { status: 401 });
+      }
+
       const isValid = verifyCryptomusWebhook(rawBody, sign, paymentKey);
       if (!isValid) {
         console.error("[Cryptomus Webhook] Signature verification failed!");
         return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
       }
     } else {
-      console.warn("[Cryptomus Webhook] CRYPTOMUS_PAYMENT_KEY not set — skipping signature verification in development.");
+      console.warn("[Cryptomus Webhook] CRYPTOMUS_PAYMENT_KEY not set — skipping signature verification in development sandbox only.");
     }
 
     const { order_id, status, is_final } = body;

@@ -13,7 +13,7 @@ export const DEFAULT_BOT_CONFIG: Record<string, string> = {
   webhook_order_log: "",
   webhook_payout_log: "",
   webhook_activity_log: "",
-  support_email: "support@vaultly.io",
+  support_email: "support@krypt.market",
 };
 
 export const BOT_CONFIG_KEYS = Object.keys(DEFAULT_BOT_CONFIG);

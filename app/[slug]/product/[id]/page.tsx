@@ -1,17 +1,18 @@
 import { db } from "@/lib/db";
 import { products, shops, inventoryKeys, reviews, user } from "@/lib/db/schema";
-import { eq, and, count, avg, desc } from "drizzle-orm";
+import { eq, and, count, desc, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProductCheckoutClient from "./checkout-client";
 import { ProductGallery } from "./product-gallery";
-import { ArrowLeft, Key, Package, ShieldCheck, Zap, Star, MessageSquare, Lock } from "lucide-react";
+import { ArrowLeft, Key, Package, ShieldCheck, Zap, Star, MessageSquare, Lock, Clock, Terminal, Cpu, CheckCircle2 } from "lucide-react";
+import { getKeyDurationDisplay } from "@/lib/key-duration";
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = await params;
 
   const shop = await db.query.shops.findFirst({
-    where: eq(shops.slug, slug),
+    where: or(eq(shops.slug, slug), eq(shops.customDomain, slug)),
   });
 
   if (!shop || !shop.isActive) {
@@ -42,17 +43,17 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
     if (!isOwner && !isAdmin && !isSuperAdmin) {
       return (
-        <div style={{ minHeight: "100vh", background: "#08090c", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ maxWidth: 440, width: "100%", background: "#0f1015", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 32px", textAlign: "center" }}>
-            <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#818cf8" }}>
+        <div style={{ minHeight: "100vh", background: "#030407", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "var(--font-mono, monospace)" }}>
+          <div style={{ maxWidth: 440, width: "100%", background: "#080a0f", border: "1px solid rgba(255,42,75,0.4)", borderRadius: 14, padding: 36, textAlign: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: 12, background: "rgba(255,42,75,0.12)", border: "1px solid rgba(255,42,75,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#ff2a4b" }}>
               <Lock size={24} />
             </div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, color: "#f3f4f6", marginBottom: 8 }}>Store Pending Review</h1>
-            <p style={{ fontSize: 13, color: "#7e8494", lineHeight: 1.6, marginBottom: 24 }}>
-              <strong>{shop.name}</strong> is currently pending platform approval. This product cannot be purchased yet.
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", marginBottom: 8 }}>NODE_PENDING_APPROVAL</h1>
+            <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: 24 }}>
+              <strong>{shop.name}</strong> is currently pending platform approval.
             </p>
-            <Link href="/" style={{ display: "inline-flex", padding: "9px 20px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#f3f4f6", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
-              Return Home
+            <Link href="/" className="krypt-btn-primary" style={{ display: "inline-flex", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 12 }}>
+              [RETURN_TO_HUB]
             </Link>
           </div>
         </div>
@@ -69,11 +70,26 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   }
 
   let stock = 0;
-  const res = await db
-    .select({ count: count() })
+  const allUnusedKeys = await db
+    .select({
+      id: inventoryKeys.id,
+      duration: inventoryKeys.duration,
+      variantId: inventoryKeys.variantId,
+    })
     .from(inventoryKeys)
     .where(and(eq(inventoryKeys.productId, product.id), eq(inventoryKeys.isUsed, false)));
-  stock = res[0]?.count || 0;
+
+  stock = allUnusedKeys.length;
+
+  const variantStocks: Record<string, number> = {};
+  for (const k of allUnusedKeys) {
+    if (k.variantId) {
+      variantStocks[k.variantId] = (variantStocks[k.variantId] || 0) + 1;
+    }
+    if (k.duration) {
+      variantStocks[k.duration] = (variantStocks[k.duration] || 0) + 1;
+    }
+  }
 
   // Fetch product reviews
   const productReviews = await db
@@ -85,9 +101,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const reviewCount = productReviews.length;
   const avgRating = reviewCount > 0 ? (productReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviewCount).toFixed(1) : null;
 
-  const bg = shop.backgroundColor || "#0f0f0f";
-  const accent = shop.accentColor || "#6366f1";
-  const isLight = false;
+  const bg = "#030305";
+  const accent = "rgb(55, 44, 102)";
 
   let galleryImages: string[] = [];
   if (product.images) {
@@ -102,193 +117,313 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="page-transition" style={{ minHeight: "100vh", background: bg, color: "#fff", fontFamily: "Inter, sans-serif", position: "relative" }}>
-      {/* Ambient Blurred Store Banner (Atmospheric background glow, no sharp floating box) */}
-      {shop.bannerUrl ? (
+    <div
+      className="page-transition"
+      style={{
+        minHeight: "100vh",
+        background: bg,
+        color: "#ffffff",
+        fontFamily: "var(--font-mono, monospace)",
+        position: "relative",
+      }}
+    >
+      {/* ─── Top Command Navigation HUD ─── */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 80,
+          background: "rgba(3, 3, 5, 0.94)",
+          backdropFilter: "blur(16px)",
+          borderBottom: "1px solid rgba(55, 44, 102, 0.45)",
+          padding: "12px 20px",
+        }}
+      >
         <div
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 260,
-            overflow: "hidden",
-            pointerEvents: "none",
-            zIndex: 0,
+            maxWidth: 1280,
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
           }}
         >
-          <img
-            src={shop.bannerUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "blur(32px)",
-              opacity: isLight ? 0.45 : 0.35,
-              transform: "scale(1.15)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, ${bg} 100%)`,
-            }}
-          />
-        </div>
-      ) : (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 220,
-            background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${accent}25, transparent)`,
-            pointerEvents: "none",
-            zIndex: 0,
-          }}
-        />
-      )}
+          {/* Breadcrumb path */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link
+              href={`/${slug}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 12px",
+                borderRadius: 6,
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
+                textDecoration: "none",
+                fontSize: 11,
+                fontWeight: 700,
+                transition: "all 0.15s ease",
+              }}
+            >
+              <ArrowLeft size={13} />
+              <span>[BACK_TO_NODE]</span>
+            </Link>
 
-      <style>{`
-        @keyframes productPageFadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .product-page-content {
-          animation: productPageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      `}</style>
+            <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.3)" }}>/</span>
 
-      <div className="product-page-content" style={{ maxWidth: 960, margin: "0 auto", padding: "24px 24px 60px", position: "relative", zIndex: 1 }}>
-        {/* Navigation & Store Info Bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+            <span style={{ fontSize: 11, color: "#c4b5fd", fontWeight: 700 }}>
+              {shop.name.toUpperCase()}
+            </span>
+
+            <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.3)" }}>/</span>
+
+            <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
+              {product.title}
+            </span>
+          </div>
+
+          {/* Quick Keys link */}
           <Link
-            href={`/${slug}`}
+            href={`/${shop.slug}/lookup`}
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 8,
-              color: "rgba(255,255,255,0.7)",
+              gap: 6,
+              padding: "5px 12px",
+              borderRadius: 6,
+              background: "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(78, 62, 140) 100%)",
+              border: "1px solid rgba(167, 139, 250, 0.4)",
+              color: "#ffffff",
               textDecoration: "none",
-              fontSize: 14,
-              fontWeight: 500,
+              fontSize: 11,
+              fontWeight: 800,
+              boxShadow: "0 0 12px rgba(55, 44, 102, 0.5)",
             }}
           >
-            <ArrowLeft size={16} /> Back to <strong style={{ color: "#fff" }}>{shop.name}</strong>
+            <Key size={12} />
+            <span>[RECOVER_KEYS]</span>
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {shop.logoUrl && (
-              <img
-                src={shop.logoUrl}
-                alt=""
-                referrerPolicy="no-referrer"
-                style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
-              />
-            )}
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{shop.name} • Official Store</span>
-          </div>
         </div>
+      </header>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1.2fr",
-            gap: 36,
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 24,
-            padding: 32,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-            marginBottom: 40,
-          }}
-        >
-          {/* Left Column: Product Info & Gallery */}
-          <div>
+      {/* ─── Main Weaponized Dual-Cockpit Grid ─── */}
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "32px 20px 60px",
+          display: "grid",
+          gridTemplateColumns: "1.1fr 1fr",
+          gap: 32,
+          alignItems: "start",
+        }}
+      >
+        {/* ─── LEFT COCKPIT: Gallery, Specs & Verified Reviews ─── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {/* Main Product Card Deck */}
+          <div
+            style={{
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.45)",
+              borderRadius: 14,
+              padding: 24,
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 10px 35px rgba(0, 0, 0, 0.8)",
+            }}
+          >
+            {/* Cyber Corner HUD Notches */}
+            <div style={{ position: "absolute", top: 6, left: 6, width: 8, height: 8, borderTop: "2px solid #8b5cf6", borderLeft: "2px solid #8b5cf6" }} />
+            <div style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderTop: "2px solid #8b5cf6", borderRight: "2px solid #8b5cf6" }} />
+
+            {/* Gallery Component */}
             <ProductGallery
               images={galleryImages}
               title={product.title}
               accentColor={accent}
-              isLight={isLight}
+              isLight={false}
             />
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            {/* Metadata Tags */}
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 16, marginBottom: 12 }}>
+              {product.category && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    padding: "3px 8px",
+                    borderRadius: 4,
+                    background: "rgba(55, 44, 102, 0.35)",
+                    border: "1px solid rgba(139, 92, 246, 0.35)",
+                    color: "#c4b5fd",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {product.category}
+                </span>
+              )}
+
               <span
                 style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  padding: "4px 10px",
-                  borderRadius: 6,
-                  background: "rgba(255,255,255,0.1)",
-                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  color: "#ffffff",
                   textTransform: "uppercase",
                 }}
               >
-                {product.type === "key" ? "License Key" : "Digital Key"}
+                {product.type === "key" ? "LICENSE_KEY" : "DIGITAL_DISPATCH"}
               </span>
-              <span style={{ fontSize: 12, color: stock > 0 ? "#34d399" : "#f87171" }}>
-                {stock > 0 ? `● ${stock} in vault` : "● Out of stock"}
+
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  background: stock > 0 ? "rgba(55, 44, 102, 0.4)" : "rgba(239, 68, 68, 0.1)",
+                  border: stock > 0 ? "1px solid rgba(139, 92, 246, 0.4)" : "1px solid rgba(239, 68, 68, 0.3)",
+                  color: stock > 0 ? "#c4b5fd" : "#ef4444",
+                }}
+              >
+                {product.isUnlimitedStock ? "● INSTANT_STOCK" : stock > 0 ? `● ${stock} IN VAULT` : "● DEPLETED"}
               </span>
             </div>
 
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 8px 0", color: "#fff" }}>{product.title}</h1>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: "#ffffff", margin: "0 0 12px 0", letterSpacing: "-0.01em" }}>
+              {product.title}
+            </h1>
 
             {avgRating && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-                <Star size={16} fill="#f59e0b" color="#f59e0b" />
-                <span style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>{avgRating}</span>
-                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>({reviewCount} verified reviews)</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{ display: "flex", gap: 2 }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} size={13} fill="#f59e0b" color="#f59e0b" />
+                  ))}
+                </div>
+                <span style={{ fontWeight: 800, color: "#ffffff", fontSize: 13 }}>{avgRating}</span>
+                <span style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 11 }}>({reviewCount} verified purchases)</span>
               </div>
             )}
 
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-              {product.description || "No description provided."}
-            </p>
-
-            <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#fff", fontWeight: 600, marginBottom: 4 }}>
-                <Zap size={15} color={accent} /> Instant Digital Delivery
-              </div>
-              Key or delivery credentials are shown on screen and emailed to you immediately after payment.
+            {/* Tactical Protocol Briefing */}
+            <div
+              style={{
+                marginTop: 14,
+                padding: 16,
+                borderRadius: 8,
+                background: "rgba(3, 3, 5, 0.85)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                fontSize: 12.5,
+                color: "rgba(255, 255, 255, 0.75)",
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {product.description || "No tactical briefing provided for this protocol."}
             </div>
           </div>
 
-          {/* Right Column: Interactive Checkout Form Client */}
-          <ProductCheckoutClient product={product} shop={shop} stock={stock} accentColor={accent} />
+          {/* Protocol Specifications Matrix */}
+          <div
+            style={{
+              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+              border: "1px solid rgba(55, 44, 102, 0.45)",
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", marginBottom: 14, letterSpacing: "0.08em" }}>
+              PROTOCOL_SPECIFICATIONS // TELEMETRY
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 11 }}>
+              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
+                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>DISPATCH_SPEED</div>
+                <div style={{ fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Instant (&lt; 2.4 sec)</div>
+              </div>
+
+              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
+                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>DELIVERY_GATEWAY</div>
+                <div style={{ fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>Web Terminal + Mailbox</div>
+              </div>
+
+              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
+                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>ENCRYPTION</div>
+                <div style={{ fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Zero-Knowledge TLS</div>
+              </div>
+
+              <div style={{ padding: 10, borderRadius: 6, background: "rgba(3, 3, 5, 0.8)", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
+                <div style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: 9.5 }}>SUPPORT_CHANNEL</div>
+                <div style={{ fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>Official Node Relay</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Verified Customer Reviews */}
+          {reviewCount > 0 && (
+            <div
+              style={{
+                background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+                border: "1px solid rgba(55, 44, 102, 0.45)",
+                borderRadius: 14,
+                padding: 20,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#ffffff", marginBottom: 14, letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+                <MessageSquare size={14} color="#c4b5fd" />
+                <span>CUSTOMER_REVIEWS ({reviewCount})</span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {productReviews.map((rev: any) => (
+                  <div
+                    key={rev.id}
+                    style={{
+                      padding: 12,
+                      borderRadius: 8,
+                      background: "rgba(3, 3, 5, 0.8)",
+                      border: "1px solid rgba(255, 255, 255, 0.06)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ display: "flex", gap: 2 }}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} size={11} fill={s <= rev.rating ? "#f59e0b" : "none"} color={s <= rev.rating ? "#f59e0b" : "rgba(255,255,255,0.2)"} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: 10, color: "#c4b5fd" }}>VERIFIED_BUYER</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", margin: 0, lineHeight: 1.4 }}>
+                      {rev.comment || "No written review."}
+                    </p>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>
+                      {rev.buyerEmail.replace(/(.{2})(.*)(?=@)/, "$1***")} • {new Date(rev.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Product Verified Reviews Section */}
-        {reviewCount > 0 && (
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 28 }}>
-            <h3 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 20px 0", color: "#fff", display: "flex", alignItems: "center", gap: 10 }}>
-              <MessageSquare size={20} color={accent} /> Customer Reviews & Ratings ({reviewCount})
-            </h3>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {productReviews.map((rev: any) => (
-                <div key={rev.id} style={{ padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ display: "flex", gap: 2 }}>
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} size={14} fill={s <= rev.rating ? "#f59e0b" : "none"} color={s <= rev.rating ? "#f59e0b" : "rgba(255,255,255,0.2)"} />
-                      ))}
-                    </div>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Verified Buyer</span>
-                  </div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", margin: 0, lineHeight: 1.5 }}>
-                    {rev.comment || "No comment left."}
-                  </p>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 8 }}>
-                    {rev.buyerEmail.replace(/(.{2})(.*)(?=@)/, "$1***")} • {new Date(rev.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ─── RIGHT COCKPIT: Purchase Authorization Deck (Sticky) ─── */}
+        <div style={{ position: "sticky", top: 72 }}>
+          <ProductCheckoutClient
+            product={product}
+            shop={shop}
+            stock={stock}
+            variantStocks={variantStocks}
+            accentColor={accent}
+          />
+        </div>
       </div>
     </div>
   );

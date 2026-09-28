@@ -43,7 +43,10 @@ export function verifyCryptomusWebhook(rawBody: string, receivedSign: string, ap
     // Remove sign if present in body before computing
     const { sign, ...dataWithoutSign } = parsed;
     const computedSign = generateCryptomusSignature(dataWithoutSign, apiKey);
-    return computedSign.toLowerCase() === receivedSign.toLowerCase();
+    const bufComputed = Buffer.from(computedSign.toLowerCase(), "utf8");
+    const bufReceived = Buffer.from(receivedSign.toLowerCase(), "utf8");
+    if (bufComputed.length !== bufReceived.length) return false;
+    return crypto.timingSafeEqual(bufComputed, bufReceived);
   } catch {
     return false;
   }

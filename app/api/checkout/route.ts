@@ -10,9 +10,25 @@ import { fulfillOrder } from "@/lib/order-fulfillment";
 import { checkoutSchema } from "@/lib/validations/checkout";
 import { isDisposableEmail } from "@/lib/anti-fraud/disposable-email";
 import { generateOrderAccessToken } from "@/lib/order-auth";
+import { rateLimit, rateLimitPresets, getClientIp, createRateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const headersList = await headers();
+    const clientIp = getClientIp(headersList);
+
+    // Rate Limiting Guard (Prevents card testing, bot spam, and inventory locking)
+    const rateCheck = rateLimit({
+      key: `checkout:${clientIp}`,
+      ...rateLimitPresets.checkout,
+    });
+    if (!rateCheck.allowed) {
+      return createRateLimitResponse(
+        rateCheck,
+        "Too many checkout attempts from this IP address. Please wait a moment before trying again."
+      );
+    }
+
     const body = await req.json();
     const result = checkoutSchema.safeParse(body);
     if (!result.success) {
@@ -22,7 +38,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { productId, buyerEmail, paymentMethod, quantity, couponId } = result.data;
+    const { productId, buyerEmail, paymentMethod, quantity, couponId, variantId, duration: reqDuration } = result.data;
     const parsedQty = quantity;
 
     // Anti-Fraud: Block temporary and burner email addresses
@@ -50,6 +66,35 @@ export async function POST(req: Request) {
 
     if (!shop || !shop.isActive) {
       return NextResponse.json({ error: "Store is currently inactive" }, { status: 404 });
+    }
+
+    // Determine variant & unit price
+    let chosenVariant: any = null;
+    let chosenDuration = product.duration || "lifetime";
+    let chosenDurationDays = product.durationDays ?? 0;
+    let unitPriceNum = parseFloat(product.price);
+
+    if (product.variants) {
+      try {
+        const parsedVariants = JSON.parse(product.variants);
+        if (Array.isArray(parsedVariants) && parsedVariants.length > 0) {
+          if (variantId) {
+            chosenVariant = parsedVariants.find((v: any) => v.id === variantId);
+          } else if (reqDuration) {
+            chosenVariant = parsedVariants.find((v: any) => v.duration === reqDuration);
+          }
+          if (!chosenVariant && parsedVariants[0]) {
+            chosenVariant = parsedVariants[0];
+          }
+          if (chosenVariant) {
+            unitPriceNum = parseFloat(chosenVariant.price) || unitPriceNum;
+            chosenDuration = chosenVariant.duration || chosenDuration;
+            chosenDurationDays = chosenVariant.durationDays !== undefined ? chosenVariant.durationDays : chosenDurationDays;
+          }
+        }
+      } catch {}
+    } else if (reqDuration) {
+      chosenDuration = reqDuration;
     }
 
     // Store approval security check:
@@ -86,7 +131,6 @@ export async function POST(req: Request) {
       }
     }
 
-    const unitPriceNum = parseFloat(product.price);
     let totalAmountNum = unitPriceNum * parsedQty;
 
     // 4. Secure Coupon Validation (Scoped to Shop & Usage Limits)
@@ -116,11 +160,12 @@ export async function POST(req: Request) {
     const orderId = crypto.randomUUID();
     const accessToken = generateOrderAccessToken(orderId, buyerEmail);
 
-    // 5. Create order record
+    // 5. Create order record with variant and duration details
     await db.insert(orders).values({
       id: orderId,
       shopId: product.shopId,
       productId: product.id,
+      variantId: chosenVariant?.id || variantId || null,
       couponId: validCouponId,
       buyerEmail: buyerEmail.trim().toLowerCase(),
       quantity: parsedQty,
@@ -128,13 +173,26 @@ export async function POST(req: Request) {
       totalAmount: totalAmountNum.toFixed(2),
       currency: product.currency || "USD",
       paymentMethod,
-      paymentStatus: "pending",
-      fulfilledAt: null,
+      paymentStatus: totalAmountNum <= 0 ? "completed" : "pending",
+      fulfilledAt: totalAmountNum <= 0 ? new Date() : null,
+      keyDuration: chosenDuration,
+      keyDurationDays: chosenDurationDays,
     });
+
+    const appUrl = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    // 5b. Immediate fulfillment for free orders (100% coupon promo)
+    if (totalAmountNum <= 0) {
+      await fulfillOrder(orderId);
+      return NextResponse.json({
+        success: true,
+        orderId,
+        checkoutUrl: `${appUrl}/order/${orderId}?token=${accessToken}`,
+      });
+    }
 
     // 6. Handle Real Stripe Hosted Checkout Session (Sandbox / Live)
     if (paymentMethod === "stripe" || paymentMethod === "card") {
-      const appUrl = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const unitAmountInCents = Math.round((totalAmountNum / parsedQty) * 100);
 
       const session = await stripe.checkout.sessions.create({
@@ -179,7 +237,8 @@ export async function POST(req: Request) {
     // 7. Handle Crypto Payment via Cryptomus
     if (paymentMethod === "crypto") {
       const appUrl = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const isSandbox = (process.env.CRYPTOMUS_SANDBOX || "true").toLowerCase() === "true";
+      const defaultSandbox = process.env.NODE_ENV === "production" ? "false" : "true";
+      const isSandbox = (process.env.CRYPTOMUS_SANDBOX || defaultSandbox).toLowerCase() === "true";
 
       // ── TRYB SANDBOX (Testowy bez pobierania pieniędzy, z pełnym webhookiem) ──
       if (isSandbox) {

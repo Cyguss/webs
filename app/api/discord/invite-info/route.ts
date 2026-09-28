@@ -67,7 +67,7 @@ async function verifyDiscordCode(code: string) {
       {
         signal: controller.signal,
         headers: {
-          "User-Agent": "Vaultly-Storefront-Verifier/1.0",
+          "User-Agent": "Krypt-Storefront-Verifier/2.0",
           Accept: "application/json",
         },
       }

@@ -1,12 +1,27 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orders, reviews } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { rateLimit, rateLimitPresets, getClientIp, createRateLimitResponse } from "@/lib/rate-limit";
+import { verifyOrderAccessToken } from "@/lib/order-auth";
 
 export async function POST(req: Request) {
   try {
+    const headersList = await headers();
+    const clientIp = getClientIp(headersList);
+
+    // Rate Limiting Guard
+    const rateCheck = rateLimit({
+      key: `review_post:${clientIp}`,
+      ...rateLimitPresets.review,
+    });
+    if (!rateCheck.allowed) {
+      return createRateLimitResponse(rateCheck, "Too many review submissions. Please wait a moment.");
+    }
+
     const body = await req.json();
-    const { orderId, rating, comment } = body;
+    const { orderId, rating, comment, token } = body;
 
     if (!orderId || !rating || rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Order ID and valid rating (1-5) are required" }, { status: 400 });
@@ -18,6 +33,19 @@ export async function POST(req: Request) {
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Critical Reputation Guard: Only fulfilled & completed orders can be reviewed
+    if (order.paymentStatus !== "completed") {
+      return NextResponse.json(
+        { error: "Only paid and completed orders can be reviewed." },
+        { status: 400 }
+      );
+    }
+
+    // Authenticate review submission via order token if provided
+    if (token && !verifyOrderAccessToken(order.id, order.buyerEmail, token)) {
+      return NextResponse.json({ error: "Invalid order verification token." }, { status: 403 });
     }
 
     // Check if review already submitted
@@ -36,8 +64,8 @@ export async function POST(req: Request) {
       productId: order.productId,
       orderId: order.id,
       buyerEmail: order.buyerEmail,
-      rating: parseInt(rating),
-      comment: comment ? comment.trim() : null,
+      rating: Math.round(Number(rating)),
+      comment: typeof comment === "string" ? comment.trim().slice(0, 1000) : null,
     });
 
     return NextResponse.json({ success: true, reviewId });

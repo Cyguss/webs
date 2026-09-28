@@ -86,10 +86,11 @@ export default function DashboardOverviewClient() {
         shop: storeData.shop,
         stats: storeData,
         recentOrders: ordersData.orders || [],
+        totalOrdersCount: ordersData.totalCount ?? (ordersData.orders?.length || 0),
         balanceData: balanceData,
         totalKeysAvailable: keysCount,
         approvalStatus: storeData.approvalStatus || null,
-      });
+      } as any);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
     } finally {
@@ -254,6 +255,8 @@ export default function DashboardOverviewClient() {
   const availableBalance = parseFloat(data?.balanceData?.availableBalance ?? "0");
   const pendingBalance = parseFloat(data?.balanceData?.pendingBalance ?? "0");
   const totalEarned = parseFloat(data?.balanceData?.totalEarned ?? "0");
+  const netEarnings = totalEarned * 0.95;
+  const totalOrdersCount = (data as any)?.totalOrdersCount ?? data?.recentOrders?.length ?? 0;
   const recentOrders = data?.recentOrders || [];
   const approvalStatus = data?.approvalStatus;
 
@@ -498,7 +501,7 @@ export default function DashboardOverviewClient() {
             <div>
               <label className="label" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
                 <span>Sellfront URL Slug</span>
-                <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>vaultly.io/[slug]</span>
+                <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" }}>krypt.market/[slug]</span>
               </label>
               <div style={{ display: "flex", alignItems: "center" }}>
                 <span
@@ -654,18 +657,18 @@ export default function DashboardOverviewClient() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Gross Revenue
+                Net Seller Earnings
               </span>
               <div style={{ width: 34, height: 34, borderRadius: "var(--radius-sm)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-foreground)" }}>
                 <TrendingUp size={17} />
               </div>
             </div>
             <div style={{ fontSize: 30, fontWeight: 900, color: "var(--color-foreground)", letterSpacing: "-0.02em" }}>
-              ${totalEarned.toFixed(2)}
+              ${netEarnings.toFixed(2)}
             </div>
           </div>
-          <div style={{ marginTop: 14, fontSize: 12, color: "var(--color-success)", display: "flex", alignItems: "center", gap: 5 }}>
-            <CheckCircle2 size={13} /> Flat 5% platform fee applied
+          <div style={{ marginTop: 14, fontSize: 12, color: totalEarned > 0 ? "var(--color-success)" : "var(--color-muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
+            <CheckCircle2 size={13} /> {totalEarned > 0 ? `Gross sales: $${totalEarned.toFixed(2)} • 5% fee deducted` : "Flat 5% platform fee on sales • No monthly fees"}
           </div>
         </div>
 
@@ -680,11 +683,11 @@ export default function DashboardOverviewClient() {
               </div>
             </div>
             <div style={{ fontSize: 30, fontWeight: 900, color: "var(--color-foreground)", letterSpacing: "-0.02em" }}>
-              {recentOrders.length}
+              {totalOrdersCount}
             </div>
           </div>
           <div style={{ marginTop: 14, fontSize: 12, color: "var(--color-muted-foreground)" }}>
-            Card & Crypto checkouts
+            Completed checkouts fulfilled
           </div>
         </div>
       </div>

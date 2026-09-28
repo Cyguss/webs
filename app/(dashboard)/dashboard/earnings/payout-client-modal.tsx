@@ -19,8 +19,8 @@ export default function PayoutClientModal({ availableBalance }: { availableBalan
   const [cryptoCurrency, setCryptoCurrency] = useState("LTC");
 
   const requestedNum = parseFloat(amount) || 0;
-  const feeNum = requestedNum * 0.05;
-  const netNum = requestedNum - feeNum;
+  const feeNum = 0;
+  const netNum = requestedNum;
 
   async function handlePayoutSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,47 +154,23 @@ export default function PayoutClientModal({ availableBalance }: { availableBalan
             ) : (
               <form onSubmit={handlePayoutSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 {/* Method selector */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => setMethod("crypto")}
-                    style={{
-                      padding: "12px",
-                      borderRadius: "var(--radius-md)",
-                      border: method === "crypto" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
-                      background: method === "crypto" ? "rgba(99, 102, 241, 0.1)" : "var(--color-background)",
-                      color: "var(--color-foreground)",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Coins size={18} color="#f59e0b" /> Crypto Wallet
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setMethod("crypto")}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      borderRadius: "var(--radius-md)",
-                      border: "2px solid var(--color-primary)",
-                      background: "rgba(99, 102, 241, 0.1)",
-                      color: "var(--color-foreground)",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Coins size={18} color="#f59e0b" /> Crypto Wallet Withdrawal
-                  </button>
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--color-border)",
+                    background: "var(--color-surface-2)",
+                    color: "var(--color-foreground)",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Coins size={18} color="#f59e0b" /> Direct Crypto Withdrawal
+                  </div>
+                  <span className="badge badge-success" style={{ fontSize: 11 }}>Instant Batching</span>
                 </div>
 
                 {/* Amount input */}
@@ -265,10 +241,10 @@ export default function PayoutClientModal({ availableBalance }: { availableBalan
                       <span>${requestedNum.toFixed(2)}</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", color: "var(--color-muted-foreground)" }}>
-                      <span>Platform Payout Fee (5%):</span>
-                      <span>-${feeNum.toFixed(2)}</span>
+                      <span>Withdrawal Fee:</span>
+                      <span style={{ color: "var(--color-success)", fontWeight: 600 }}>$0.00 (Platform fee covered on sales)</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#10b981", borderTop: "1px solid var(--color-border)", paddingTop: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "var(--color-success)", borderTop: "1px solid var(--color-border)", paddingTop: 6 }}>
                       <span>Net Amount Sent to You:</span>
                       <span>${netNum > 0 ? netNum.toFixed(2) : "0.00"}</span>
                     </div>

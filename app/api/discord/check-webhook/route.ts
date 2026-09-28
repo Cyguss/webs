@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     const res = await fetch(webhookUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "Vaultly-Webhook-Verifier/1.0" },
+      headers: { "User-Agent": "Krypt-Webhook-Verifier/2.0" },
     });
     clearTimeout(timeout);
 

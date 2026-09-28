@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const stored = localStorage.getItem("vaultly-theme") as Theme | null;
+    const stored = localStorage.getItem("krypt-theme") as Theme | null;
     const resolved = stored === "light" ? "light" : "dark";
     setThemeState(resolved);
     applyTheme(resolved);
@@ -37,7 +37,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   function setTheme(t: Theme) {
     setThemeState(t);
-    localStorage.setItem("vaultly-theme", t);
+    localStorage.setItem("krypt-theme", t);
     applyTheme(t);
   }
 

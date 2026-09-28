@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { DeveloperClient } from "./developer-client";
 
 export const metadata = {
-  title: "Developer & API Keys | Vaultly Dashboard",
+  title: "Developer & API Keys | KRYPT Dashboard",
   description: "Manage merchant API keys, outbound webhooks, and integrate with external bots and services.",
 };
 

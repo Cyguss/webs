@@ -6,68 +6,86 @@ import { useSession } from "@/lib/auth-client";
 import {
   Key,
   Zap,
-  Shield,
   CreditCard,
   ArrowRight,
   CheckCircle2,
   Coins,
   LayoutDashboard,
-  Terminal,
   ExternalLink,
+  Code2,
+  Globe,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  ShoppingBag,
 } from "lucide-react";
 
 function DiscordLogo({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
     </svg>
   );
 }
-
 
 export default function LandingPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  const DISCORD_INVITE = "https://discord.gg/vaultly";
+  const DISCORD_INVITE = "https://discord.gg/krypt";
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const isAuthenticated = Boolean(session?.user);
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "#07080a",
-        color: "#f3f4f6",
-        fontFamily: "Inter, -apple-system, sans-serif",
+        background: "#030305",
+        color: "#ffffff",
+        fontFamily: "var(--font-sans, Inter, sans-serif)",
         overflowX: "hidden",
         position: "relative",
       }}
     >
-      {/* Subtle Ambient Glow Mesh */}
+      {/* Cyber Grid & Ambient Background */}
+      <div
+        className="krypt-grid-bg"
+        style={{
+          position: "fixed",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 0,
+          opacity: 0.4,
+        }}
+      />
+
+      {/* Top Ambient Glow */}
       <div
         style={{
           position: "fixed",
           top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background:
-            "radial-gradient(ellipse 60% 40% at 50% -10%, rgba(99,102,241,0.14) 0%, rgba(0,0,0,0) 70%)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: 1000,
+          height: 380,
+          background: "radial-gradient(ellipse at 50% 0%, rgba(55, 44, 102, 0.4) 0%, rgba(139, 92, 246, 0.12) 35%, transparent 70%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
       />
 
-      {/* ─── Minimalist Clean Animated Header ───────────────────────── */}
+      {/* ─── Navigation Header ────────────────────────────────────────── */}
       <header
         style={{
           position: "sticky",
-          top: 16,
+          top: 14,
           zIndex: 50,
-          maxWidth: 1120,
+          maxWidth: 1080,
           margin: "0 auto",
           padding: "0 16px",
         }}
@@ -77,16 +95,16 @@ export default function LandingPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "12px 22px",
-            borderRadius: 18,
-            background: "rgba(13, 14, 19, 0.85)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03)",
+            padding: "10px 18px",
+            borderRadius: 12,
+            background: "rgba(5, 5, 8, 0.92)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(55, 44, 102, 0.45)",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.8)",
           }}
         >
-          {/* Brand with Terminal Badge */}
+          {/* Brand */}
           <Link
             href="/"
             style={{
@@ -98,99 +116,125 @@ export default function LandingPage() {
           >
             <div
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, #181a24 0%, #0f1015 100%)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "#08080c",
+                border: "1px solid rgba(139, 92, 246, 0.4)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                color: "#c4b5fd",
+                boxShadow: "0 0 12px rgba(55, 44, 102, 0.5)",
               }}
             >
-              <Terminal size={17} color="#ffffff" />
+              <ShoppingBag size={16} />
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#ffffff",
-                }}
-              >
-                VAULTLY
-              </span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 900,
+                    letterSpacing: "0.04em",
+                    color: "#ffffff",
+                    fontFamily: "var(--font-mono, monospace)",
+                  }}
+                >
+                  KRYPT
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    padding: "1px 5px",
+                    borderRadius: 4,
+                    background: "rgba(55, 44, 102, 0.4)",
+                    border: "1px solid rgba(139, 92, 246, 0.4)",
+                    color: "#c4b5fd",
+                    fontFamily: "var(--font-mono, monospace)",
+                  }}
+                >
+                  MARKET
+                </span>
+              </div>
             </div>
           </Link>
 
           {/* Action Links */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Join Discord Button */}
+            <Link
+              href="/lookup"
+              className="interactive-pill"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                color: "#c4b5fd",
+                fontWeight: 600,
+                fontSize: 12,
+                textDecoration: "none",
+                fontFamily: "var(--font-mono, monospace)",
+              }}
+            >
+              <Key size={13} />
+              <span>Find My Order</span>
+            </Link>
+
             <a
               href={DISCORD_INVITE}
               target="_blank"
               rel="noreferrer"
+              className="interactive-pill"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 7,
-                padding: "8px 16px",
-                borderRadius: 10,
-                background: "rgba(88, 101, 242, 0.12)",
-                border: "1px solid rgba(88, 101, 242, 0.3)",
-                color: "#818cf8",
-                fontWeight: 700,
-                fontSize: 13,
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 8,
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                color: "#9ca3af",
+                fontWeight: 600,
+                fontSize: 12,
                 textDecoration: "none",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "#5865f2";
-                (e.currentTarget as HTMLAnchorElement).style.color = "#ffffff";
-                (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 16px rgba(88, 101, 242, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "rgba(88, 101, 242, 0.12)";
-                (e.currentTarget as HTMLAnchorElement).style.color = "#818cf8";
-                (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
               }}
             >
-              <DiscordLogo size={16} />
-              <span>Join Discord</span>
+              <DiscordLogo size={14} />
+              <span>Discord</span>
             </a>
 
-            {session?.user ? (
+            {isAuthenticated ? (
               <Link
                 href="/dashboard"
+                className="interactive-pill krypt-btn-primary"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 8,
-                  padding: "8px 18px",
-                  borderRadius: 10,
-                  background: "#ffffff",
-                  color: "#000000",
-                  fontWeight: 700,
-                  fontSize: 13,
+                  gap: 7,
+                  padding: "7px 16px",
+                  borderRadius: 8,
+                  fontSize: 12,
                   textDecoration: "none",
-                  boxShadow: "0 4px 16px rgba(255, 255, 255, 0.15)",
-                  transition: "transform 0.15s ease",
                 }}
               >
-                <LayoutDashboard size={15} />
-                Open Dashboard
+                <LayoutDashboard size={14} />
+                <span>Dashboard</span>
               </Link>
             ) : (
               <>
                 <Link
                   href="/login"
+                  className="interactive-pill"
                   style={{
-                    padding: "8px 14px",
-                    borderRadius: 10,
-                    color: "rgba(255, 255, 255, 0.7)",
-                    fontSize: 13,
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    color: "#9ca3af",
+                    fontSize: 12,
                     fontWeight: 600,
                     textDecoration: "none",
                   }}
@@ -198,24 +242,20 @@ export default function LandingPage() {
                   Sign In
                 </Link>
                 <Link
-                  href="/dashboard"
+                  href="/register"
+                  className="interactive-pill krypt-btn-primary"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 7,
-                    padding: "8px 18px",
-                    borderRadius: 10,
-                    background: "#ffffff",
-                    color: "#000000",
-                    fontWeight: 700,
-                    fontSize: 13,
+                    gap: 6,
+                    padding: "7px 16px",
+                    borderRadius: 8,
+                    fontSize: 12,
                     textDecoration: "none",
-                    boxShadow: "0 4px 16px rgba(255, 255, 255, 0.15)",
-                    transition: "all 0.15s ease",
                   }}
                 >
-                  <LayoutDashboard size={15} />
-                  Open Dashboard
+                  <span>Create Store</span>
+                  <ArrowRight size={13} />
                 </Link>
               </>
             )}
@@ -228,402 +268,348 @@ export default function LandingPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 980,
+          maxWidth: 960,
           margin: "0 auto",
-          padding: "90px 24px 60px",
+          padding: "80px 24px 40px",
           textAlign: "center",
           opacity: mounted ? 1 : 0,
-          transform: mounted ? "translateY(0)" : "translateY(12px)",
-          transition: "opacity 0.5s ease, transform 0.5s ease",
+          transform: mounted ? "translateY(0)" : "translateY(8px)",
+          transition: "opacity 0.4s ease, transform 0.4s ease",
         }}
       >
+        {/* Status Badge */}
+        <div
+          className="krypt-tag krypt-tag-violet animate-pop"
+          style={{
+            marginBottom: 24,
+            padding: "5px 14px",
+            borderRadius: 99,
+          }}
+        >
+          <Sparkles size={13} />
+          <span>Automated Digital Key & License Delivery</span>
+        </div>
+
         {/* Hero Title */}
         <h1
           style={{
-            fontSize: "clamp(44px, 7vw, 80px)",
+            fontSize: "clamp(34px, 5.5vw, 64px)",
             fontWeight: 900,
-            lineHeight: 1.05,
-            letterSpacing: "-0.04em",
-            margin: "0 0 24px",
+            lineHeight: 1.08,
+            letterSpacing: "-0.03em",
+            margin: "0 0 20px",
             color: "#ffffff",
           }}
         >
-          Sell Digital Keys.
-          <br />
-          <span
-            style={{
-              background: "linear-gradient(135deg, #ffffff 30%, #818cf8 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Zero Friction.
-          </span>
+          The Modern E-Commerce Platform for Digital Goods
         </h1>
 
-        {/* Subtitle with corrected grammar */}
+        {/* Subtitle */}
         <p
           style={{
-            fontSize: "clamp(16px, 2.2vw, 19px)",
-            color: "rgba(255, 255, 255, 0.65)",
+            fontSize: "clamp(15px, 2vw, 17px)",
+            color: "#8b949e",
             maxWidth: 620,
-            margin: "0 auto 40px",
+            margin: "0 auto 36px",
             lineHeight: 1.6,
           }}
         >
-          Open your storefront in under 60 seconds. Pre-load your keys into our automated vault. We&apos;re accepting Stripe and crypto with a flat 5% platform fee.
+          Launch your automated store in minutes. Deposit software serials, license keys, and accounts. Accept Card and Crypto payments with zero-delay instant key fulfillment.
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link
-            href="/dashboard"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 9,
-              padding: "14px 30px",
-              borderRadius: 12,
-              background: "#ffffff",
-              color: "#000000",
-              fontWeight: 800,
-              fontSize: 15,
-              textDecoration: "none",
-              boxShadow: "0 6px 24px rgba(255, 255, 255, 0.2)",
-              transition: "transform 0.15s ease, box-shadow 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 10px 30px rgba(255, 255, 255, 0.25)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 6px 24px rgba(255, 255, 255, 0.2)";
-            }}
-          >
-            <LayoutDashboard size={18} />
-            Open Dashboard
-          </Link>
-
-          <Link
-            href="/register"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "14px 28px",
-              borderRadius: 12,
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              color: "#ffffff",
-              fontWeight: 700,
-              fontSize: 15,
-              textDecoration: "none",
-              transition: "background 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255, 255, 255, 0.09)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255, 255, 255, 0.05)";
-            }}
-          >
-            Start Selling Free <ArrowRight size={16} />
-          </Link>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 48 }}>
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="interactive-pill krypt-btn-primary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "13px 28px",
+                borderRadius: 10,
+                fontSize: 14,
+                textDecoration: "none",
+              }}
+            >
+              <LayoutDashboard size={16} />
+              <span>Go to Dashboard</span>
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="interactive-pill krypt-btn-primary"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "13px 28px",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  textDecoration: "none",
+                }}
+              >
+                <span>Create Your Store</span>
+                <ArrowRight size={15} />
+              </Link>
+              <Link
+                href="/login"
+                className="interactive-pill"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "13px 24px",
+                  borderRadius: 10,
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  textDecoration: "none",
+                }}
+              >
+                Sign In
+              </Link>
+            </>
+          )}
         </div>
-      </section>
 
-      {/* ─── Supported Payment Methods ─────────────────────────────── */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 1,
-          maxWidth: 1040,
-          margin: "0 auto",
-          padding: "20px 24px 60px",
-        }}
-      >
+        {/* Highlights Row */}
         <div
           style={{
-            padding: "36px 32px",
-            borderRadius: 20,
-            background: "rgba(15, 16, 21, 0.6)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 14,
+            maxWidth: 820,
+            margin: "0 auto",
           }}
         >
-          {/* Clean Title */}
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: "#ffffff", margin: 0, letterSpacing: "-0.02em" }}>
-              Supported Payment Methods
-            </h2>
+          <div className="krypt-card" style={{ padding: "18px 20px", textAlign: "left" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#c4b5fd", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
+              INSTANT DELIVERY
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#ffffff", marginBottom: 4 }}>
+              0-Second Dispatch
+            </div>
+            <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>
+              Keys revealed on-screen and emailed instantly upon payment confirmation.
+            </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 16,
-            }}
-          >
-            {/* 1. Stripe (Not Stripe Connect) */}
-            <div
-              className="card-hover-glow"
-              style={{
-                padding: "24px 22px",
-                borderRadius: 14,
-                background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: "rgba(99, 102, 241, 0.15)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#818cf8",
-                  }}
-                >
-                  <CreditCard size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "#ffffff" }}>
-                    Stripe
-                  </h3>
-                  <span style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.5)" }}>Direct Card Checkout</span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {["Cards", "Visa", "Mastercard", "Amex", "Apple Pay", "Google Pay"].map((badge) => (
-                  <span
-                    key={badge}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 6,
-                      background: "rgba(255, 255, 255, 0.05)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "rgba(255, 255, 255, 0.85)",
-                    }}
-                  >
-                    {badge}
-                  </span>
-                ))}
-              </div>
+          <div className="krypt-card" style={{ padding: "18px 20px", textAlign: "left" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#c4b5fd", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
+              MULTIPLE DURATION TIERS
             </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#ffffff", marginBottom: 4 }}>
+              Day / Week / Month / Lifetime
+            </div>
+            <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>
+              Separate stock vaults and custom pricing for every license duration.
+            </div>
+          </div>
 
-            {/* 2. Crypto (BTC, LTC, XMR, USDT, ETH) */}
-            <div
-              className="card-hover-glow"
-              style={{
-                padding: "24px 22px",
-                borderRadius: 14,
-                background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: "rgba(245, 158, 11, 0.15)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#f59e0b",
-                  }}
-                >
-                  <Coins size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "#ffffff" }}>
-                    Crypto
-                  </h3>
-                  <span style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.5)" }}>On-Chain Verification</span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {["BTC", "LTC", "XMR", "USDT", "ETH"].map((badge) => (
-                  <span
-                    key={badge}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 6,
-                      background: "rgba(245, 158, 11, 0.08)",
-                      border: "1px solid rgba(245, 158, 11, 0.2)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: "#f59e0b",
-                    }}
-                  >
-                    {badge}
-                  </span>
-                ))}
-              </div>
+          <div className="krypt-card" style={{ padding: "18px 20px", textAlign: "left" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#c4b5fd", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
+              ZERO DOUBLE-SELLS
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#ffffff", marginBottom: 4 }}>
+              Single-Use Key Vault
+            </div>
+            <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>
+              Mathematical lock on key delivery prevents duplicate deliveries forever.
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Core Highlights: No KYC, 5%, Keys Only ──────────────────── */}
+      {/* ─── Supported Payment Rails ───────────────────────────────────── */}
       <section
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 1040,
-          margin: "0 auto",
-          padding: "20px 24px 70px",
+          maxWidth: 960,
+          margin: "40px auto 60px",
+          padding: "0 20px",
         }}
       >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {/* Card Gateway */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <CreditCard size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#ffffff" }}>
+                  Card Checkout Gateway
+                </h3>
+                <span style={{ fontSize: 11, color: "#8b949e" }}>
+                  Stripe Card & Digital Wallets
+                </span>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: "#8b949e", margin: "0 0 16px", lineHeight: 1.5 }}>
+              Process credit and debit card payments securely with bank-grade encrypted checkout tunnels.
+            </p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {["VISA", "MASTERCARD", "AMEX", "APPLE PAY", "GOOGLE PAY"].map((badge) => (
+                <span
+                  key={badge}
+                  className="krypt-tag krypt-tag-violet"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Crypto Rails */}
+          <div
+            className="krypt-card"
+            style={{
+              padding: "24px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: "rgba(55, 44, 102, 0.4)",
+                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#c4b5fd",
+                }}
+              >
+                <Coins size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#ffffff" }}>
+                  Cryptocurrency Payments
+                </h3>
+                <span style={{ fontSize: 11, color: "#8b949e" }}>
+                  Automated Blockchain Invoicing
+                </span>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: "#8b949e", margin: "0 0 16px", lineHeight: 1.5 }}>
+              Native crypto invoicing with zero chargeback risk and direct automated payment confirmation.
+            </p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {["BTC", "LTC", "XMR", "USDT", "ETH", "SOL"].map((coin) => (
+                <span
+                  key={coin}
+                  className="krypt-tag krypt-tag-violet"
+                >
+                  {coin}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 3-Step Workflow ──────────────────────────────────────────── */}
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 960,
+          margin: "0 auto 60px",
+          padding: "0 20px",
+        }}
+      >
+        <div style={{ textAlign: "left", marginBottom: 20 }}>
+          <div className="krypt-hud-label" style={{ marginBottom: 4 }}>
+            HOW IT WORKS
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", margin: 0 }}>
+            Start Selling in 3 Simple Steps
+          </h2>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: 16,
           }}
         >
           {[
             {
-              icon: <Shield size={22} color="#818cf8" />,
-              title: "Zero KYC Required",
-              desc: "Sell freely without passport scans, utility bills, or invasive identity checks.",
+              phase: "STEP 01",
+              title: "Create Your Store",
+              desc: "Set up your storefront URL, custom branding, logo, and optional custom domain.",
+              tag: "SETUP",
             },
             {
-              icon: <Coins size={22} color="#10b981" />,
-              title: "5% Flat Commission",
-              desc: "100% free to open. No monthly subscriptions, no setup fees. Only 5% on sales.",
+              phase: "STEP 02",
+              title: "Add Products & Keys",
+              desc: "Paste license keys line-by-line. Set duration tiers (Daily, Weekly, Monthly, Lifetime).",
+              tag: "INVENTORY",
             },
             {
-              icon: <Key size={22} color="#f59e0b" />,
-              title: "License Keys Only",
-              desc: "Engineered specifically for digital keys, activation codes, serials, and vouchers.",
-            },
-            {
-              icon: <Zap size={22} color="#38bdf8" />,
-              title: "Instant Key Dispatch",
-              desc: "Buyers see their serial immediately upon confirmation and receive an email copy.",
-            },
-          ].map((item, idx) => (
-            <div
-              key={idx}
-              className="card-hover-glow"
-              style={{
-                padding: "26px 22px",
-                borderRadius: 16,
-                background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-              }}
-            >
-              <div
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 10,
-                  background: "rgba(255, 255, 255, 0.04)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 16,
-                }}
-              >
-                {item.icon}
-              </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 6px", color: "#ffffff" }}>
-                {item.title}
-              </h3>
-              <p style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.5)", lineHeight: 1.5, margin: 0 }}>
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── 3-Step Flow ─────────────────────────────────────────────── */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 1,
-          maxWidth: 1040,
-          margin: "0 auto",
-          padding: "20px 24px 70px",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em" }}>
-            How It Works
-          </h2>
-          <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.5)", marginTop: 6 }}>
-            Three simple steps to automate your digital key sales
-          </p>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 20,
-          }}
-        >
-          {[
-            {
-              step: "01",
-              title: "Create Storefront",
-              desc: "Register in 10 seconds, choose your store name and slug. No KYC required.",
-            },
-            {
-              step: "02",
-              title: "Paste License Keys",
-              desc: "Add your key inventory line-by-line. The vault securely handles distribution.",
-            },
-            {
-              step: "03",
-              title: "Collect Payments",
-              desc: "Buyers check out with card or crypto. Keys deliver automatically 24/7.",
+              phase: "STEP 03",
+              title: "Automated Instant Delivery",
+              desc: "Buyers complete checkout. One unique key is unlocked and delivered immediately 24/7.",
+              tag: "AUTOMATION",
             },
           ].map((s) => (
             <div
-              key={s.step}
-              className="card-hover-glow"
+              key={s.phase}
+              className="krypt-card"
               style={{
-                padding: "28px 24px",
-                borderRadius: 16,
-                background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                position: "relative",
+                padding: "22px",
               }}
             >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "#818cf8",
-                  letterSpacing: "0.08em",
-                  marginBottom: 10,
-                }}
-              >
-                STEP {s.step}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    fontFamily: "var(--font-mono, monospace)",
+                    color: "#c4b5fd",
+                  }}
+                >
+                  {s.phase}
+                </span>
+                <span className="krypt-tag krypt-tag-violet" style={{ fontSize: 9 }}>
+                  {s.tag}
+                </span>
               </div>
-              <h3 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 8px", color: "#ffffff" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px", color: "#ffffff" }}>
                 {s.title}
               </h3>
-              <p style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.5)", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
                 {s.desc}
               </p>
             </div>
@@ -631,52 +617,112 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Transparent 5% Pricing Card ─────────────────────────────── */}
+      {/* ─── Security Matrix & Merchant Controls ──────────────────────── */}
       <section
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "20px 24px 80px",
+          maxWidth: 960,
+          margin: "0 auto 60px",
+          padding: "0 20px",
+        }}
+      >
+        <div style={{ textAlign: "left", marginBottom: 20 }}>
+          <div className="krypt-hud-label" style={{ marginBottom: 4 }}>
+            FEATURES & SECURITY
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", margin: 0 }}>
+            Built for High-Volume Digital Sellers
+          </h2>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 16,
+          }}
+        >
+          <div className="krypt-card" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#c4b5fd" }}>
+              <Key size={17} />
+              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>Single-Use Key Vault</span>
+            </div>
+            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              Each serial is marked as delivered automatically upon payment, mathematically preventing double-sells.
+            </p>
+          </div>
+
+          <div className="krypt-card" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#ffffff" }}>
+              <Globe size={17} />
+              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>Custom Domains</span>
+            </div>
+            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              Connect your branded domain or subdomain directly with automatic SSL certificate provisioning.
+            </p>
+          </div>
+
+          <div className="krypt-card" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#c4b5fd" }}>
+              <Code2 size={17} />
+              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>HMAC Webhooks</span>
+            </div>
+            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              Cryptographically signed HMAC-SHA256 order webhooks for Discord bot role assignments or external server automation.
+            </p>
+          </div>
+
+          <div className="krypt-card" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "#ffffff" }}>
+              <Lock size={17} />
+              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono, monospace)" }}>TOTP 2FA Security</span>
+            </div>
+            <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              Protect merchant settings, API credentials, and payout destinations with multi-factor authentication.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Transparent 5% Platform Fee Card ─────────────────────────── */}
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 640,
+          margin: "0 auto 80px",
+          padding: "0 20px",
         }}
       >
         <div
-          className="card-hover-glow"
+          className="krypt-card"
           style={{
-            maxWidth: 680,
-            margin: "0 auto",
-            padding: "44px 36px",
-            borderRadius: 20,
-            background: "linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            padding: "40px 32px",
             textAlign: "center",
+            border: "1px solid rgba(55, 44, 102, 0.5)",
+            boxShadow: "0 0 30px rgba(55, 44, 102, 0.35)",
           }}
         >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: "#818cf8",
-              letterSpacing: "0.1em",
-              marginBottom: 12,
-            }}
-          >
+          <div className="krypt-hud-label" style={{ marginBottom: 8, color: "#c4b5fd" }}>
             TRANSPARENT PRICING
           </div>
           <div
             style={{
-              fontSize: "clamp(64px, 12vw, 96px)",
+              fontSize: 64,
               fontWeight: 900,
-              letterSpacing: "-0.05em",
+              letterSpacing: "-0.04em",
               color: "#ffffff",
               lineHeight: 1,
               marginBottom: 6,
+              fontFamily: "var(--font-mono, monospace)",
             }}
           >
             5%
           </div>
-          <div style={{ fontSize: 16, color: "rgba(255, 255, 255, 0.6)", marginBottom: 26 }}>
-            Flat platform fee per successful sale. Keep 95% of your revenue.
-          </div>
+          <p style={{ fontSize: 14, color: "#8b949e", margin: "0 auto 24px", maxWidth: 420 }}>
+            Flat platform fee per completed checkout. Keep 95% of your sales. No subscriptions, zero hidden charges.
+          </p>
 
           <div
             style={{
@@ -684,47 +730,55 @@ export default function LandingPage() {
               gap: 12,
               justifyContent: "center",
               flexWrap: "wrap",
-              marginBottom: 32,
+              marginBottom: 28,
             }}
           >
-            {["Zero monthly fee", "Zero setup cost", "No KYC verification", "Instant payouts"].map(
-              (item) => (
-                <div
-                  key={item}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 13,
-                    color: "rgba(255, 255, 255, 0.75)",
-                  }}
-                >
-                  <CheckCircle2 size={14} color="#10b981" />
-                  {item}
-                </div>
-              )
-            )}
+            {["ZERO SETUP FEES", "ZERO MONTHLY RENT", "INSTANT DISPATCH", "FAST PAYOUTS"].map((item) => (
+              <div
+                key={item}
+                className="krypt-tag krypt-tag-violet"
+              >
+                <CheckCircle2 size={12} />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
 
-          <Link
-            href="/dashboard"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "13px 28px",
-              borderRadius: 12,
-              background: "#ffffff",
-              color: "#000000",
-              fontWeight: 800,
-              fontSize: 15,
-              textDecoration: "none",
-              boxShadow: "0 6px 20px rgba(255, 255, 255, 0.2)",
-            }}
-          >
-            <LayoutDashboard size={17} />
-            Open Dashboard
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="interactive-pill krypt-btn-primary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 28px",
+                borderRadius: 8,
+                fontSize: 13,
+                textDecoration: "none",
+              }}
+            >
+              <LayoutDashboard size={15} />
+              <span>Go to Dashboard</span>
+            </Link>
+          ) : (
+            <Link
+              href="/register"
+              className="interactive-pill krypt-btn-primary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 28px",
+                borderRadius: 8,
+                fontSize: 13,
+                textDecoration: "none",
+              }}
+            >
+              <span>Create Your Store</span>
+              <ArrowRight size={14} />
+            </Link>
+          )}
         </div>
       </section>
 
@@ -734,84 +788,93 @@ export default function LandingPage() {
           position: "relative",
           zIndex: 1,
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-          padding: "28px 24px",
+          padding: "28px 20px",
+          background: "#020305",
         }}
       >
         <div
           style={{
-            maxWidth: 1040,
+            maxWidth: 960,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
             gap: 16,
+            fontSize: 12,
+            fontFamily: "var(--font-mono, monospace)",
+            color: "#6b7280",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontWeight: 800, color: "#ffffff" }}>KRYPT MARKET</span>
+            <span>//</span>
+            <span style={{ color: "#c4b5fd" }}>DIGITAL GOODS & KEYS</span>
+          </div>
+
+          <div>&copy; {new Date().getFullYear()} KRYPT. All rights reserved.</div>
+
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <Link
+              href="/lookup"
               style={{
-                width: 26,
-                height: 26,
-                borderRadius: 6,
-                background: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#000000",
+                color: "#c4b5fd",
+                textDecoration: "none",
               }}
             >
-              <Terminal size={14} />
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: "#ffffff" }}>VAULTLY</span>
-          </div>
+              Order Lookup
+            </Link>
 
-          <div style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.4)" }}>
-            © {new Date().getFullYear()} Vaultly. All rights reserved.
-          </div>
-
-          <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
-            {/* Support redirects directly to Discord invite as requested */}
             <a
               href={DISCORD_INVITE}
               target="_blank"
               rel="noreferrer"
               style={{
-                fontSize: 13,
-                color: "rgba(255, 255, 255, 0.6)",
+                color: "#9ca3af",
                 textDecoration: "none",
                 display: "flex",
                 alignItems: "center",
-                gap: 5,
-                transition: "color 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "#818cf8";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255, 255, 255, 0.6)";
+                gap: 4,
               }}
             >
-              <span>Support</span>
-              <ExternalLink size={12} />
+              <span>Discord</span>
+              <ExternalLink size={11} />
             </a>
-            <Link
-              href="/dashboard"
-              style={{
-                fontSize: 13,
-                color: "rgba(255, 255, 255, 0.6)",
-                textDecoration: "none",
-                transition: "color 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "#ffffff";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255, 255, 255, 0.6)";
-              }}
-            >
-              Dashboard
-            </Link>
+
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                style={{
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  style={{
+                    color: "#9ca3af",
+                    textDecoration: "none",
+                  }}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  style={{
+                    color: "#c4b5fd",
+                    textDecoration: "none",
+                    fontWeight: 700,
+                  }}
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </footer>

@@ -11,7 +11,8 @@ export type AdminTab =
   | "orders"
   | "payouts"
   | "staff"
-  | "bot-config";
+  | "bot-config"
+  | "settings";
 
 interface AdminTabsNavProps {
   activeTab: AdminTab;
@@ -52,7 +53,10 @@ export function AdminTabsNav({
     { id: "orders", label: "Orders", count: ordersCount },
     { id: "payouts", label: "Payouts", count: payoutsCount },
     { id: "staff", label: "Staff", count: staffCount },
-    ...(isSuperAdmin ? [{ id: "bot-config", label: "Bot Config", count: null }] : []),
+    ...(isSuperAdmin ? [
+      { id: "settings", label: "Platform Config", count: null },
+      { id: "bot-config", label: "Bot Config", count: null },
+    ] : []),
   ];
 
   return (

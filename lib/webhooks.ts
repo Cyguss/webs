@@ -13,7 +13,7 @@ export interface WebhookPayload<T = any> {
 
 /**
  * Dispatches an event to all active webhook endpoints registered for a shop.
- * Includes cryptographic HMAC-SHA256 signature in X-Vaultly-Signature header.
+ * Includes cryptographic HMAC-SHA256 signature in X-Krypt-Signature header.
  * Dispatches concurrently without blocking the main request thread.
  */
 export async function dispatchWebhookEvent<T = any>(
@@ -70,58 +70,58 @@ export async function dispatchWebhookEvent<T = any>(
 
 function formatDiscordWebhookPayload(event: string, payload: any): string {
   const data = payload?.data || {};
-  let title = `Vaultly Event: ${event}`;
+  let title = `KRYPT Event: ${event}`;
   let description = "";
-  let color = 0x6366f1; // default indigo
+  let color = 0x00e5ff; // cyan
   const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
 
   if (event === "order.completed") {
-    title = "🎉 New Sale Completed!";
-    color = 0x10b981; // green
-    description = `A new customer order was successfully processed on your store!`;
-    if (data.productTitle) fields.push({ name: "📦 Product", value: String(data.productTitle), inline: true });
+    title = "⚡ KRYPT // Sale Settled & Keys Dispatched";
+    color = 0x00ff66; // neon green
+    description = `A new transaction settled on your store node!`;
+    if (data.productTitle) fields.push({ name: "📦 Protocol", value: String(data.productTitle), inline: true });
     if (data.totalAmount) fields.push({ name: "💰 Total", value: `$${parseFloat(data.totalAmount).toFixed(2)} ${data.currency || "USD"}`, inline: true });
-    if (data.paymentMethod) fields.push({ name: "💳 Method", value: String(data.paymentMethod).toUpperCase(), inline: true });
-    if (data.orderId) fields.push({ name: "🧾 Order ID", value: `\`${data.orderId.slice(0, 10)}\``, inline: true });
+    if (data.paymentMethod) fields.push({ name: "💳 Gateway", value: String(data.paymentMethod).toUpperCase(), inline: true });
+    if (data.orderId) fields.push({ name: "🧾 TXID", value: `\`${data.orderId.slice(0, 10)}\``, inline: true });
     if (data.buyerEmail) {
       const parts = data.buyerEmail.split("@");
       const masked = parts.length === 2 ? `${parts[0].slice(0, 2)}***@${parts[1]}` : "Customer";
-      fields.push({ name: "👤 Customer", value: masked, inline: true });
+      fields.push({ name: "👤 Mailbox", value: masked, inline: true });
     }
   } else if (event === "order.created") {
-    title = "🛒 Checkout Started";
-    color = 0x3b82f6; // blue
-    description = `A customer has started checkout for order \`${data.orderId || payload.id}\`.`;
+    title = "🛒 Checkout Initialized";
+    color = 0x00e5ff; // cyan
+    description = `Checkout session created for order \`${data.orderId || payload.id}\`.`;
     if (data.productTitle) fields.push({ name: "📦 Product", value: String(data.productTitle), inline: true });
   } else if (event === "stock.low") {
-    title = "⚠️ Low Inventory Warning!";
-    color = 0xef4444; // red
-    description = `Product **${data.productTitle || "Digital Key"}** has only ${data.remainingKeys ?? 0} keys remaining in stock!`;
+    title = "⚠️ Vault Partition Low Warning!";
+    color = 0xff2a4b; // laser red
+    description = `Product **${data.productTitle || "Digital Key"}** has only ${data.remainingKeys ?? 0} keys remaining in vault!`;
     fields.push({ name: "Remaining Keys", value: String(data.remainingKeys ?? 0), inline: true });
   } else if (event === "product.created") {
-    title = "✨ New Product Published";
-    color = 0x8b5cf6; // purple
-    description = `Product **${data.title || "New Product"}** is now live on your storefront.`;
+    title = "✨ New Protocol Product Published";
+    color = 0x00e5ff; // cyan
+    description = `Product **${data.title || "New Product"}** is now live on your storefront node.`;
     if (data.price) fields.push({ name: "Price", value: `$${parseFloat(data.price).toFixed(2)}`, inline: true });
   } else if (event === "review.created") {
-    title = "⭐ New Customer Review";
-    color = 0xf59e0b; // amber
-    description = `A customer left a review: "${data.comment || "Great product!"}"`;
+    title = "⭐ Verified Feedback Received";
+    color = 0x00ff66; // green
+    description = `A customer left feedback: "${data.comment || "Verified purchase."}"`;
     if (data.rating) fields.push({ name: "Rating", value: `${"★".repeat(data.rating)} (${data.rating}/5)`, inline: true });
   } else {
     description = `\`\`\`json\n${JSON.stringify(data, null, 2).slice(0, 1500)}\n\`\`\``;
   }
 
   return JSON.stringify({
-    username: "Vaultly Webhooks",
-    content: `🔔 **[Vaultly Notification]** \`${event}\``,
+    username: "KRYPT Webhooks",
+    content: `🔔 **[KRYPT Protocol Notification]** \`${event}\``,
     embeds: [
       {
         title,
         description,
         color,
         fields: fields.length > 0 ? fields : undefined,
-        footer: { text: "Vaultly Digital Commerce • Live Notifications" },
+        footer: { text: "KRYPT MARKET PROTOCOL // ZERO LOG RETENTION" },
         timestamp: new Date().toISOString(),
       },
     ],
@@ -168,9 +168,9 @@ async function deliverWebhook(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "Vaultly-Webhooks/1.0",
-        "X-Vaultly-Event": event,
-        "X-Vaultly-Signature": `sha256=${signature}`,
+        "User-Agent": "KRYPT-Webhooks/2.0",
+        "X-Krypt-Event": event,
+        "X-Krypt-Signature": `sha256=${signature}`,
       },
       body: outgoingBody,
       signal: controller.signal,
@@ -180,7 +180,7 @@ async function deliverWebhook(
     status = res.status;
     success = res.status >= 200 && res.status < 300;
     const text = await res.text();
-    responseText = text.slice(0, 1000); // truncate response preview
+    responseText = text.slice(0, 1000);
   } catch (err: any) {
     status = 0;
     responseText = err?.message || "Connection timeout or network error";
@@ -243,7 +243,7 @@ export async function sendDiscordSaleNotification(
       keysCount = 1,
     } = sale;
 
-    // Mask buyer email for merchant privacy (e.g. jo***@gmail.com)
+    // Mask buyer email for privacy
     const emailParts = buyerEmail.split("@");
     const maskedEmail =
       emailParts.length === 2
@@ -254,44 +254,44 @@ export async function sendDiscordSaleNotification(
     const shortOrderId = orderId.slice(0, 8).toUpperCase();
 
     const embed = {
-      title: "🎉 New Sale Completed!",
-      description: `A new customer purchase just completed on **${shop.name}**!`,
-      color: 0x6366f1, // Vaultly Indigo
+      title: "⚡ KRYPT // Sale Settled & Dispatched",
+      description: `New customer purchase settled on **${shop.name}**!`,
+      color: 0x00ff66, // Neon Green
       fields: [
         {
-          name: "📦 Product",
+          name: "📦 Protocol",
           value: `${productTitle} ${quantity > 1 ? `(x${quantity})` : ""}`,
           inline: true,
         },
         {
-          name: "💰 Amount",
+          name: "💰 Settled Amount",
           value: `**${formattedAmount}**`,
           inline: true,
         },
         {
-          name: "💳 Method",
+          name: "💳 Gateway",
           value: paymentMethod.toUpperCase(),
           inline: true,
         },
         {
-          name: "👤 Customer",
+          name: "👤 Destination",
           value: `\`${maskedEmail}\``,
           inline: true,
         },
         {
-          name: "🔑 Digital Keys",
-          value: `${keysCount} key(s) delivered`,
+          name: "🔑 Decrypted Keys",
+          value: `${keysCount} key(s) dispatched`,
           inline: true,
         },
         {
-          name: "🧾 Order ID",
+          name: "🧾 TXID Reference",
           value: `#${shortOrderId}`,
           inline: true,
         },
       ],
       footer: {
-        text: `Vaultly Automated Commerce • Order #${shortOrderId}`,
-        icon_url: "https://vaultly.dev/favicon.ico",
+        text: `KRYPT MARKET PROTOCOL • Order #${shortOrderId}`,
+        icon_url: "https://krypt.market/favicon.ico",
       },
       timestamp: new Date().toISOString(),
     };
@@ -300,8 +300,8 @@ export async function sendDiscordSaleNotification(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: "Vaultly Sales Bot",
-        avatar_url: "https://vaultly.dev/logo.png",
+        username: "KRYPT Sales Daemon",
+        avatar_url: "https://krypt.market/logo.png",
         embeds: [embed],
       }),
     });
@@ -328,16 +328,16 @@ export async function sendApprovalRequestWebhook(params: {
 
   try {
     const embed = {
-      title: "📋 New Store Approval Request",
-      description: `Seller requested verification for **${params.shopName}**`,
-      color: 0xf59e0b, // Amber
+      title: "📋 Storefront Node Approval Request",
+      description: `Operator requested protocol verification for **${params.shopName}**`,
+      color: 0x00e5ff, // Cyan
       fields: [
-        { name: "Store Name", value: params.shopName, inline: true },
-        { name: "Slug", value: `/${params.shopSlug}`, inline: true },
-        { name: "Owner", value: `${params.ownerName} (${params.ownerEmail})`, inline: false },
+        { name: "Node Name", value: params.shopName, inline: true },
+        { name: "Slug Endpoint", value: `/${params.shopSlug}`, inline: true },
+        { name: "Operator", value: `${params.ownerName} (${params.ownerEmail})`, inline: false },
         { name: "Request ID", value: params.requestId, inline: true },
       ],
-      footer: { text: "Vaultly Admin Security" },
+      footer: { text: "KRYPT Protocol Admin Security" },
       timestamp: new Date().toISOString(),
     };
 
@@ -345,7 +345,7 @@ export async function sendApprovalRequestWebhook(params: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: "Vaultly Approvals",
+        username: "KRYPT Node Approvals",
         embeds: [embed],
       }),
     });
@@ -370,15 +370,15 @@ export async function sendAdminActionWebhook(params: {
   try {
     const isApproved = params.action === "approved";
     const embed = {
-      title: isApproved ? "✅ Store Approved" : "❌ Store Rejected",
-      description: `Store **${params.shopName}** (/${params.shopSlug}) was ${params.action} by **${params.adminName}**.`,
-      color: isApproved ? 0x22c55e : 0xef4444,
+      title: isApproved ? "✅ Storefront Node Approved" : "❌ Storefront Node Rejected",
+      description: `Store node **${params.shopName}** (/${params.shopSlug}) was ${params.action} by admin **${params.adminName}**.`,
+      color: isApproved ? 0x00ff66 : 0xff2a4b,
       fields: [
         { name: "Admin", value: params.adminName, inline: true },
         { name: "Decision", value: params.action.toUpperCase(), inline: true },
         ...(params.note ? [{ name: "Moderation Note", value: params.note, inline: false }] : []),
       ],
-      footer: { text: "Vaultly Admin Audit Log" },
+      footer: { text: "KRYPT Protocol Audit Log" },
       timestamp: new Date().toISOString(),
     };
 
@@ -386,7 +386,7 @@ export async function sendAdminActionWebhook(params: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: "Vaultly Audit",
+        username: "KRYPT Audit Daemon",
         embeds: [embed],
       }),
     });
@@ -394,3 +394,57 @@ export async function sendAdminActionWebhook(params: {
     console.warn("[Admin Action Webhook Error]", err);
   }
 }
+
+/**
+ * SSRF Prevention Validator
+ * Ensures webhook URLs are public HTTPS endpoints and do not point to internal metadata/loopback services.
+ */
+export function validateWebhookUrl(urlString: string): { valid: boolean; error?: string } {
+  try {
+    const url = new URL(urlString);
+
+    if (process.env.NODE_ENV === "production" && url.protocol !== "https:") {
+      return { valid: false, error: "Only HTTPS webhook URLs are allowed in production." };
+    }
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return { valid: false, error: "Invalid protocol. Only HTTP and HTTPS are permitted." };
+    }
+
+    const hostname = url.hostname.toLowerCase();
+
+    // Block localhost and loopbacks
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "0.0.0.0" ||
+      hostname.endsWith(".localhost") ||
+      hostname.endsWith(".local")
+    ) {
+      if (process.env.NODE_ENV === "production") {
+        return { valid: false, error: "Localhost and loopback destinations are forbidden." };
+      }
+    }
+
+    // Block AWS / GCP / Azure / cloud metadata services and private subnets
+    const privateIpRegex = /^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|169\.254\.)/;
+    if (privateIpRegex.test(hostname)) {
+      return { valid: false, error: "Private or internal IP addresses are strictly forbidden." };
+    }
+
+    // Block cloud metadata hostnames
+    if (
+      hostname.includes("metadata.google.internal") ||
+      hostname.includes("instance-data") ||
+      hostname === "169.254.169.254"
+    ) {
+      return { valid: false, error: "Cloud metadata addresses are forbidden." };
+    }
+
+    return { valid: true };
+  } catch {
+    return { valid: false, error: "Malformed URL provided." };
+  }
+}
+

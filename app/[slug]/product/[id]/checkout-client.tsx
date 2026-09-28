@@ -1,20 +1,68 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Coins, Zap, ShieldCheck, Loader2, CheckCircle2, ArrowRight, Tag, Check, Plus, Minus, AlertTriangle, AlertCircle } from "lucide-react";
+import { CreditCard, Coins, Zap, ShieldCheck, Loader2, Tag, Plus, Minus, Clock, Layers, Cpu, CheckCircle } from "lucide-react";
 import { useToast } from "@/components/toast-context";
 import { isDisposableEmail } from "@/lib/anti-fraud/disposable-email";
+import { getKeyDurationDisplay, KeyDurationType } from "@/lib/key-duration";
 
-export default function ProductCheckoutClient({ product, shop, stock, accentColor }: any) {
+export default function ProductCheckoutClient({
+  product,
+  shop,
+  stock,
+  variantStocks = {},
+  accentColor = "rgb(55, 44, 102)",
+}: any) {
   const router = useRouter();
   const toast = useToast();
+
+  // Parse product variants if configured
+  const parsedVariants: any[] = useMemo(() => {
+    if (!product?.variants) return [];
+    try {
+      const arr = JSON.parse(product.variants);
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }, [product]);
+
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(
+    parsedVariants.length > 0 ? parsedVariants[0].id : ""
+  );
+
+  const selectedVariant = useMemo(() => {
+    if (parsedVariants.length === 0) return null;
+    return parsedVariants.find((v) => v.id === selectedVariantId) || parsedVariants[0];
+  }, [parsedVariants, selectedVariantId]);
+
+  // Current active stock for selected duration variant
+  const currentActiveStock = useMemo(() => {
+    if (product.isUnlimitedStock) return 9999;
+    if (selectedVariant) {
+      if (variantStocks[selectedVariant.id] !== undefined) return variantStocks[selectedVariant.id];
+      if (variantStocks[selectedVariant.duration] !== undefined) return variantStocks[selectedVariant.duration];
+    }
+    return stock;
+  }, [product.isUnlimitedStock, selectedVariant, variantStocks, stock]);
+
   const [quantity, setQuantity] = useState(1);
   const [stockNotice, setStockNotice] = useState<string | null>(null);
   const [buyerEmail, setBuyerEmail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "crypto">("stripe");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Unit price is variant price if variants exist, else base product price
+  const unitPrice = selectedVariant ? parseFloat(selectedVariant.price) : parseFloat(product.price);
+  const rawTotal = unitPrice * quantity;
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   function handleQuantityChange(val: number) {
     setStockNotice(null);
@@ -23,17 +71,17 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
       setQuantity(1);
       return;
     }
-    if (!product.isUnlimitedStock && val > stock) {
-      setQuantity(stock);
-      setStockNotice(`Max available stock is ${stock}`);
+    if (!product.isUnlimitedStock && val > currentActiveStock) {
+      setQuantity(Math.max(1, currentActiveStock));
+      setStockNotice(`[VAULT_LIMIT: MAX ${currentActiveStock} UNITS]`);
       return;
     }
     setQuantity(val);
   }
 
   function handleIncrement() {
-    if (!product.isUnlimitedStock && quantity >= stock) {
-      setStockNotice(`Cannot add more. Only ${stock} item(s) available in vault.`);
+    if (!product.isUnlimitedStock && quantity >= currentActiveStock) {
+      setStockNotice(`[LIMIT_REACHED: ONLY ${currentActiveStock} AVAILABLE IN VAULT]`);
       setTimeout(() => setStockNotice(null), 4000);
       return;
     }
@@ -46,16 +94,6 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
     setQuantity((prev) => prev - 1);
     setStockNotice(null);
   }
-
-  // Coupon state
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [couponLoading, setCouponLoading] = useState(false);
-  const [couponError, setCouponError] = useState<string | null>(null);
-
-
-  const unitPrice = parseFloat(product.price);
-  const rawTotal = unitPrice * quantity;
 
   // Calculate discount
   let discountAmount = 0;
@@ -85,11 +123,11 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
 
       setAppliedCoupon(data);
       setCouponError(null);
-      toast.success("Coupon Applied", `Promo code ${data.code} applied successfully!`);
+      toast.success("Promo Hash Verified", `Discount applied: ${data.code}`);
     } catch (err: any) {
       setCouponError(err.message);
       setAppliedCoupon(null);
-      toast.error("Coupon Error", err.message || "Invalid coupon code");
+      toast.error("Promo Error", err.message || "Invalid coupon code");
     } finally {
       setCouponLoading(false);
     }
@@ -99,31 +137,33 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
     setError(null);
 
     if (!buyerEmail.trim() || !buyerEmail.includes("@")) {
-      const msg = "Please enter a valid email address to receive your order receipt.";
+      const msg = "Please enter a valid destination email address for key dispatch.";
       setError(msg);
-      toast.error("Invalid Email", msg);
+      toast.error("Invalid Destination", msg);
       return;
     }
 
     if (isDisposableEmail(buyerEmail)) {
-      const msg = "Temporary and disposable email domains are not permitted. Please provide a permanent email address (e.g. Gmail, Outlook, iCloud).";
+      const msg = "Disposable email domains are blocked by anti-fraud filters. Please enter a permanent mailbox.";
       setError(msg);
-      toast.error("Disposable Email Blocked", msg);
+      toast.error("Disposable Mail Blocked", msg);
       return;
     }
 
-    if (stock <= 0) {
-      const msg = "This product is currently out of stock.";
+    if (!product.isUnlimitedStock && currentActiveStock <= 0) {
+      const msg = selectedVariant
+        ? `The "${selectedVariant.label || selectedVariant.duration}" license tier is out of stock in vault.`
+        : "Product vault is currently depleted.";
       setError(msg);
-      toast.error("Out of Stock", msg);
+      toast.error("Vault Depleted", msg);
       return;
     }
 
-    if (!product.isUnlimitedStock && quantity > stock) {
-      const msg = `Cannot purchase ${quantity} items. Only ${stock} available in stock.`;
+    if (!product.isUnlimitedStock && quantity > currentActiveStock) {
+      const msg = `Cannot dispatch ${quantity} keys. Only ${currentActiveStock} available in vault partition.`;
       setError(msg);
       setStockNotice(msg);
-      toast.error("Insufficient Stock", msg);
+      toast.error("Stock Exceeded", msg);
       return;
     }
 
@@ -135,6 +175,8 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId: product.id,
+          variantId: selectedVariant?.id || null,
+          duration: selectedVariant?.duration || product.duration,
           buyerEmail: buyerEmail.trim(),
           paymentMethod,
           quantity,
@@ -145,17 +187,17 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Checkout failed");
+        throw new Error(data.error || "Checkout authorization failed");
       }
 
       if (data.checkoutUrl) {
-        toast.info("Connecting to Payment Gateway", "Redirecting to secure checkout...");
+        toast.info("Dispatch Gateway", "Opening encrypted payment portal...");
         window.location.href = data.checkoutUrl;
         return;
       }
 
       if (data.redirectUrl) {
-        toast.success("Payment Successful!", "Redirecting to your delivery receipt...");
+        toast.success("Settlement Complete", "Decrypted license key dispatched!");
         router.push(data.redirectUrl);
         return;
       }
@@ -170,288 +212,432 @@ export default function ProductCheckoutClient({ product, shop, stock, accentColo
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Price Summary Box */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 16 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+        border: "1px solid rgba(55, 44, 102, 0.45)",
+        borderRadius: 16,
+        padding: 24,
+        backdropFilter: "blur(14px)",
+        boxShadow: "0 12px 40px rgba(0, 0, 0, 0.8)",
+      }}
+    >
+      {/* Price Summary Box (HUD Style) */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          paddingBottom: 16,
+        }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: 14, color: "rgba(255,255,255,0.6)" }}>Total Price</span>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              DISPATCH RATE // TOTAL
+            </span>
+            <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd" }}>
+              {product.type === "key" ? "DIGITAL_LICENSE" : "SERVICE_PASS"} • QTY: {quantity}
+            </span>
+          </div>
+
           <div style={{ textAlign: "right" }}>
             {appliedCoupon && (
-              <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", textDecoration: "line-through", marginRight: 8 }}>
+              <span style={{ fontSize: 13, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", textDecoration: "line-through", marginRight: 8 }}>
                 ${rawTotal.toFixed(2)}
               </span>
             )}
-            <span style={{ fontSize: 28, fontWeight: 800, color: "#fff" }}>${finalTotal.toFixed(2)} USD</span>
+            <span
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                fontFamily: "var(--font-mono, monospace)",
+                color: "#ffffff",
+                letterSpacing: "-0.02em",
+                textShadow: "0 0 16px rgba(139, 92, 246, 0.35)",
+              }}
+            >
+              ${finalTotal.toFixed(2)} <span style={{ fontSize: 13, color: "#c4b5fd" }}>USD</span>
+            </span>
           </div>
         </div>
 
         {appliedCoupon && (
-          <div style={{ fontSize: 12, color: "#34d399", display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-            <Tag size={12} /> Promo code {appliedCoupon.code} applied (-${discountAmount.toFixed(2)})
+          <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd", display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+            <Tag size={11} /> PROMO_APPLIED: {appliedCoupon.code} (-${discountAmount.toFixed(2)})
           </div>
         )}
       </div>
 
-      {/* Standard Checkout Form */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Email input */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>Your Email Address *</label>
+      {/* Multi-Duration Hardware-Chip Variant Selector */}
+      {parsedVariants.length > 0 && (
+        <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+              <Cpu size={13} /> SELECT LICENSE TERM:
+            </label>
+            {selectedVariant && (
+              <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: currentActiveStock > 0 ? "#c4b5fd" : "#ef4444", fontWeight: 700 }}>
+                {product.isUnlimitedStock ? "[INSTANT_KEY]" : currentActiveStock > 0 ? `[VAULT: ${currentActiveStock} AVAILABLE]` : "[DEPLETED]"}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: parsedVariants.length > 2 ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+            {parsedVariants.map((v) => {
+              const isSelected = selectedVariantId === v.id;
+              const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
+              const vStock = product.isUnlimitedStock
+                ? 9999
+                : (variantStocks[v.id] !== undefined
+                    ? variantStocks[v.id]
+                    : variantStocks[v.duration] !== undefined
+                    ? variantStocks[v.duration]
+                    : stock);
+              const isVariantOutOfStock = !product.isUnlimitedStock && vStock <= 0;
+
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  disabled={isVariantOutOfStock}
+                  onClick={() => {
+                    setSelectedVariantId(v.id);
+                    setError(null);
+                    setStockNotice(null);
+                  }}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: isSelected
+                      ? "1px solid #8b5cf6"
+                      : "1px solid rgba(255, 255, 255, 0.08)",
+                    background: isSelected
+                      ? "rgb(55, 44, 102)"
+                      : "rgba(255, 255, 255, 0.02)",
+                    color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
+                    cursor: isVariantOutOfStock ? "not-allowed" : "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    position: "relative",
+                    overflow: "hidden",
+                    transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                    boxShadow: isSelected ? "0 0 16px rgba(139, 92, 246, 0.35)" : "none",
+                    opacity: isVariantOutOfStock ? 0.4 : 1,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: isSelected ? "#ffffff" : "rgba(255,255,255,0.9)" }}>
+                      {v.label || dMeta.shortLabel}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontFamily: "var(--font-mono, monospace)",
+                        fontWeight: 800,
+                        padding: "1px 5px",
+                        borderRadius: 3,
+                        background: isSelected ? "rgba(255, 255, 255, 0.18)" : "rgba(55, 44, 102, 0.4)",
+                        color: isSelected ? "#ffffff" : "#c4b5fd",
+                        border: isSelected ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid rgba(139, 92, 246, 0.4)",
+                      }}
+                    >
+                      {dMeta.shortLabel}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 2 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: "#ffffff" }}>
+                      ${parseFloat(v.price).toFixed(2)}
+                    </div>
+                    <span style={{ fontSize: 9, fontFamily: "var(--font-mono, monospace)", color: isVariantOutOfStock ? "#ef4444" : "rgba(255,255,255,0.45)" }}>
+                      {isVariantOutOfStock ? "DEPLETED" : product.isUnlimitedStock ? "INSTANT" : `${vStock} left`}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Cyber Checkout Inputs */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Email input */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            [DESTINATION_EMAIL // DISPATCH_TARGET] *
+          </label>
+          <input
+            type="email"
+            placeholder="operator@proton.me"
+            value={buyerEmail}
+            onChange={(e) => setBuyerEmail(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              borderRadius: 8,
+              background: "rgba(3, 3, 5, 0.9)",
+              border: "1px solid rgba(139, 92, 246, 0.25)",
+              color: "#ffffff",
+              fontSize: 13,
+              fontFamily: "var(--font-mono, monospace)",
+              outline: "none",
+              transition: "all 0.15s ease",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#8b5cf6";
+              e.currentTarget.style.boxShadow = "0 0 12px rgba(139, 92, 246, 0.25)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.25)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+            required
+          />
+        </div>
+
+        {/* Promo code input */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            [DISCOUNT_PROMO_HASH]
+          </label>
+          <form onSubmit={handleApplyCoupon} style={{ display: "flex", gap: 8 }}>
             <input
-              type="email"
-              placeholder="buyer@example.com"
-              value={buyerEmail}
-              onChange={(e) => setBuyerEmail(e.target.value)}
+              type="text"
+              placeholder="e.g. DARKNET20"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                flex: 1,
+                padding: "9px 12px",
+                borderRadius: 8,
+                background: "rgba(3, 3, 5, 0.9)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
                 color: "#fff",
-                fontSize: 14,
+                fontSize: 12,
+                fontFamily: "var(--font-mono, monospace)",
+                textTransform: "uppercase",
                 outline: "none",
               }}
-              required
             />
-          </div>
+            <button
+              type="submit"
+              disabled={couponLoading || !couponCode.trim()}
+              style={{
+                padding: "9px 14px",
+                borderRadius: 8,
+                background: "rgba(55, 44, 102, 0.4)",
+                color: "#c4b5fd",
+                border: "1px solid rgba(139, 92, 246, 0.4)",
+                fontSize: 11,
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {couponLoading ? <Loader2 size={13} className="animate-spin" /> : "[APPLY]"}
+            </button>
+          </form>
 
-          {/* Promo code input */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>Have a Promo Code?</label>
-            <form onSubmit={handleApplyCoupon} style={{ display: "flex", gap: 8 }}>
-              <input
-                type="text"
-                placeholder="e.g. VIP20"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+          {couponError && <span className="animate-pop" style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#ef4444" }}>{couponError}</span>}
+        </div>
+
+        {/* Quantity Selector with Steppers */}
+        {!product.isUnlimitedStock && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase" }}>
+                [QUANTITY_UNITS]
+              </label>
+              <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: stock > 0 ? "rgba(255,255,255,0.4)" : "#ef4444" }}>
+                {stock > 0 ? `VAULT: ${stock} MAX` : "DEPLETED"}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
                 style={{
-                  flex: 1,
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  fontSize: 13,
-                  fontFamily: "monospace",
-                  textTransform: "uppercase",
-                  outline: "none",
-                }}
-              />
-              <button
-                type="submit"
-                disabled={couponLoading || !couponCode.trim()}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  background: "rgba(3, 3, 5, 0.9)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: 8,
+                  overflow: "hidden",
                 }}
               >
-                {couponLoading ? <Loader2 size={14} className="spin" /> : "Apply"}
-              </button>
-            </form>
-
-            {couponError && <span style={{ fontSize: 11, color: "#f87171" }}>{couponError}</span>}
-          </div>
-
-          {/* Quantity Selector with Steppers and Stock Protection */}
-          {!product.isUnlimitedStock && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>Quantity</label>
-                <span style={{ fontSize: 11, color: stock > 0 ? "rgba(255,255,255,0.5)" : "#ef4444" }}>
-                  {stock > 0 ? `Max in stock: ${stock}` : "Out of stock"}
-                </span>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
+                <button
+                  type="button"
+                  onClick={handleDecrement}
+                  disabled={quantity <= 1 || stock <= 0}
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 10,
-                    overflow: "hidden",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={handleDecrement}
-                    disabled={quantity <= 1 || stock <= 0}
-                    style={{
-                      width: 36,
-                      height: 38,
-                      border: "none",
-                      background: "transparent",
-                      color: quantity <= 1 || stock <= 0 ? "rgba(255,255,255,0.2)" : "#fff",
-                      cursor: quantity <= 1 || stock <= 0 ? "not-allowed" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    title="Decrease quantity"
-                  >
-                    <Minus size={14} />
-                  </button>
-
-                  <input
-                    type="number"
-                    min="1"
-                    max={stock}
-                    value={quantity}
-                    onChange={(e) => handleQuantityChange(parseInt(e.target.value))}
-                    disabled={stock <= 0}
-                    style={{
-                      width: 50,
-                      height: 38,
-                      padding: 0,
-                      background: "transparent",
-                      border: "none",
-                      color: "#fff",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      textAlign: "center",
-                      outline: "none",
-                    }}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleIncrement}
-                    disabled={quantity >= stock || stock <= 0}
-                    style={{
-                      width: 36,
-                      height: 38,
-                      border: "none",
-                      background: "transparent",
-                      color: quantity >= stock || stock <= 0 ? "rgba(255,255,255,0.2)" : "#fff",
-                      cursor: quantity >= stock || stock <= 0 ? "not-allowed" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    title="Increase quantity"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {stockNotice && (
-                <div
-                  style={{
+                    width: 34,
+                    height: 34,
+                    border: "none",
+                    background: "transparent",
+                    color: quantity <= 1 || stock <= 0 ? "rgba(255,255,255,0.2)" : "#fff",
+                    cursor: quantity <= 1 || stock <= 0 ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    color: "#f59e0b",
-                    background: "rgba(245, 158, 11, 0.12)",
-                    padding: "7px 10px",
-                    borderRadius: 8,
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    justifyContent: "center",
                   }}
                 >
-                  <AlertTriangle size={13} style={{ flexShrink: 0 }} />
-                  <span>{stockNotice}</span>
-                </div>
-              )}
-            </div>
-          )}
+                  <Minus size={13} />
+                </button>
 
-          {/* Payment Method Tabs */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>Payment Method</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("stripe")}
-                style={{
-                  height: 42,
-                  boxSizing: "border-box",
-                  padding: "0 8px",
-                  borderRadius: 10,
-                  border: paymentMethod === "stripe" ? `1px solid ${accentColor}` : "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: paymentMethod === "stripe" ? `0 0 0 1px ${accentColor}` : "none",
-                  background: paymentMethod === "stripe" ? `${accentColor}22` : "rgba(255,255,255,0.04)",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  cursor: "pointer",
-                  transition: "background 0.15s ease, border-color 0.15s ease",
-                }}
-              >
-                <CreditCard size={15} color="#818cf8" style={{ flexShrink: 0 }} /> Stripe / Card
-              </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={stock || 1}
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(parseInt(e.target.value, 10))}
+                  style={{
+                    width: 44,
+                    height: 34,
+                    border: "none",
+                    background: "transparent",
+                    color: "#ffffff",
+                    textAlign: "center",
+                    fontSize: 13,
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontWeight: 800,
+                    outline: "none",
+                  }}
+                />
 
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("crypto")}
-                style={{
-                  height: 42,
-                  boxSizing: "border-box",
-                  padding: "0 8px",
-                  borderRadius: 10,
-                  border: paymentMethod === "crypto" ? `1px solid ${accentColor}` : "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: paymentMethod === "crypto" ? `0 0 0 1px ${accentColor}` : "none",
-                  background: paymentMethod === "crypto" ? `${accentColor}22` : "rgba(255,255,255,0.04)",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  cursor: "pointer",
-                  transition: "background 0.15s ease, border-color 0.15s ease",
-                }}
-              >
-                <Coins size={15} color="#f59e0b" style={{ flexShrink: 0 }} /> Crypto
-              </button>
+                <button
+                  type="button"
+                  onClick={handleIncrement}
+                  disabled={quantity >= stock || stock <= 0}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    border: "none",
+                    background: "transparent",
+                    color: quantity >= stock || stock <= 0 ? "rgba(255,255,255,0.2)" : "#fff",
+                    cursor: quantity >= stock || stock <= 0 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+
+              {stockNotice && <span className="animate-pop" style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#ef4444" }}>{stockNotice}</span>}
             </div>
           </div>
+        )}
 
-          {/* Pay Action Buttons */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+        {/* Payment Method Selector */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase" }}>
+            [SETTLEMENT_GATEWAY]
+          </label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button
-              onClick={() => handleCheckout(false)}
-              disabled={loading || stock <= 0}
+              type="button"
+              onClick={() => setPaymentMethod("stripe")}
               style={{
-                width: "100%",
-                padding: "14px",
-                borderRadius: 12,
-                background: stock <= 0 ? "rgba(255,255,255,0.08)" : accentColor,
-                color: stock <= 0 ? "rgba(255,255,255,0.4)" : "#fff",
-                fontWeight: 700,
-                fontSize: 16,
-                border: "none",
-                cursor: stock <= 0 ? "not-allowed" : "pointer",
+                padding: "10px",
+                borderRadius: 8,
+                border: paymentMethod === "stripe" ? "1px solid #8b5cf6" : "1px solid rgba(255,255,255,0.08)",
+                background: paymentMethod === "stripe" ? "rgb(55, 44, 102)" : "rgba(255,255,255,0.02)",
+                color: paymentMethod === "stripe" ? "#ffffff" : "rgba(255,255,255,0.6)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
-                boxShadow: stock <= 0 ? "none" : `0 4px 20px ${accentColor}66`,
+                gap: 6,
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 700,
+                fontSize: 11,
+                cursor: "pointer",
+                boxShadow: paymentMethod === "stripe" ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
               }}
             >
-              {loading ? (
-                <Loader2 size={18} className="spin" />
-              ) : stock <= 0 ? (
-                "Out of Stock"
-              ) : (
-                <>Pay ${finalTotal.toFixed(2)} Now <ArrowRight size={18} /></>
-              )}
+              <CreditCard size={14} /> STRIPE_CARD_256
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("crypto")}
+              style={{
+                padding: "10px",
+                borderRadius: 8,
+                border: paymentMethod === "crypto" ? "1px solid #8b5cf6" : "1px solid rgba(255,255,255,0.08)",
+                background: paymentMethod === "crypto" ? "rgb(55, 44, 102)" : "rgba(255,255,255,0.02)",
+                color: paymentMethod === "crypto" ? "#ffffff" : "rgba(255,255,255,0.6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 700,
+                fontSize: 11,
+                cursor: "pointer",
+                boxShadow: paymentMethod === "crypto" ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
+              }}
+            >
+              <Coins size={14} /> ON_CHAIN_CRYPTO
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="animate-pop" style={{ padding: "8px 12px", borderRadius: 6, background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#ef4444", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>
+            [ERROR: {error}]
+          </div>
+        )}
+
+        {/* Action Button */}
+        <button
+          type="button"
+          onClick={() => handleCheckout(false)}
+          disabled={loading || stock <= 0}
+          className="krypt-btn-primary"
+          style={{
+            width: "100%",
+            padding: "13px",
+            borderRadius: 8,
+            fontSize: 13,
+            fontFamily: "var(--font-mono, monospace)",
+            fontWeight: 800,
+            cursor: loading || stock <= 0 ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            opacity: stock <= 0 ? 0.45 : 1,
+            marginTop: 4,
+          }}
+        >
+          {loading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <>
+              <Zap size={15} />
+              <span>
+                {stock <= 0
+                  ? "[VAULT_DEPLETED]"
+                  : `[DISPATCH_LICENSE // $${finalTotal.toFixed(2)} USD]`}
+              </span>
+            </>
+          )}
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.4)" }}>
+          <ShieldCheck size={13} color="#c4b5fd" />
+          <span>CRYPTOGRAPHIC 256-BIT DISPATCH • ZERO LOG RETENTION</span>
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+

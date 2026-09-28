@@ -63,12 +63,13 @@ export async function createMerchantApiKey(params: {
 /**
  * Validates an incoming API key from request headers.
  * Accepts either:
- * - Authorization: Bearer vlt_live_...
+ * - Authorization: Bearer kpt_live_... / vlt_live_...
+ * - X-Krypt-Api-Key: kpt_live_...
  * - X-Vaultly-Api-Key: vlt_live_...
  */
 export async function verifyMerchantApiKey(req: Request): Promise<ApiKeyVerificationResult> {
   const authHeader = req.headers.get("authorization");
-  const apiKeyHeader = req.headers.get("x-vaultly-api-key");
+  const apiKeyHeader = req.headers.get("x-krypt-api-key") || req.headers.get("x-vaultly-api-key");
 
   let token: string | null = null;
   if (apiKeyHeader) {
@@ -78,11 +79,11 @@ export async function verifyMerchantApiKey(req: Request): Promise<ApiKeyVerifica
   }
 
   if (!token) {
-    return { valid: false, error: "Missing API Key. Provide via 'Authorization: Bearer <key>' or 'X-Vaultly-Api-Key: <key>' header." };
+    return { valid: false, error: "Missing API Key. Provide via 'Authorization: Bearer <key>' or 'X-Krypt-Api-Key: <key>' header." };
   }
 
-  if (!token.startsWith("vlt_live_")) {
-    return { valid: false, error: "Invalid API key format. Vaultly API keys start with 'vlt_live_'." };
+  if (!token.startsWith("kpt_live_") && !token.startsWith("vlt_live_")) {
+    return { valid: false, error: "Invalid API key format. KRYPT API keys start with 'kpt_live_'." };
   }
 
   const hash = crypto.createHash("sha256").update(token).digest("hex");

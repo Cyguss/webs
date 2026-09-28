@@ -3,6 +3,12 @@ import { verifyMerchantApiKey } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { inventoryKeys, products, orders } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import {
+  calculateExpirationDate,
+  getKeyDurationDisplay,
+  formatExpirationRemaining,
+  isKeyExpired,
+} from "@/lib/key-duration";
 
 export async function POST(req: Request) {
   const authResult = await verifyMerchantApiKey(req);
@@ -72,6 +78,38 @@ export async function POST(req: Request) {
       }
     }
 
+    // Calculate duration & expiration
+    const effectiveDuration = keyRecord.duration || product.duration || "lifetime";
+    const effectiveDays = keyRecord.durationDays ?? product.durationDays ?? 0;
+    const effectiveLabel = keyRecord.customDurationLabel || product.customDurationLabel || null;
+    const durationMeta = getKeyDurationDisplay(effectiveDuration, effectiveDays, effectiveLabel);
+
+    let expiresAt: Date | null = null;
+    let expired = false;
+
+    if (keyRecord.usedAt) {
+      expiresAt = calculateExpirationDate(keyRecord.usedAt, effectiveDuration, effectiveDays);
+      expired = isKeyExpired(expiresAt);
+    }
+
+    if (expired) {
+      return NextResponse.json({
+        valid: false,
+        reason: "LICENSE_EXPIRED",
+        message: "License key has expired.",
+        duration: durationMeta.label,
+        durationDays: durationMeta.days,
+        expiresAt: expiresAt?.toISOString() || null,
+        usedAt: keyRecord.usedAt,
+        product: {
+          id: product.id,
+          title: product.title,
+          type: product.type,
+        },
+        order: orderInfo,
+      }, { status: 403 });
+    }
+
     return NextResponse.json({
       valid: true,
       product: {
@@ -79,6 +117,11 @@ export async function POST(req: Request) {
         title: product.title,
         type: product.type,
       },
+      duration: durationMeta.label,
+      durationDays: durationMeta.days,
+      isLifetime: durationMeta.isLifetime,
+      expiresAt: expiresAt?.toISOString() || null,
+      expirationRemaining: formatExpirationRemaining(expiresAt),
       isUsed: keyRecord.isUsed,
       usedAt: keyRecord.usedAt,
       order: orderInfo,

@@ -32,9 +32,7 @@ export const pool =
     keepAliveInitialDelay: 0,
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.pool = pool;
-}
+globalForDb.pool = pool;
 
 // Auto-run schema verification & table creation whenever db connection is initialized
 if (!globalForDb.dbInitRan) {

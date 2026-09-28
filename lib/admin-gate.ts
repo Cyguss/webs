@@ -16,8 +16,8 @@ const BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes block
 const WINDOW_DURATION_MS = 15 * 60 * 1000;
 
 export function checkAdminRateLimit(ip: string): { allowed: boolean; remainingAttempts: number; waitSeconds?: number } {
-  // Always allow localhost during development to prevent developer lockout
-  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") {
+  // Only allow localhost bypass in non-production when explicitly enabled
+  if (process.env.NODE_ENV !== "production" && process.env.ALLOW_DEV_LOCAL_BYPASS === "true" && (ip === "127.0.0.1" || ip === "::1" || ip === "localhost")) {
     return { allowed: true, remainingAttempts: MAX_FAILED_ATTEMPTS };
   }
 
@@ -45,7 +45,7 @@ export function checkAdminRateLimit(ip: string): { allowed: boolean; remainingAt
 }
 
 export function recordAdminFailedAttempt(ip: string): { remainingAttempts: number; blocked: boolean; waitSeconds?: number } {
-  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") {
+  if (process.env.NODE_ENV !== "production" && process.env.ALLOW_DEV_LOCAL_BYPASS === "true" && (ip === "127.0.0.1" || ip === "::1" || ip === "localhost")) {
     return { remainingAttempts: MAX_FAILED_ATTEMPTS, blocked: false };
   }
 
@@ -204,5 +204,42 @@ export async function setBlockAllAdminsStatus(blocked: boolean): Promise<boolean
   } catch (err) {
     console.error("Failed to update block_all_admins status:", err);
     return false;
+  }
+}
+
+// ─── Granular Staff Permissions ──────────────────────────────────────────────
+
+export interface AdminPermissions {
+  canApproveShops: boolean;
+  canDeleteShops: boolean;
+  canManageUsers: boolean;
+  canManagePayouts: boolean;
+  canViewFinancials: boolean;
+  canManageSettings: boolean;
+}
+
+export const DEFAULT_ADMIN_PERMISSIONS: AdminPermissions = {
+  canApproveShops: true,
+  canDeleteShops: false,
+  canManageUsers: false,
+  canManagePayouts: true,
+  canViewFinancials: true,
+  canManageSettings: false,
+};
+
+export function parseAdminPermissions(raw: string | null | undefined): AdminPermissions {
+  if (!raw) return { ...DEFAULT_ADMIN_PERMISSIONS };
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      canApproveShops: parsed.canApproveShops ?? DEFAULT_ADMIN_PERMISSIONS.canApproveShops,
+      canDeleteShops: parsed.canDeleteShops ?? DEFAULT_ADMIN_PERMISSIONS.canDeleteShops,
+      canManageUsers: parsed.canManageUsers ?? DEFAULT_ADMIN_PERMISSIONS.canManageUsers,
+      canManagePayouts: parsed.canManagePayouts ?? DEFAULT_ADMIN_PERMISSIONS.canManagePayouts,
+      canViewFinancials: parsed.canViewFinancials ?? DEFAULT_ADMIN_PERMISSIONS.canViewFinancials,
+      canManageSettings: parsed.canManageSettings ?? DEFAULT_ADMIN_PERMISSIONS.canManageSettings,
+    };
+  } catch {
+    return { ...DEFAULT_ADMIN_PERMISSIONS };
   }
 }
