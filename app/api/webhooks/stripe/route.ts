@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     let event: any;
     const primarySecret = (env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET || "").trim();
-    const cliSecret = (process.env.STRIPE_CLI_WEBHOOK_SECRET || "whsec_bb42ac15eb3e5fbbff4ad415a5d21c517070c9d4faab94c5316bc62ab99dd2e9").trim();
+    const cliSecret = (env.STRIPE_CLI_WEBHOOK_SECRET || process.env.STRIPE_CLI_WEBHOOK_SECRET || "").trim();
     const candidateSecrets = Array.from(new Set([primarySecret, cliSecret])).filter(
       (s) => s && s.startsWith("whsec_") && !s.includes("sandbox")
     );

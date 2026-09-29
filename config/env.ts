@@ -60,6 +60,7 @@ const envSchema = z.object({
   STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
+  STRIPE_CLI_WEBHOOK_SECRET: z.string().optional().default(""),
 
   // ── Crypto / NOWPayments & Cryptomus (Optional) ──
   NOWPAYMENTS_API_KEY: z.string().optional().default(""),
