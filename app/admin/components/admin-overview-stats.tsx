@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Users, Store, Package, DollarSign, Clock } from "lucide-react";
+import { Users, Store, Package, DollarSign, Clock, LayoutDashboard } from "lucide-react";
 import { AdminTab } from "./admin-tabs-nav";
 
 interface AdminOverviewStatsProps {
@@ -9,6 +9,7 @@ interface AdminOverviewStatsProps {
   usersList: any[];
   shopsList: any[];
   onNavigateTab: (tab: AdminTab) => void;
+  onLaunchDashboard?: (shopId: string, shopName: string) => void;
 }
 
 export function AdminOverviewStats({
@@ -16,6 +17,7 @@ export function AdminOverviewStats({
   usersList,
   shopsList,
   onNavigateTab,
+  onLaunchDashboard,
 }: AdminOverviewStatsProps) {
   return (
     <div>
@@ -118,7 +120,7 @@ export function AdminOverviewStats({
                   justifyContent: "space-between",
                   padding: "10px 12px",
                   borderRadius: "var(--radius-sm)",
-                  background: "rgba(255,255,255,0.02)",
+                  background: "var(--color-surface-2)",
                   border: "1px solid var(--color-border)",
                 }}
               >
@@ -132,7 +134,7 @@ export function AdminOverviewStats({
                     fontWeight: 700,
                     padding: "2px 6px",
                     borderRadius: 4,
-                    background: u.role === "admin" ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.06)",
+                    background: u.role === "admin" ? "rgba(239,68,68,0.15)" : "var(--badge-neutral-bg, var(--color-surface))",
                     color: u.role === "admin" ? "#f87171" : "var(--color-muted-foreground)",
                   }}
                 >
@@ -170,7 +172,7 @@ export function AdminOverviewStats({
                     justifyContent: "space-between",
                     padding: "10px 12px",
                     borderRadius: "var(--radius-sm)",
-                    background: "rgba(255,255,255,0.02)",
+                    background: "var(--color-surface-2)",
                     border: "1px solid var(--color-border)",
                   }}
                 >
@@ -180,13 +182,36 @@ export function AdminOverviewStats({
                       href={`/${s.slug}`}
                       target="_blank"
                       rel="noreferrer"
-                      style={{ fontSize: 11, color: "#ffffff", textDecoration: "none" }}
+                      style={{ fontSize: 11, color: "var(--color-primary-light, #818cf8)", textDecoration: "none" }}
                     >
                       /{s.slug} &rarr;
                     </a>
                   </div>
-                  <div style={{ textAlign: "right", fontSize: 11, color: "var(--color-muted-foreground)" }}>
-                    Owner: {s.ownerName}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ textAlign: "right", fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                      Owner: {s.ownerName}
+                    </div>
+                    {onLaunchDashboard && (
+                      <button
+                        type="button"
+                        onClick={() => onLaunchDashboard(s.id, s.name)}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: "3px 7px",
+                          fontSize: 10.5,
+                          gap: 4,
+                          height: 24,
+                          fontWeight: 700,
+                          background: "rgba(99, 102, 241, 0.15)",
+                          color: "var(--color-primary-light, #818cf8)",
+                          borderColor: "rgba(99, 102, 241, 0.3)",
+                        }}
+                        title="Open Merchant Dashboard"
+                      >
+                        <LayoutDashboard size={11} />
+                        <span>Dashboard</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

@@ -33,14 +33,17 @@ export async function GET(req: NextRequest) {
 
     // 2. Otherwise check for 2FA pending session cookie
     const cookieStore = await cookies();
-    const twoFactorCookie =
+    const twoFactorCookieRaw =
       cookieStore.get("better-auth.two_factor")?.value ||
       cookieStore.get("__Secure-better-auth.two_factor")?.value ||
       cookieStore.get("two_factor")?.value;
 
-    if (twoFactorCookie) {
+    if (twoFactorCookieRaw) {
       // The cookie may be in format: "identifier.signature" or "identifier"
-      const rawIdentifier = twoFactorCookie.split(".")[0];
+      const decodedCookie = decodeURIComponent(twoFactorCookieRaw).replace(/^"+|"+$/g, "");
+      const rawIdentifier = decodedCookie.includes(".")
+        ? decodedCookie.substring(0, decodedCookie.lastIndexOf("."))
+        : decodedCookie;
 
       if (rawIdentifier) {
         const [verRecord] = await db

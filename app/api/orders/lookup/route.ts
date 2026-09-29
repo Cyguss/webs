@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { orders, products, shops } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { generateOrderAccessToken } from "@/lib/order-auth";
+import { eq, and, desc } from "drizzle-orm";
+import { generateOrderBearerSecret, hashOrderBearerSecret } from "@/lib/order-auth";
 import { sendOrderLookupEmail, OrderLookupEmailItem } from "@/lib/email";
-
-// Simple in-memory rate limiting to prevent spam
-const lookupRateLimits = new Map<string, { count: number; lastTime: number }>();
+import { rateLimit, rateLimitPresets, getClientIp, createRateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const headersList = await headers();
+    const clientIp = getClientIp(headersList);
+
     const body = await req.json();
     const rawEmail = (body.email || "").trim().toLowerCase();
     const shopSlug = (body.shopSlug || "").trim().toLowerCase();
@@ -21,20 +23,30 @@ export async function POST(req: Request) {
       );
     }
 
-    // Rate limit: max 5 lookups per email per 10 minutes
-    const now = Date.now();
-    const rateLimit = lookupRateLimits.get(rawEmail);
-    if (rateLimit && now - rateLimit.lastTime < 10 * 60 * 1000 && rateLimit.count >= 5) {
-      return NextResponse.json(
-        { error: "Too many lookup attempts for this email. Please check your inbox or try again in a few minutes." },
-        { status: 429 }
+    // Rate limit: max 5 lookups per IP and per email
+    const ipCheck = rateLimit({
+      key: `lookup_ip:${clientIp}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!ipCheck.allowed) {
+      return createRateLimitResponse(
+        ipCheck,
+        "Too many lookup attempts from this network. Please check your inbox or try again in a few minutes."
       );
     }
 
-    lookupRateLimits.set(rawEmail, {
-      count: rateLimit && now - rateLimit.lastTime < 10 * 60 * 1000 ? rateLimit.count + 1 : 1,
-      lastTime: now,
+    const emailCheck = rateLimit({
+      key: `lookup_email:${rawEmail}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
     });
+    if (!emailCheck.allowed) {
+      return createRateLimitResponse(
+        emailCheck,
+        "Too many lookup attempts for this mailbox. Please check your inbox or try again in a few minutes."
+      );
+    }
 
     const userOrders = await db
       .select({
@@ -45,85 +57,72 @@ export async function POST(req: Request) {
       .from(orders)
       .leftJoin(products, eq(orders.productId, products.id))
       .leftJoin(shops, eq(orders.shopId, shops.id))
-      .where(eq(orders.buyerEmail, rawEmail))
+      .where(
+        shopSlug
+          ? and(eq(orders.buyerEmail, rawEmail), eq(shops.slug, shopSlug))
+          : eq(orders.buyerEmail, rawEmail)
+      )
       .orderBy(desc(orders.createdAt))
       .limit(50);
 
-    if (!userOrders || userOrders.length === 0) {
-      return NextResponse.json({
-        success: true,
-        count: 0,
-        orders: [],
-        message: "No orders found associated with this email address.",
-      });
-    }
-
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
     const emailOrderItems: OrderLookupEmailItem[] = [];
-    const clientOrderSummaries = [];
 
-    for (const item of userOrders) {
-      const ord = item.order;
-      const prod = item.product;
-      const shp = item.shop;
+    if (userOrders && userOrders.length > 0) {
+      for (const item of userOrders) {
+        const ord = item.order;
+        const prod = item.product;
+        const shp = item.shop;
 
-      const token = generateOrderAccessToken(ord.id, ord.buyerEmail);
-      const receiptUrl = `${appUrl}/order/${ord.id}?token=${token}`;
+        if (ord.paymentStatus === "completed") {
+          // Generate a fresh random bearer secret for secure access via email
+          const bearerSecret = generateOrderBearerSecret();
+          const secretHash = hashOrderBearerSecret(bearerSecret);
 
-      if (ord.paymentStatus === "completed") {
-        emailOrderItems.push({
-          orderId: ord.id,
-          shopName: shp?.name || "Merchant Store",
-          productTitle: prod?.title || "Digital Product",
-          totalAmount: ord.totalAmount,
-          currency: ord.currency || "USD",
-          createdAt: ord.createdAt,
-          receiptUrl,
-        });
+          // Update the order's secret hash in the database
+          await db
+            .update(orders)
+            .set({
+              accessSecretHash: secretHash,
+              updatedAt: new Date(),
+            })
+            .where(eq(orders.id, ord.id));
+
+          const receiptUrl = `${appUrl}/order/${ord.id}?secret=${bearerSecret}`;
+
+          emailOrderItems.push({
+            orderId: ord.id,
+            shopName: shp?.name || "Merchant Store",
+            productTitle: prod?.title || "Digital Product",
+            totalAmount: ord.totalAmount,
+            currency: ord.currency || "USD",
+            createdAt: ord.createdAt,
+            receiptUrl,
+          });
+        }
       }
 
-      clientOrderSummaries.push({
-        id: ord.id,
-        shortId: ord.id.slice(0, 8).toUpperCase(),
-        productTitle: prod?.title || "Digital Product",
-        shopName: shp?.name || "Merchant Store",
-        shopSlug: shp?.slug || null,
-        totalAmount: ord.totalAmount,
-        currency: ord.currency || "USD",
-        paymentStatus: ord.paymentStatus,
-        paymentMethod: ord.paymentMethod,
-        createdAt: ord.createdAt,
-        receiptUrl,
-      });
-    }
-
-    let emailSent = false;
-    if (emailOrderItems.length > 0) {
-      try {
-        const mailRes = await sendOrderLookupEmail({
-          email: rawEmail,
-          orders: emailOrderItems,
-        });
-        emailSent = mailRes.success;
-      } catch (mailErr) {
-        console.warn("[Order Lookup] Failed to send lookup email:", mailErr);
+      if (emailOrderItems.length > 0) {
+        try {
+          await sendOrderLookupEmail({
+            email: rawEmail,
+            orders: emailOrderItems,
+          });
+        } catch (mailErr) {
+          console.warn("[Order Lookup] Failed to send lookup email:", mailErr);
+        }
       }
     }
 
+    // Secure response: NEVER return receipt URLs, tokens, secrets, or order items to unauthenticated caller.
     return NextResponse.json({
       success: true,
-      count: clientOrderSummaries.length,
-      orders: clientOrderSummaries,
-      emailSent,
-      message: emailSent
-        ? `Found ${clientOrderSummaries.length} order(s). Access links have also been sent to your email.`
-        : `Found ${clientOrderSummaries.length} order(s). Click any order below to view your keys.`,
+      message: "If any completed orders exist for this email, secure access links have been dispatched to your inbox.",
     });
   } catch (err: any) {
     console.error("[Order Lookup Error]", err);
     return NextResponse.json(
-      { error: err.message || "Failed to search for orders" },
+      { error: "Failed to process order recovery request" },
       { status: 500 }
     );
   }

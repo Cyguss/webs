@@ -14,7 +14,7 @@ export const siteConfig = {
   // Platform Business Rules
   business: {
     platformFeePercent: 5, // 5% fee on sales
-    payoutHoldDays: 7, // 7-day security hold before balance is withdrawable
+    payoutHoldDays: 14, // 14-day security hold before balance is withdrawable
     minimumPayoutUsd: 10.0, // Minimum payout request amount
     defaultCurrency: "USD",
     maxShopsPerUser: 1, // Store limit per user

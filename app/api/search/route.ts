@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shops, products, orders } from "@/lib/db/schema";
 import { eq, and, or, like, desc } from "drizzle-orm";
+import { getActiveMerchantShop } from "@/lib/tenant";
 
 export async function GET(req: Request) {
   try {
@@ -22,9 +23,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ products: [], orders: [] });
     }
 
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
+    const shopId = searchParams.get("shopId");
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
     if (!userShop) {
       return NextResponse.json({ products: [], orders: [] });

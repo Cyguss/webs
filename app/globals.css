@@ -1147,5 +1147,48 @@ textarea:focus-visible {
   animation: bounceClick 0.25s ease-in-out;
 }
 
+/* ─── Responsive Storefront & Product Layouts ────────────────────────────── */
+
+.storefront-layout-grid {
+  display: grid;
+  grid-template-columns: 330px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .storefront-layout-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .storefront-layout-grid aside {
+    position: static !important;
+    width: 100% !important;
+  }
+}
+
+.product-details-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .product-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 16px !important;
+  }
+  .stat-grid, .stat-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 
 

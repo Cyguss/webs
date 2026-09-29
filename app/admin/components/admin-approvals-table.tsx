@@ -1,21 +1,25 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, ExternalLink, Loader2, Copy, Check } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, Copy, Check, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/components/toast-context";
 
 interface AdminApprovalsTableProps {
   approvalRequests: any[];
   approvingShopId: string | null;
+  launchingShopId?: string | null;
   onApproveShop: (shopId: string, status: "approved" | "rejected") => void;
   onOpenRejectModal: (shopId: string, shopName: string) => void;
+  onLaunchDashboard?: (shopId: string, shopName: string) => void;
 }
 
 export function AdminApprovalsTable({
   approvalRequests,
   approvingShopId,
+  launchingShopId,
   onApproveShop,
   onOpenRejectModal,
+  onLaunchDashboard,
 }: AdminApprovalsTableProps) {
   const toast = useToast();
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -59,7 +63,7 @@ export function AdminApprovalsTable({
       {pendingRequests.length === 0 ? (
         <div style={{ textAlign: "center", padding: 56, color: "var(--color-muted-foreground)" }}>
           <CheckCircle2 size={40} style={{ margin: "0 auto 12px", opacity: 0.4, color: "#10b981", display: "block" }} />
-          <div style={{ fontWeight: 700, fontSize: 16, color: "#ffffff" }}>All Caught Up!</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--color-foreground)" }}>All Caught Up!</div>
           <div style={{ fontSize: 13, marginTop: 4, color: "var(--color-muted-foreground)" }}>
             There are no stores currently waiting for review or approval.
           </div>
@@ -82,9 +86,9 @@ export function AdminApprovalsTable({
                 const isCopied = copiedId === r.shopId;
 
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <tr key={r.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td style={{ padding: "12px 14px" }}>
-                      <div style={{ fontWeight: 700, color: "#ffffff" }}>{r.shopName || "Unnamed Store"}</div>
+                      <div style={{ fontWeight: 700, color: "var(--color-foreground)" }}>{r.shopName || "Unnamed Store"}</div>
                       <span
                         style={{
                           fontSize: 10,
@@ -128,6 +132,31 @@ export function AdminApprovalsTable({
                     </td>
                     <td style={{ padding: "12px 14px", textAlign: "right" }}>
                       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+                        {onLaunchDashboard && (
+                          <button
+                            type="button"
+                            onClick={() => onLaunchDashboard(r.shopId, r.shopName || "Store")}
+                            disabled={launchingShopId === r.shopId}
+                            className="btn btn-secondary"
+                            style={{
+                              padding: "5px 10px",
+                              fontSize: 12,
+                              gap: 5,
+                              fontWeight: 700,
+                              background: "rgba(99, 102, 241, 0.15)",
+                              color: "var(--color-primary-light, #818cf8)",
+                              borderColor: "rgba(99, 102, 241, 0.3)",
+                            }}
+                            title="Open & inspect this store's merchant dashboard"
+                          >
+                            {launchingShopId === r.shopId ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <LayoutDashboard size={12} />
+                            )}
+                            <span>Dashboard</span>
+                          </button>
+                        )}
                         <a
                           href={`/${r.shopSlug}`}
                           target="_blank"

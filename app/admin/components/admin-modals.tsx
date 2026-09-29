@@ -276,9 +276,9 @@ export function AdminMasterModal({
           maxWidth: 420,
           width: "100%",
           padding: 30,
-          border: "1px solid rgba(255, 255, 255, 0.12)",
-          background: "#0d0e12",
-          boxShadow: "0 25px 60px rgba(0, 0, 0, 0.95)",
+          border: "1px solid var(--color-border)",
+          background: "var(--color-surface)",
+          boxShadow: "0 25px 60px rgba(0, 0, 0, 0.5)",
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -287,13 +287,13 @@ export function AdminMasterModal({
               width: 46,
               height: 46,
               borderRadius: "var(--radius-sm)",
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "var(--color-surface-2, rgba(125,125,125,0.1))",
+              border: "1px solid var(--color-border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 12px",
-              color: "#ffffff",
+              color: "var(--color-foreground)",
             }}
           >
             <Lock size={20} />

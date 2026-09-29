@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shops, orders, products, inventoryKeys } from "@/lib/db/schema";
 import { eq, count } from "drizzle-orm";
+import { getActiveMerchantShop } from "@/lib/tenant";
 
 export async function GET(req: Request) {
   try {
@@ -17,10 +18,9 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
+    const shopId = searchParams.get("shopId");
 
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
     if (!userShop) {
       return NextResponse.json({

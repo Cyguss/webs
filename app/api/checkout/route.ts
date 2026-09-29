@@ -158,9 +158,11 @@ export async function POST(req: Request) {
     }
 
     const orderId = crypto.randomUUID();
-    const accessToken = generateOrderAccessToken(orderId, buyerEmail);
+    const { generateOrderBearerSecret, hashOrderBearerSecret } = await import("@/lib/order-auth");
+    const bearerSecret = generateOrderBearerSecret();
+    const secretHash = hashOrderBearerSecret(bearerSecret);
 
-    // 5. Create order record with variant and duration details
+    // 5. Create order record with variant, duration, and cryptographically random secret hash
     await db.insert(orders).values({
       id: orderId,
       shopId: product.shopId,
@@ -173,8 +175,9 @@ export async function POST(req: Request) {
       totalAmount: totalAmountNum.toFixed(2),
       currency: product.currency || "USD",
       paymentMethod,
-      paymentStatus: totalAmountNum <= 0 ? "completed" : "pending",
-      fulfilledAt: totalAmountNum <= 0 ? new Date() : null,
+      paymentStatus: "pending",
+      accessSecretHash: secretHash,
+      fulfilledAt: null,
       keyDuration: chosenDuration,
       keyDurationDays: chosenDurationDays,
     });
@@ -183,11 +186,11 @@ export async function POST(req: Request) {
 
     // 5b. Immediate fulfillment for free orders (100% coupon promo)
     if (totalAmountNum <= 0) {
-      await fulfillOrder(orderId);
+      await fulfillOrder(orderId, { accessSecret: bearerSecret });
       return NextResponse.json({
         success: true,
         orderId,
-        checkoutUrl: `${appUrl}/order/${orderId}?token=${accessToken}`,
+        checkoutUrl: `${appUrl}/order/${orderId}?secret=${bearerSecret}`,
       });
     }
 
@@ -212,7 +215,7 @@ export async function POST(req: Request) {
         ],
         mode: "payment",
         customer_email: buyerEmail.trim().toLowerCase(),
-        success_url: `${appUrl}/order/${orderId}?session_id={CHECKOUT_SESSION_ID}&token=${accessToken}`,
+        success_url: `${appUrl}/order/${orderId}?session_id={CHECKOUT_SESSION_ID}&secret=${bearerSecret}`,
         cancel_url: `${appUrl}/${shop.slug}/product/${product.id}?canceled=1`,
         metadata: {
           orderId,
@@ -234,53 +237,36 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7. Handle Crypto Payment via Cryptomus
+    // 7. Handle Crypto Payment via NOWPayments
     if (paymentMethod === "crypto") {
       const appUrl = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const defaultSandbox = process.env.NODE_ENV === "production" ? "false" : "true";
-      const isSandbox = (process.env.CRYPTOMUS_SANDBOX || defaultSandbox).toLowerCase() === "true";
-
-      // ── TRYB SANDBOX (Testowy bez pobierania pieniędzy, z pełnym webhookiem) ──
-      if (isSandbox) {
-        console.log(`[Cryptomus Sandbox] Generating realistic test invoice for order ${orderId}`);
-        await db
-          .update(orders)
-          .set({ cryptoPaymentId: `sim_${orderId}` })
-          .where(eq(orders.id, orderId));
-
-        return NextResponse.json({
-          success: true,
-          orderId,
-          checkoutUrl: `${appUrl}/checkout/crypto-sandbox?orderId=${orderId}`,
-        });
-      }
-
-      // ── TRYB PRODUKCYJNY (Prawdziwe płatności Cryptomus z Merchant UUID) ──
-      const { createCryptomusPayment } = await import("@/lib/cryptomus");
-      const cryptomusRes = await createCryptomusPayment({
-        amount: totalAmountNum.toFixed(2),
-        currency: product.currency || "USD",
+      const { createNowPaymentsInvoice } = await import("@/lib/nowpayments");
+      const nowpaymentsRes = await createNowPaymentsInvoice({
         orderId,
-        urlReturn: `${appUrl}/order/${orderId}?token=${accessToken}&crypto=1`,
-        urlCallback: `${appUrl}/api/webhooks/crypto`,
+        priceAmount: totalAmountNum,
+        priceCurrency: (product.currency || "usd").toLowerCase(),
+        orderDescription: `Order #${orderId.slice(0, 8)} - ${product.title}`,
+        ipnCallbackUrl: `${appUrl}/api/webhooks/crypto`,
+        successUrl: `${appUrl}/order/${orderId}?secret=${bearerSecret}&crypto=1`,
+        cancelUrl: `${appUrl}/order/${orderId}?canceled=true`,
       });
 
-      if (cryptomusRes.success && cryptomusRes.paymentUrl) {
+      if (nowpaymentsRes.success && nowpaymentsRes.invoiceUrl) {
         await db
           .update(orders)
-          .set({ cryptoPaymentId: cryptomusRes.paymentId || orderId })
+          .set({ cryptoPaymentId: nowpaymentsRes.id || orderId })
           .where(eq(orders.id, orderId));
 
         return NextResponse.json({
           success: true,
           orderId,
-          checkoutUrl: cryptomusRes.paymentUrl,
+          checkoutUrl: nowpaymentsRes.invoiceUrl,
         });
       }
 
       return NextResponse.json(
         {
-          error: cryptomusRes.error || "Cryptomus live payment initialization failed.",
+          error: nowpaymentsRes.error || "NOWPayments live checkout initialization failed.",
         },
         { status: 400 }
       );

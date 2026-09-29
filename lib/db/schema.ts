@@ -118,6 +118,9 @@ export const shops = mysqlTable(
     cardColor: varchar("card_color", { length: 20 }),
     borderColor: varchar("border_color", { length: 20 }),
     themeMode: varchar("theme_mode", { length: 20 }).default("dark"),
+    supportEmail: varchar("support_email", { length: 255 }),
+    contactInfo: text("contact_info"),
+    termsOfService: text("terms_of_service"),
     // Deprecated raw injection fields (eliminated for security)
     customCss: text("custom_css"),
     customHtml: text("custom_html"),
@@ -179,6 +182,7 @@ export const products = mysqlTable(
     isUnlimitedStock: boolean("is_unlimited_stock").notNull().default(false),
     thumbnailUrl: text("thumbnail_url"),
     images: text("images"),
+    youtubeUrl: text("youtube_url"), // Showcase video URL (YouTube, Streamable, etc.)
     isActive: boolean("is_active").notNull().default(true),
     receiptNote: text("receipt_note"),
     duration: varchar("duration", { length: 50 }).notNull().default("lifetime"),
@@ -280,6 +284,7 @@ export const orders = mysqlTable(
     paymentStatus: varchar("payment_status", { length: 50 }).notNull().default("pending"),
     stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
     cryptoPaymentId: varchar("crypto_payment_id", { length: 255 }),
+    accessSecretHash: varchar("access_secret_hash", { length: 64 }),
     fulfilledAt: timestamp("fulfilled_at"),
     variantId: varchar("variant_id", { length: 50 }),
     keyDuration: varchar("key_duration", { length: 50 }),
@@ -293,6 +298,7 @@ export const orders = mysqlTable(
     index("orders_product_id_idx").on(table.productId),
     index("orders_created_at_idx").on(table.createdAt),
     index("orders_payment_status_idx").on(table.paymentStatus),
+    index("orders_secret_hash_idx").on(table.accessSecretHash),
   ]
 );
 
@@ -324,6 +330,7 @@ export const sellerBalances = mysqlTable(
       .references(() => user.id, { onDelete: "cascade" }),
     availableBalance: varchar("available_balance", { length: 32 }).notNull().default("0"),
     pendingBalance: varchar("pending_balance", { length: 32 }).notNull().default("0"),
+    reserveBalance: varchar("reserve_balance", { length: 32 }).notNull().default("0"),
     totalEarned: varchar("total_earned", { length: 32 }).notNull().default("0"),
     totalWithdrawn: varchar("total_withdrawn", { length: 32 }).notNull().default("0"),
     currency: varchar("currency", { length: 10 }).notNull().default("USD"),
@@ -346,12 +353,41 @@ export const balanceTransactions = mysqlTable(
     amount: varchar("amount", { length: 32 }).notNull(),
     feeAmount: varchar("fee_amount", { length: 32 }).notNull().default("0"),
     netAmount: varchar("net_amount", { length: 32 }).notNull(),
+    currency: varchar("currency", { length: 10 }).notNull().default("USD"),
+    provider: varchar("provider", { length: 50 }),
+    providerPaymentId: varchar("provider_payment_id", { length: 255 }),
+    externalEventId: varchar("external_event_id", { length: 255 }),
     description: text("description"),
+    isReleased: boolean("is_released").notNull().default(false),
+    releasedAt: timestamp("released_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("bal_tx_user_id_idx").on(table.userId),
     index("bal_tx_created_at_idx").on(table.createdAt),
+    index("bal_tx_rel_idx").on(table.userId, table.isReleased, table.type),
+    index("bal_tx_order_id_idx").on(table.orderId),
+    index("bal_tx_ext_event_idx").on(table.provider, table.externalEventId),
+  ]
+);
+
+export const processedWebhookEvents = mysqlTable(
+  "processed_webhook_events",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    provider: varchar("provider", { length: 50 }).notNull(),
+    eventId: varchar("event_id", { length: 255 }).notNull(),
+    eventType: varchar("event_type", { length: 100 }).notNull(),
+    orderId: varchar("order_id", { length: 36 }),
+    merchantId: varchar("merchant_id", { length: 36 }),
+    amount: varchar("amount", { length: 32 }),
+    currency: varchar("currency", { length: 10 }).default("USD"),
+    status: varchar("status", { length: 50 }).notNull().default("processed"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("proc_wh_prov_ev_idx").on(table.provider, table.eventId),
+    index("proc_wh_order_idx").on(table.orderId),
   ]
 );
 
@@ -393,12 +429,14 @@ export const tickets = mysqlTable(
     subject: varchar("subject", { length: 255 }).notNull(),
     status: varchar("status", { length: 50 }).notNull().default("open"),
     priority: varchar("priority", { length: 50 }).notNull().default("normal"),
+    accessSecretHash: varchar("access_secret_hash", { length: 64 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("tickets_shop_id_idx").on(table.shopId),
     index("tickets_status_idx").on(table.status),
+    index("tickets_secret_hash_idx").on(table.accessSecretHash),
   ]
 );
 

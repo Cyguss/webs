@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Inbox,
   CheckCircle2,
@@ -14,6 +15,8 @@ import {
   ExternalLink,
   ShieldAlert,
   ArrowRight,
+  Wallet,
+  MessageSquare,
 } from "lucide-react";
 import { useToast } from "@/components/toast-context";
 
@@ -30,6 +33,9 @@ interface NotificationItem {
 }
 
 export default function InboxPage() {
+  const searchParams = useSearchParams();
+  const shopId = searchParams.get("shopId");
+  const querySuffix = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread" | "status">("all");
@@ -39,7 +45,7 @@ export default function InboxPage() {
   async function loadNotifications() {
     try {
       setLoading(true);
-      const res = await fetch("/api/notifications");
+      const res = await fetch(`/api/notifications${querySuffix}`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -53,7 +59,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     loadNotifications();
-  }, []);
+  }, [shopId]);
 
   async function handleMarkAllRead() {
     try {
@@ -61,7 +67,7 @@ export default function InboxPage() {
       const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ all: true }),
+        body: JSON.stringify({ all: true, shopId }),
       });
       if (res.ok) {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
@@ -81,7 +87,7 @@ export default function InboxPage() {
       const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, shopId }),
       });
       if (res.ok) {
         setNotifications((prev) =>
@@ -96,7 +102,8 @@ export default function InboxPage() {
 
   async function handleDeleteSingle(id: string) {
     try {
-      const res = await fetch(`/api/notifications?id=${id}`, {
+      const delShopQuery = shopId ? `&shopId=${encodeURIComponent(shopId)}` : "";
+      const res = await fetch(`/api/notifications?id=${id}${delShopQuery}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -113,7 +120,8 @@ export default function InboxPage() {
     if (!confirm("Are you sure you want to clear all notifications from your inbox?")) return;
     try {
       setActionLoading(true);
-      const res = await fetch("/api/notifications?all=true", {
+      const delShopQuery = shopId ? `&shopId=${encodeURIComponent(shopId)}` : "";
+      const res = await fetch(`/api/notifications?all=true${delShopQuery}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -130,7 +138,17 @@ export default function InboxPage() {
 
   const filteredNotifications = notifications.filter((n) => {
     if (filter === "unread") return !n.isRead;
-    if (filter === "status") return n.type === "store_approved" || n.type === "store_rejected";
+    if (filter === "status") {
+      return (
+        n.type === "store_approved" ||
+        n.type === "store_rejected" ||
+        n.type === "payment_disputed" ||
+        n.type === "payment_reversed" ||
+        n.type === "payout_completed" ||
+        n.type === "payout_approved" ||
+        n.type === "payout_rejected"
+      );
+    }
     return true;
   });
 
@@ -227,7 +245,7 @@ export default function InboxPage() {
           className={`btn ${filter === "status" ? "btn-primary" : "btn-ghost"}`}
           style={{ fontSize: 13, padding: "6px 14px", height: "auto" }}
         >
-          Store Verdicts
+          Disputes & Verdicts
         </button>
       </div>
 
@@ -286,6 +304,10 @@ export default function InboxPage() {
           {filteredNotifications.map((notif) => {
             const isRejected = notif.type === "store_rejected";
             const isApproved = notif.type === "store_approved";
+            const isReversed = notif.type === "payment_reversed" || notif.type === "PAYMENT_REVERSED";
+            const isDisputed = notif.type === "payment_disputed" || notif.type === "PAYMENT_DISPUTED";
+            const isPayoutApproved = notif.type === "payout_completed" || notif.type === "payout_approved";
+            const isPayoutRejected = notif.type === "payout_rejected";
 
             return (
               <div
@@ -296,10 +318,14 @@ export default function InboxPage() {
                   padding: "18px 20px",
                   borderRadius: "var(--radius-lg, 14px)",
                   background: notif.isRead ? "var(--color-surface)" : "var(--color-surface-2)",
-                  border: isRejected
+                  border: isDisputed
+                    ? "1px solid rgba(244, 63, 94, 0.45)"
+                    : isRejected || isPayoutRejected
                     ? "1px solid rgba(239, 68, 68, 0.35)"
-                    : isApproved
+                    : isApproved || isPayoutApproved
                     ? "1px solid rgba(34, 197, 94, 0.35)"
+                    : isReversed
+                    ? "1px solid rgba(249, 115, 22, 0.4)"
                     : "1px solid var(--color-border)",
                   boxShadow: notif.isRead ? "none" : "0 4px 18px rgba(0,0,0,0.12)",
                   transition: "all 0.15s ease",
@@ -313,12 +339,24 @@ export default function InboxPage() {
                       width: 40,
                       height: 40,
                       borderRadius: 10,
-                      background: isRejected
+                      background: isDisputed
+                        ? "rgba(244, 63, 94, 0.15)"
+                        : isRejected || isPayoutRejected
                         ? "rgba(239, 68, 68, 0.15)"
-                        : isApproved
+                        : isApproved || isPayoutApproved
                         ? "rgba(34, 197, 94, 0.15)"
+                        : isReversed
+                        ? "rgba(249, 115, 22, 0.15)"
                         : "var(--color-surface-2)",
-                      color: isRejected ? "#ef4444" : isApproved ? "#22c55e" : "var(--color-foreground)",
+                      color: isDisputed
+                        ? "#f43f5e"
+                        : isRejected || isPayoutRejected
+                        ? "#ef4444"
+                        : isApproved || isPayoutApproved
+                        ? "#22c55e"
+                        : isReversed
+                        ? "#f97316"
+                        : "var(--color-foreground)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -326,10 +364,18 @@ export default function InboxPage() {
                       marginTop: 2,
                     }}
                   >
-                    {isRejected ? (
+                    {isDisputed ? (
+                      <ShieldAlert size={22} />
+                    ) : isPayoutApproved ? (
+                      <CheckCircle2 size={22} />
+                    ) : isPayoutRejected ? (
+                      <XCircle size={22} />
+                    ) : isRejected ? (
                       <XCircle size={22} />
                     ) : isApproved ? (
                       <CheckCircle2 size={22} />
+                    ) : isReversed ? (
+                      <AlertTriangle size={22} />
                     ) : (
                       <Bell size={20} />
                     )}
@@ -393,6 +439,70 @@ export default function InboxPage() {
                             Approved
                           </span>
                         )}
+                        {isDisputed && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              borderRadius: 4,
+                              background: "rgba(244, 63, 94, 0.18)",
+                              color: "#f43f5e",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            Payment Disputed
+                          </span>
+                        )}
+                        {isPayoutApproved && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              borderRadius: 4,
+                              background: "rgba(34, 197, 94, 0.18)",
+                              color: "#22c55e",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            Payout Approved
+                          </span>
+                        )}
+                        {isPayoutRejected && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              borderRadius: 4,
+                              background: "rgba(239, 68, 68, 0.18)",
+                              color: "#ef4444",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            Payout Rejected
+                          </span>
+                        )}
+                        {isReversed && !isDisputed && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              borderRadius: 4,
+                              background: "rgba(249, 115, 22, 0.18)",
+                              color: "#f97316",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            Payment Reversed
+                          </span>
+                        )}
                       </div>
 
                       <span style={{ fontSize: 12, color: "var(--color-muted-foreground)", flexShrink: 0 }}>
@@ -401,23 +511,60 @@ export default function InboxPage() {
                       </span>
                     </div>
 
-                    <p style={{ margin: "4px 0 0", fontSize: 13.5, color: "var(--color-muted-foreground)", lineHeight: 1.5 }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 13.5, color: "var(--color-foreground)", lineHeight: 1.5 }}>
                       {notif.message}
                     </p>
 
-                    {/* Admin Rejection Reason Box */}
-                    {isRejected && notif.reason && (
+                    {/* Reason / Admin Memo Box */}
+                    {(isRejected || isReversed || isDisputed || isPayoutApproved || isPayoutRejected) && notif.reason && (
                       <div
                         style={{
                           marginTop: 12,
                           padding: "12px 14px",
                           borderRadius: 8,
-                          background: "rgba(239, 68, 68, 0.08)",
-                          borderLeft: "3px solid #ef4444",
+                          background: isDisputed
+                            ? "rgba(244, 63, 94, 0.08)"
+                            : isRejected || isPayoutRejected
+                            ? "rgba(239, 68, 68, 0.08)"
+                            : isApproved || isPayoutApproved
+                            ? "rgba(34, 197, 94, 0.08)"
+                            : "rgba(249, 115, 22, 0.08)",
+                          borderLeft: `3px solid ${
+                            isDisputed
+                              ? "#f43f5e"
+                              : isRejected || isPayoutRejected
+                              ? "#ef4444"
+                              : isApproved || isPayoutApproved
+                              ? "#22c55e"
+                              : "#f97316"
+                          }`,
                         }}
                       >
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
-                          Reason from Moderation Team
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: isDisputed
+                              ? "#f43f5e"
+                              : isRejected || isPayoutRejected
+                              ? "#ef4444"
+                              : isApproved || isPayoutApproved
+                              ? "#22c55e"
+                              : "#f97316",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 3,
+                          }}
+                        >
+                          {isDisputed
+                            ? "Dispute Details"
+                            : isPayoutApproved
+                            ? "Admin Confirmation Note"
+                            : isPayoutRejected
+                            ? "Payout Rejection Reason"
+                            : isRejected
+                            ? "Reason from Moderation Team"
+                            : "Reversal Reason"}
                         </div>
                         <div style={{ fontSize: 13, color: "var(--color-foreground)", fontWeight: 500, lineHeight: 1.4 }}>
                           "{notif.reason}"
@@ -426,11 +573,11 @@ export default function InboxPage() {
                     )}
 
                     {/* Footer Actions */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 10, borderTop: "1px solid var(--color-border)" }}>
-                      <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 10, borderTop: "1px solid var(--color-border)", flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         {isRejected && (
                           <Link
-                            href="/dashboard/storefront"
+                            href={`/dashboard/storefront${querySuffix}`}
                             className="btn btn-secondary"
                             style={{ fontSize: 11, padding: "4px 10px", gap: 5 }}
                           >
@@ -440,13 +587,37 @@ export default function InboxPage() {
                         )}
                         {isApproved && notif.shopId && (
                           <Link
-                            href="/dashboard/storefront"
+                            href={`/dashboard/storefront${querySuffix}`}
                             className="btn btn-secondary"
                             style={{ fontSize: 11, padding: "4px 10px", gap: 5 }}
                           >
                             <span>Open Storefront</span>
                             <ExternalLink size={11} />
                           </Link>
+                        )}
+                        {(isPayoutApproved || isPayoutRejected) && (
+                          <>
+                            <a
+                              href="https://discord.gg/krypt"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary"
+                              style={{ fontSize: 11, padding: "4px 10px", gap: 5, color: "#818cf8" }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageSquare size={12} />
+                              <span>Contact Support on Discord</span>
+                            </a>
+                            <Link
+                              href={`/dashboard/earnings${querySuffix}`}
+                              className="btn btn-ghost"
+                              style={{ fontSize: 11, padding: "4px 10px", gap: 5 }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Wallet size={12} />
+                              <span>View Balance & Earnings</span>
+                            </Link>
+                          </>
                         )}
                       </div>
 

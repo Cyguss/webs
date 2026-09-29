@@ -12,6 +12,11 @@ export default async function CryptoSandboxPage({
 }: {
   searchParams: Promise<{ orderId?: string }>;
 }) {
+  // CRITICAL SECURITY GUARD: Sandbox page is strictly disabled in production unless sandbox mode is explicitly on
+  if (process.env.NODE_ENV === "production" && process.env.CRYPTOMUS_SANDBOX !== "true") {
+    notFound();
+  }
+
   const sParams = await searchParams;
   const orderId = sParams.orderId;
 

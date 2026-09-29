@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { twoFactor } from "better-auth/plugins";
+import { oauthTwoFactorPlugin } from "@/lib/auth-oauth-2fa";
 import { db, schema } from "@/lib/db";
 import { env, features } from "@/config";
 import { Resend } from "resend";
@@ -11,13 +12,22 @@ const resend = features.resend ? new Resend(env.RESEND_API_KEY) : null;
 
 const resendFromEmail = process.env.RESEND_FROM_EMAIL || "KRYPT MARKET <onboarding@resend.dev>";
 
+const betterAuthBaseUrl =
+  env.BETTER_AUTH_URL ||
+  (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "") ||
+  (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : "") ||
+  env.NEXT_PUBLIC_APP_URL ||
+  "http://localhost:3000";
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
+  baseURL: betterAuthBaseUrl,
   trustedOrigins: [
+    betterAuthBaseUrl,
     env.BETTER_AUTH_URL,
     env.NEXT_PUBLIC_APP_URL,
     ...(process.env.RAILWAY_PUBLIC_DOMAIN ? [`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`] : []),
+    ...(process.env.RAILWAY_STATIC_URL ? [`https://${process.env.RAILWAY_STATIC_URL}`] : []),
   ].filter(Boolean),
   database: drizzleAdapter(db, {
     provider: "mysql",
@@ -156,6 +166,7 @@ export const auth = betterAuth({
         },
       },
     }),
+    oauthTwoFactorPlugin(),
   ],
   databaseHooks: {
     user: {

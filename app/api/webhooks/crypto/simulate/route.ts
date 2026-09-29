@@ -49,17 +49,24 @@ export async function POST(req: Request) {
       payer_currency: "USDT",
     };
 
+    const ipnSecret = (process.env.NOWPAYMENTS_IPN_SECRET || "").trim();
+    const sortedString = JSON.stringify(payload, Object.keys(payload).sort());
+    const nowpaymentsSig = ipnSecret
+      ? crypto.createHmac("sha512", ipnSecret).update(sortedString).digest("hex")
+      : "dev_test_sig";
+
     const signature = paymentKey ? generateCryptomusSignature(payload, paymentKey) : "dev_test_sig";
 
-    // Call the actual Cryptomus webhook handler internally
+    // Call the actual crypto webhook handler internally
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const webhookRes = await fetch(`${appUrl}/api/webhooks/crypto`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-nowpayments-sig": nowpaymentsSig,
         sign: signature,
       },
-      body: JSON.stringify({ ...payload, sign: signature }),
+      body: JSON.stringify({ ...payload, payment_status: "finished", sign: signature }),
     });
 
     const resJson = await webhookRes.json();

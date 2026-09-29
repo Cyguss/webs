@@ -6,7 +6,9 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { OrderLookupForm } from "@/components/order-lookup-form";
 import { ArrowLeft, Key, Terminal } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { resolveStorefrontFont } from "@/lib/fonts";
+import { GlobalAnnouncementBanner } from "@/components/global-announcement-banner";
+import { getPlatformConfig } from "@/lib/platform-settings";
 
 export async function generateMetadata({
   params,
@@ -40,19 +42,72 @@ export default async function StorefrontOrderLookupPage({
     notFound();
   }
 
-  const accentColor = shop.accentColor || "rgb(55, 44, 102)";
+  // Luminance calculation for intelligent fallback colors
+  const bgRaw = (shop.backgroundColor || "").trim();
+  const hasCustomBg = Boolean(bgRaw && bgRaw !== "");
+  
+  let isLightBg = false;
+  if (bgRaw.startsWith("#") && bgRaw.length >= 7) {
+    const c = bgRaw.replace("#", "");
+    const r = parseInt(c.substring(0, 2), 16) || 0;
+    const g = parseInt(c.substring(2, 4), 16) || 0;
+    const b = parseInt(c.substring(4, 6), 16) || 0;
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    isLightBg = lum > 0.55;
+  }
+
+  const storefrontBg = shop.backgroundColor || "var(--color-background)";
+  const storefrontAccent = shop.accentColor || "rgb(55, 44, 102)";
+  const storefrontSurface = shop.cardColor || (hasCustomBg ? (isLightBg ? "#ffffff" : "#11131a") : "var(--color-surface)");
+  const storefrontSurface2 = hasCustomBg ? (isLightBg ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)") : "var(--color-surface-2)";
+  const storefrontBorder = shop.borderColor || (hasCustomBg ? (isLightBg ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)") : "var(--color-border)");
+  const storefrontTextColor = shop.textColor || (hasCustomBg ? (isLightBg ? "#111827" : "#f1f5f9") : "var(--color-foreground)");
+  const storefrontMutedColor = shop.mutedTextColor || (hasCustomBg ? (isLightBg ? "rgba(17,24,39,0.65)" : "rgba(241,245,249,0.6)") : "var(--color-muted-foreground)");
+
+  const fontMeta = resolveStorefrontFont(shop.fontStyle, shop.customFontUrl);
+  const platformConfig = await getPlatformConfig();
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: shop.backgroundColor || "#030305",
-        color: shop.textColor || "#ffffff",
+        background: storefrontBg,
+        color: storefrontTextColor,
+        fontFamily: fontMeta.fontFamily,
         display: "flex",
         flexDirection: "column",
         position: "relative",
-      }}
+        "--color-background": storefrontBg,
+        "--color-surface": storefrontSurface,
+        "--color-surface-2": storefrontSurface2,
+        "--color-border": storefrontBorder,
+        "--color-foreground": storefrontTextColor,
+        "--color-muted-foreground": storefrontMutedColor,
+        "--color-primary": storefrontAccent,
+        "--color-primary-light": storefrontAccent,
+        "--color-primary-glow": `${storefrontAccent}40`,
+        "--input-bg": storefrontSurface2,
+      } as React.CSSProperties}
     >
+      {/* Dynamic Preset or Custom Google Font */}
+      {fontMeta.stylesheetUrl && (
+        <link rel="stylesheet" href={fontMeta.stylesheetUrl} />
+      )}
+
+      {/* Global Platform Announcement Banner */}
+      <GlobalAnnouncementBanner
+        config={{
+          active: platformConfig.announcement_banner_active,
+          text: platformConfig.announcement_banner_text,
+          type: platformConfig.announcement_banner_type,
+          target: platformConfig.announcement_banner_target,
+          linkUrl: platformConfig.announcement_banner_link_url,
+          linkText: platformConfig.announcement_banner_link_text,
+          dismissible: platformConfig.announcement_banner_dismissible,
+        }}
+        currentLocation="storefront"
+      />
+
       {/* Tactical Background Grid */}
       <div
         className="krypt-grid-bg"
@@ -67,9 +122,9 @@ export default async function StorefrontOrderLookupPage({
       {/* Header */}
       <header
         style={{
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: `1px solid ${storefrontBorder}`,
           padding: "14px 24px",
-          background: "rgba(8, 8, 12, 0.95)",
+          background: storefrontSurface,
           backdropFilter: "blur(12px)",
           position: "relative",
           zIndex: 10,
@@ -78,7 +133,7 @@ export default async function StorefrontOrderLookupPage({
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link
             href={`/${shop.slug}`}
-            style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit", fontWeight: 800, fontSize: 16, fontFamily: "var(--font-mono, monospace)" }}
+            style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: storefrontTextColor, fontWeight: 800, fontSize: 16, fontFamily: "var(--font-mono, monospace)" }}
           >
             {shop.logoUrl ? (
               <img
@@ -92,13 +147,13 @@ export default async function StorefrontOrderLookupPage({
                   width: 28,
                   height: 28,
                   borderRadius: 6,
-                  background: "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(78, 62, 140) 100%)",
+                  background: `linear-gradient(135deg, ${storefrontAccent} 0%, ${storefrontAccent} 100%)`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#ffffff",
                   fontWeight: 900,
-                  border: "1px solid rgba(167, 139, 250, 0.4)",
+                  border: `1px solid ${storefrontAccent}88`,
                 }}
               >
                 {shop.name[0] || "S"}
@@ -108,21 +163,20 @@ export default async function StorefrontOrderLookupPage({
           </Link>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <ThemeToggle />
             <Link
               href={`/${shop.slug}`}
               style={{
                 fontSize: 12,
                 fontFamily: "var(--font-mono, monospace)",
-                color: "rgba(255, 255, 255, 0.7)",
+                color: storefrontMutedColor,
                 textDecoration: "none",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
                 padding: "6px 12px",
                 borderRadius: 6,
-                background: "rgba(255, 255, 255, 0.04)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                background: storefrontSurface2,
+                border: `1px solid ${storefrontBorder}`,
               }}
             >
               <ArrowLeft size={13} />
@@ -137,13 +191,50 @@ export default async function StorefrontOrderLookupPage({
         <OrderLookupForm
           shopSlug={shop.slug}
           shopName={shop.name}
-          accentColor={accentColor}
+          accentColor={storefrontAccent}
         />
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", padding: "18px 24px", textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", position: "relative", zIndex: 10 }}>
-        &copy; {new Date().getFullYear()} {shop.name} • Powered by KRYPT
+      <footer
+        style={{
+          borderTop: `1px solid ${storefrontBorder}`,
+          background: storefrontSurface,
+          padding: "20px 24px",
+          marginTop: "auto",
+          width: "100%",
+          position: "relative",
+          zIndex: 10,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            fontSize: 11,
+            color: storefrontMutedColor,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: storefrontTextColor, fontWeight: 800 }}>KRYPT.MARKET</span>
+            <span>•</span>
+            <span>{shop.name}</span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <Link href={`/${slug}`} style={{ color: storefrontAccent, textDecoration: "none", fontWeight: 700 }}>
+              Back to Store
+            </Link>
+            <Link href="/terms" style={{ color: storefrontMutedColor, textDecoration: "none" }}>
+              Terms of Service
+            </Link>
+          </div>
+        </div>
       </footer>
     </div>
   );

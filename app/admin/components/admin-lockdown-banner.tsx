@@ -108,7 +108,7 @@ export function AdminLockdownBanner({
         marginBottom: 24,
         padding: "14px 20px",
         borderRadius: "var(--radius-md)",
-        background: "#0d0e12",
+        background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
         display: "flex",
         alignItems: "center",

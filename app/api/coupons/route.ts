@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { shops, coupons } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { rateLimit, rateLimitPresets, getClientIp, createRateLimitResponse } from "@/lib/rate-limit";
+import { getActiveMerchantShop } from "@/lib/tenant";
 
 export async function GET(req: Request) {
   try {
@@ -62,15 +63,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
+    const { searchParams } = new URL(req.url);
+    const body = await req.json();
+    const shopId = body.shopId || searchParams.get("shopId");
+
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
     if (!userShop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
 
-    const body = await req.json();
     const { code, discountPercent, discountAmount, maxUses } = body;
 
     if (!code) {
@@ -109,12 +111,11 @@ export async function DELETE(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const shopId = searchParams.get("shopId");
 
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
     if (!userShop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });

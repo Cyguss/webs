@@ -100,6 +100,9 @@ const TABLE_DEFINITIONS = [
     \`card_color\` VARCHAR(20),
     \`border_color\` VARCHAR(20),
     \`theme_mode\` VARCHAR(20) DEFAULT 'dark',
+    \`support_email\` VARCHAR(255),
+    \`contact_info\` TEXT,
+    \`terms_of_service\` TEXT,
     \`custom_css\` TEXT,
     \`custom_html\` TEXT,
     \`is_active\` BOOLEAN NOT NULL DEFAULT 1,
@@ -141,11 +144,13 @@ const TABLE_DEFINITIONS = [
     \`is_unlimited_stock\` BOOLEAN NOT NULL DEFAULT 0,
     \`thumbnail_url\` TEXT,
     \`images\` TEXT,
+    \`youtube_url\` TEXT,
     \`is_active\` BOOLEAN NOT NULL DEFAULT 1,
     \`receipt_note\` TEXT,
     \`duration\` VARCHAR(50) NOT NULL DEFAULT 'lifetime',
     \`duration_days\` INT NOT NULL DEFAULT 0,
     \`custom_duration_label\` VARCHAR(100),
+    \`variants\` TEXT,
     \`sort_order\` INT NOT NULL DEFAULT 0,
     \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -157,6 +162,7 @@ const TABLE_DEFINITIONS = [
   `CREATE TABLE IF NOT EXISTS \`inventory_keys\` (
     \`id\` VARCHAR(36) NOT NULL PRIMARY KEY,
     \`product_id\` VARCHAR(36) NOT NULL,
+    \`variant_id\` VARCHAR(50),
     \`key_value\` TEXT NOT NULL,
     \`duration\` VARCHAR(50) DEFAULT 'lifetime',
     \`duration_days\` INT DEFAULT 0,
@@ -201,6 +207,7 @@ const TABLE_DEFINITIONS = [
     \`id\` VARCHAR(36) NOT NULL PRIMARY KEY,
     \`shop_id\` VARCHAR(36) NOT NULL,
     \`product_id\` VARCHAR(36) NOT NULL,
+    \`variant_id\` VARCHAR(50),
     \`coupon_id\` VARCHAR(36),
     \`buyer_email\` VARCHAR(255) NOT NULL,
     \`quantity\` INT NOT NULL DEFAULT 1,
@@ -211,6 +218,7 @@ const TABLE_DEFINITIONS = [
     \`payment_status\` VARCHAR(50) NOT NULL DEFAULT 'pending',
     \`stripe_payment_intent_id\` VARCHAR(255),
     \`crypto_payment_id\` VARCHAR(255),
+    \`access_secret_hash\` VARCHAR(64),
     \`fulfilled_at\` TIMESTAMP NULL,
     \`key_duration\` VARCHAR(50),
     \`key_duration_days\` INT,
@@ -220,7 +228,8 @@ const TABLE_DEFINITIONS = [
     INDEX \`orders_shop_id_idx\` (\`shop_id\`),
     INDEX \`orders_product_id_idx\` (\`product_id\`),
     INDEX \`orders_created_at_idx\` (\`created_at\`),
-    INDEX \`orders_payment_status_idx\` (\`payment_status\`)
+    INDEX \`orders_payment_status_idx\` (\`payment_status\`),
+    INDEX \`orders_secret_hash_idx\` (\`access_secret_hash\`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
   // 13. Order Deliveries
@@ -239,6 +248,7 @@ const TABLE_DEFINITIONS = [
     \`user_id\` VARCHAR(36) NOT NULL UNIQUE,
     \`available_balance\` VARCHAR(32) NOT NULL DEFAULT '0',
     \`pending_balance\` VARCHAR(32) NOT NULL DEFAULT '0',
+    \`reserve_balance\` VARCHAR(32) NOT NULL DEFAULT '0',
     \`total_earned\` VARCHAR(32) NOT NULL DEFAULT '0',
     \`total_withdrawn\` VARCHAR(32) NOT NULL DEFAULT '0',
     \`currency\` VARCHAR(10) NOT NULL DEFAULT 'USD',
@@ -256,9 +266,12 @@ const TABLE_DEFINITIONS = [
     \`fee_amount\` VARCHAR(32) NOT NULL DEFAULT '0',
     \`net_amount\` VARCHAR(32) NOT NULL,
     \`description\` TEXT,
+    \`is_released\` BOOLEAN NOT NULL DEFAULT 0,
+    \`released_at\` TIMESTAMP NULL,
     \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX \`bal_tx_user_id_idx\` (\`user_id\`),
-    INDEX \`bal_tx_created_at_idx\` (\`created_at\`)
+    INDEX \`bal_tx_created_at_idx\` (\`created_at\`),
+    INDEX \`bal_tx_rel_idx\` (\`user_id\`, \`is_released\`, \`type\`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
   // 16. Payout Requests
@@ -288,10 +301,12 @@ const TABLE_DEFINITIONS = [
     \`subject\` VARCHAR(255) NOT NULL,
     \`status\` VARCHAR(50) NOT NULL DEFAULT 'open',
     \`priority\` VARCHAR(50) NOT NULL DEFAULT 'normal',
+    \`access_secret_hash\` VARCHAR(64),
     \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX \`tickets_shop_id_idx\` (\`shop_id\`),
-    INDEX \`tickets_status_idx\` (\`status\`)
+    INDEX \`tickets_status_idx\` (\`status\`),
+    INDEX \`tickets_secret_hash_idx\` (\`access_secret_hash\`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
   // 18. Ticket Messages
@@ -370,6 +385,22 @@ const TABLE_DEFINITIONS = [
     \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX \`idx_webhook_logs_endpoint\` (\`webhook_endpoint_id\`),
     INDEX \`idx_webhook_logs_shop\` (\`shop_id\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+  // 24. Processed Webhook Events (Idempotency & Replay Protection)
+  `CREATE TABLE IF NOT EXISTS \`processed_webhook_events\` (
+    \`id\` VARCHAR(36) NOT NULL PRIMARY KEY,
+    \`provider\` VARCHAR(50) NOT NULL,
+    \`event_id\` VARCHAR(255) NOT NULL,
+    \`event_type\` VARCHAR(100) NOT NULL,
+    \`order_id\` VARCHAR(36),
+    \`merchant_id\` VARCHAR(36),
+    \`amount\` VARCHAR(32),
+    \`currency\` VARCHAR(10) DEFAULT 'USD',
+    \`status\` VARCHAR(50) NOT NULL DEFAULT 'processed',
+    \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY \`uk_provider_event\` (\`provider\`, \`event_id\`),
+    INDEX \`proc_wh_order_idx\` (\`order_id\`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
 ];
 
@@ -427,6 +458,9 @@ export async function ensureDatabaseSchema(pool: mysql.Pool): Promise<void> {
           { table: "user", column: "discord_roles", def: "TEXT NULL" },
           { table: "shops", column: "is_accepted", def: "BOOLEAN NOT NULL DEFAULT 0" },
           { table: "shops", column: "theme_mode", def: "VARCHAR(20) DEFAULT 'dark'" },
+          { table: "shops", column: "support_email", def: "VARCHAR(255) NULL" },
+          { table: "shops", column: "contact_info", def: "TEXT NULL" },
+          { table: "shops", column: "terms_of_service", def: "TEXT NULL" },
           { table: "shops", column: "categories", def: "TEXT NULL" },
           { table: "shops", column: "twitter_url", def: "TEXT NULL" },
           { table: "shops", column: "discord_url", def: "TEXT NULL" },
@@ -435,6 +469,7 @@ export async function ensureDatabaseSchema(pool: mysql.Pool): Promise<void> {
           { table: "shops", column: "trustpilot_url", def: "TEXT NULL" },
           { table: "shops", column: "discord_webhook_url", def: "TEXT NULL" },
           { table: "products", column: "category", def: "VARCHAR(100) NULL" },
+          { table: "products", column: "youtube_url", def: "TEXT NULL" },
           { table: "products", column: "duration", def: "VARCHAR(50) NOT NULL DEFAULT 'lifetime'" },
           { table: "products", column: "duration_days", def: "INT NOT NULL DEFAULT 0" },
           { table: "products", column: "custom_duration_label", def: "VARCHAR(100) NULL" },
@@ -448,6 +483,15 @@ export async function ensureDatabaseSchema(pool: mysql.Pool): Promise<void> {
           { table: "orders", column: "key_duration", def: "VARCHAR(50) NULL" },
           { table: "orders", column: "key_duration_days", def: "INT NULL" },
           { table: "orders", column: "key_expires_at", def: "TIMESTAMP NULL" },
+          { table: "orders", column: "access_secret_hash", def: "VARCHAR(64) NULL" },
+          { table: "balance_transactions", column: "is_released", def: "BOOLEAN NOT NULL DEFAULT 0" },
+          { table: "balance_transactions", column: "released_at", def: "TIMESTAMP NULL" },
+          { table: "balance_transactions", column: "currency", def: "VARCHAR(10) NOT NULL DEFAULT 'USD'" },
+          { table: "balance_transactions", column: "provider", def: "VARCHAR(50) NULL" },
+          { table: "balance_transactions", column: "provider_payment_id", def: "VARCHAR(255) NULL" },
+          { table: "balance_transactions", column: "external_event_id", def: "VARCHAR(255) NULL" },
+          { table: "seller_balances", column: "reserve_balance", def: "VARCHAR(32) NOT NULL DEFAULT '0'" },
+          { table: "tickets", column: "access_secret_hash", def: "VARCHAR(64) NULL" },
         ];
 
         for (const col of columnsToEnsure) {

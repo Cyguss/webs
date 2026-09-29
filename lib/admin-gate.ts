@@ -216,6 +216,7 @@ export interface AdminPermissions {
   canManagePayouts: boolean;
   canViewFinancials: boolean;
   canManageSettings: boolean;
+  canAccessDebug: boolean;
 }
 
 export const DEFAULT_ADMIN_PERMISSIONS: AdminPermissions = {
@@ -225,10 +226,22 @@ export const DEFAULT_ADMIN_PERMISSIONS: AdminPermissions = {
   canManagePayouts: true,
   canViewFinancials: true,
   canManageSettings: false,
+  canAccessDebug: false,
 };
 
 export function parseAdminPermissions(raw: string | null | undefined): AdminPermissions {
   if (!raw) return { ...DEFAULT_ADMIN_PERMISSIONS };
+  if (raw === "all") {
+    return {
+      canApproveShops: true,
+      canDeleteShops: true,
+      canManageUsers: true,
+      canManagePayouts: true,
+      canViewFinancials: true,
+      canManageSettings: true,
+      canAccessDebug: true,
+    };
+  }
   try {
     const parsed = JSON.parse(raw);
     return {
@@ -238,8 +251,40 @@ export function parseAdminPermissions(raw: string | null | undefined): AdminPerm
       canManagePayouts: parsed.canManagePayouts ?? DEFAULT_ADMIN_PERMISSIONS.canManagePayouts,
       canViewFinancials: parsed.canViewFinancials ?? DEFAULT_ADMIN_PERMISSIONS.canViewFinancials,
       canManageSettings: parsed.canManageSettings ?? DEFAULT_ADMIN_PERMISSIONS.canManageSettings,
+      canAccessDebug: parsed.canAccessDebug ?? DEFAULT_ADMIN_PERMISSIONS.canAccessDebug,
     };
   } catch {
     return { ...DEFAULT_ADMIN_PERMISSIONS };
   }
+}
+
+/**
+ * Checks if a database user record represents an active administrator.
+ * Inactive/frozen administrators (adminPermissionsActive === false) are strictly denied.
+ */
+export function isUserActiveAdmin(
+  dbUser?: { role?: string | null; adminPermissionsActive?: boolean | null } | null
+): boolean {
+  if (!dbUser) return false;
+  if (dbUser.role === "superadmin") return true;
+  if (dbUser.role === "admin" && dbUser.adminPermissionsActive !== false) return true;
+  return false;
+}
+
+/**
+ * Checks if a database user record is authorized for a specific administrative permission.
+ * Super-Admin inherently possesses all permissions.
+ * Frozen admins (adminPermissionsActive === false) fail immediately.
+ */
+export function hasAdminPermission(
+  dbUser: { role?: string | null; adminPermissionsActive?: boolean | null; adminPermissions?: string | null } | null | undefined,
+  flag: keyof AdminPermissions
+): boolean {
+  if (!dbUser) return false;
+  if (dbUser.role === "superadmin") return true;
+  if (dbUser.role === "admin" && dbUser.adminPermissionsActive !== false) {
+    const perms = parseAdminPermissions(dbUser.adminPermissions);
+    return Boolean(perms[flag]);
+  }
+  return false;
 }

@@ -139,6 +139,7 @@ export async function POST(
         canManagePayouts: typeof body.permissions.canManagePayouts === "boolean" ? body.permissions.canManagePayouts : currentPerms.canManagePayouts,
         canViewFinancials: typeof body.permissions.canViewFinancials === "boolean" ? body.permissions.canViewFinancials : currentPerms.canViewFinancials,
         canManageSettings: typeof body.permissions.canManageSettings === "boolean" ? body.permissions.canManageSettings : currentPerms.canManageSettings,
+        canAccessDebug: typeof body.permissions.canAccessDebug === "boolean" ? body.permissions.canAccessDebug : currentPerms.canAccessDebug,
       };
       updatePayload.adminPermissions = JSON.stringify(mergedPerms);
     }

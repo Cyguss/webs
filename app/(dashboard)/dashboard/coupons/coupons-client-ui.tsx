@@ -32,6 +32,7 @@ export default function CouponsClientUI({ initialCoupons, shopId }: { initialCou
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          shopId,
           code: code.trim(),
           discountPercent: discountType === "percent" ? parseInt(discountValue) : null,
           discountAmount: discountType === "amount" ? parseFloat(discountValue) : null,
@@ -56,7 +57,8 @@ export default function CouponsClientUI({ initialCoupons, shopId }: { initialCou
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/coupons?id=${id}`, { method: "DELETE" });
+      const delQuery = shopId ? `&shopId=${encodeURIComponent(shopId)}` : "";
+      const res = await fetch(`/api/coupons?id=${id}${delQuery}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete coupon");
       toast.success("Coupon Deleted", "The promo code has been removed.");
       router.refresh();
@@ -174,15 +176,12 @@ export default function CouponsClientUI({ initialCoupons, shopId }: { initialCou
                           {c.code}
                         </span>
                       </td>
-
                       <td style={{ padding: "14px 18px", fontWeight: 700, color: "#10b981" }}>
                         {c.discountPercent ? `${c.discountPercent}% OFF` : `$${parseFloat(c.discountAmount).toFixed(2)} OFF`}
                       </td>
-
                       <td style={{ padding: "14px 18px", color: "var(--color-muted-foreground)", fontSize: 13 }}>
                         {c.usedCount} {c.maxUses ? `/ ${c.maxUses}` : "uses"}
                       </td>
-
                       <td style={{ padding: "14px 18px" }}>
                         <button
                           onClick={() => handleDelete(c.id)}

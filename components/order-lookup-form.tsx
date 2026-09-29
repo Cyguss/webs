@@ -67,10 +67,10 @@ export function OrderLookupForm({
       <div
         style={{
           padding: 32,
-          background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
+          background: "var(--color-surface)",
           backdropFilter: "blur(16px)",
-          border: "1px solid rgba(55, 44, 102, 0.45)",
-          boxShadow: "0 20px 50px rgba(0, 0, 0, 0.8)",
+          border: "1px solid var(--color-border)",
+          boxShadow: "var(--card-shadow)",
           borderRadius: 16,
           position: "relative",
           overflow: "hidden",
@@ -84,7 +84,7 @@ export function OrderLookupForm({
             left: 0,
             right: 0,
             height: 2,
-            background: "linear-gradient(90deg, rgb(55, 44, 102) 0%, #8b5cf6 50%, rgba(255, 255, 255, 0.4) 100%)",
+            background: `linear-gradient(90deg, ${accentColor} 0%, ${accentColor} 50%, rgba(255, 255, 255, 0.4) 100%)`,
           }}
         />
 
@@ -94,25 +94,25 @@ export function OrderLookupForm({
               width: 52,
               height: 52,
               borderRadius: 12,
-              background: "rgba(55, 44, 102, 0.4)",
-              border: "1px solid rgba(139, 92, 246, 0.45)",
+              background: `${accentColor}18`,
+              border: `1px solid ${accentColor}45`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#c4b5fd",
+              color: accentColor,
               margin: "0 auto 16px",
-              boxShadow: "0 0 16px rgba(55, 44, 102, 0.5)",
+              boxShadow: `0 0 16px ${accentColor}35`,
             }}
           >
             <Terminal size={24} />
           </div>
-          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd", letterSpacing: "0.04em", marginBottom: 4, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: accentColor, letterSpacing: "0.04em", marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>
             Order History Lookup
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.01em", color: "#fff" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.01em", color: "var(--color-foreground)" }}>
             Find My Purchased Orders & Keys
           </h1>
-          <p style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.5)", margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
             Lost your active tab or need to retrieve your license keys? Enter the email address you used during checkout.
           </p>
         </div>
@@ -126,7 +126,7 @@ export function OrderLookupForm({
                 left: 14,
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "#c4b5fd",
+                color: accentColor,
                 opacity: 0.8,
               }}
             />
@@ -143,18 +143,18 @@ export function OrderLookupForm({
                 fontFamily: "var(--font-mono, monospace)",
                 borderRadius: 8,
                 width: "100%",
-                background: "rgba(3, 3, 5, 0.9)",
-                border: "1px solid rgba(139, 92, 246, 0.25)",
-                color: "#ffffff",
+                background: "var(--input-bg)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-foreground)",
                 outline: "none",
                 transition: "all 0.15s ease",
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#8b5cf6";
-                e.currentTarget.style.boxShadow = "0 0 12px rgba(139, 92, 246, 0.25)";
+                e.currentTarget.style.borderColor = accentColor;
+                e.currentTarget.style.boxShadow = `0 0 12px ${accentColor}40`;
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.25)";
+                e.currentTarget.style.borderColor = "var(--color-border)";
                 e.currentTarget.style.boxShadow = "none";
               }}
             />
@@ -163,7 +163,6 @@ export function OrderLookupForm({
           <button
             type="submit"
             disabled={loading}
-            className="krypt-btn-primary"
             style={{
               height: 44,
               fontSize: 12,
@@ -175,7 +174,12 @@ export function OrderLookupForm({
               alignItems: "center",
               justifyContent: "center",
               letterSpacing: "0.05em",
-              cursor: "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
+              background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+              border: `1px solid ${accentColor}88`,
+              color: "#ffffff",
+              boxShadow: `0 0 14px ${accentColor}50`,
+              transition: "all 0.15s ease",
             }}
           >
             {loading ? (
@@ -193,132 +197,49 @@ export function OrderLookupForm({
         </form>
 
         {searched && (
-          <div className="animate-slide-up" style={{ marginTop: 24, borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: 20 }}>
-            {emailSent && (
+          <div className="animate-slide-up" style={{ marginTop: 24, borderTop: "1px solid var(--color-border)", paddingTop: 20 }}>
+            <div
+              style={{
+                padding: "20px",
+                borderRadius: 12,
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                textAlign: "center",
+                fontFamily: "var(--font-mono, monospace)",
+              }}
+            >
               <div
                 style={{
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  background: "rgba(55, 44, 102, 0.35)",
-                  border: "1px solid rgba(139, 92, 246, 0.45)",
-                  color: "#c4b5fd",
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontWeight: 600,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: `${accentColor}18`,
+                  border: `1px solid ${accentColor}40`,
+                  color: accentColor,
                   display: "flex",
                   alignItems: "center",
-                  gap: 8,
-                  marginBottom: 16,
-                  boxShadow: "0 0 16px rgba(55, 44, 102, 0.4)",
+                  justifyContent: "center",
+                  margin: "0 auto 12px",
                 }}
               >
-                <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
-                <span>Receipt links sent to <strong>{email}</strong>.</span>
+                <Mail size={20} />
               </div>
-            )}
-
-            {results.length === 0 ? (
-              <div
-                style={{
-                  padding: "28px 16px",
-                  textAlign: "center",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  borderRadius: 8,
-                  border: "1px dashed rgba(255, 255, 255, 0.1)",
-                  fontFamily: "var(--font-mono, monospace)",
-                }}
-              >
-                <AlertCircle size={26} style={{ color: "#ef4444", margin: "0 auto 10px" }} />
-                <div style={{ fontWeight: 800, fontSize: 13, color: "#fff", marginBottom: 4 }}>No Orders Found</div>
-                <div style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", maxWidth: 360, margin: "0 auto" }}>
-                  No completed orders matching <strong>{email}</strong> were found.
-                </div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "var(--color-foreground)", marginBottom: 6 }}>
+                Recovery Dispatched
               </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.5)", marginBottom: 4 }}>
-                  Found Orders ({results.length})
-                </div>
-
-                {results.map((ord, oIdx) => (
-                  <div
-                    key={ord.id}
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 8,
-                      background: "rgba(3, 3, 5, 0.9)",
-                      border: "1px solid rgba(55, 44, 102, 0.4)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 14,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: "#ffffff", display: "flex", alignItems: "center", gap: 8 }}>
-                        <span>{ord.productTitle}</span>
-                        <span
-                          style={{
-                            fontSize: 9,
-                            padding: "1px 5px",
-                            borderRadius: 3,
-                            fontWeight: 800,
-                            fontFamily: "var(--font-mono, monospace)",
-                            background: ord.paymentStatus === "completed" ? "rgba(55, 44, 102, 0.4)" : "rgba(245, 158, 11, 0.15)",
-                            color: ord.paymentStatus === "completed" ? "#c4b5fd" : "#fbbf24",
-                            border: ord.paymentStatus === "completed" ? "1px solid rgba(139, 92, 246, 0.45)" : "1px solid rgba(245, 158, 11, 0.3)",
-                          }}
-                        >
-                          {ord.paymentStatus.toUpperCase()}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.5)", marginTop: 4, display: "flex", gap: 10 }}>
-                        <span>Store: <strong style={{ color: "#ffffff" }}>{ord.shopName}</strong></span>
-                        <span>•</span>
-                        <span>Order: #{ord.shortId}</span>
-                        <span>•</span>
-                        <span>{new Date(ord.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: "#ffffff" }}>
-                          ${parseFloat(ord.totalAmount).toFixed(2)} {ord.currency}
-                        </div>
-                      </div>
-
-                      <Link
-                        href={ord.receiptUrl}
-                        className="krypt-btn-primary"
-                        style={{
-                          padding: "6px 12px",
-                          fontSize: 11,
-                          fontFamily: "var(--font-mono, monospace)",
-                          fontWeight: 700,
-                          borderRadius: 6,
-                          gap: 5,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          textDecoration: "none",
-                        }}
-                      >
-                        <Key size={12} />
-                        <span>View Order</span>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+              <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "0 auto 12px", maxWidth: 420, lineHeight: 1.6 }}>
+                If any completed orders were found matching <strong style={{ color: "var(--color-foreground)" }}>{email}</strong>, secure access links with your decrypted license keys have been dispatched to your inbox.
+              </p>
+              <div style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                Please check your inbox (and spam / junk folders) for your receipt link.
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
 
-      <div style={{ marginTop: 20, textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        <ShieldCheck size={13} color="#c4b5fd" />
+      <div style={{ marginTop: 20, textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <ShieldCheck size={13} color={accentColor} />
         <span>Secure Order Lookup • Instant Delivery</span>
       </div>
     </div>

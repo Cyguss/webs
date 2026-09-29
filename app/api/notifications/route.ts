@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifications } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, or, desc } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -15,8 +15,19 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const shopId = searchParams.get("shopId");
+
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const activeShop = await getActiveMerchantShop(session.user.id, shopId);
+
+    const targetUserId = activeShop ? activeShop.userId : session.user.id;
+    const targetShopId = activeShop ? activeShop.id : null;
+
     const userNotifications = await db.query.notifications.findMany({
-      where: eq(notifications.userId, session.user.id),
+      where: targetShopId
+        ? or(eq(notifications.shopId, targetShopId), eq(notifications.userId, targetUserId))
+        : eq(notifications.userId, targetUserId),
       orderBy: [desc(notifications.createdAt)],
     });
 
@@ -43,13 +54,21 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { id, all } = body;
+    const { id, all, shopId } = body;
+
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const activeShop = await getActiveMerchantShop(session.user.id, shopId);
+    const targetUserId = activeShop ? activeShop.userId : session.user.id;
 
     if (all) {
       await db
         .update(notifications)
         .set({ isRead: true })
-        .where(eq(notifications.userId, session.user.id));
+        .where(
+          activeShop
+            ? or(eq(notifications.shopId, activeShop.id), eq(notifications.userId, targetUserId))
+            : eq(notifications.userId, targetUserId)
+        );
       return NextResponse.json({ success: true });
     }
 
@@ -57,7 +76,11 @@ export async function PATCH(req: Request) {
       await db
         .update(notifications)
         .set({ isRead: true })
-        .where(and(eq(notifications.id, id), eq(notifications.userId, session.user.id)));
+        .where(
+          activeShop
+            ? and(eq(notifications.id, id), or(eq(notifications.shopId, activeShop.id), eq(notifications.userId, targetUserId)))
+            : and(eq(notifications.id, id), eq(notifications.userId, targetUserId))
+        );
       return NextResponse.json({ success: true });
     }
 
@@ -81,16 +104,29 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const all = searchParams.get("all") === "true";
+    const shopId = searchParams.get("shopId");
+
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const activeShop = await getActiveMerchantShop(session.user.id, shopId);
+    const targetUserId = activeShop ? activeShop.userId : session.user.id;
 
     if (all) {
-      await db.delete(notifications).where(eq(notifications.userId, session.user.id));
+      await db.delete(notifications).where(
+        activeShop
+          ? or(eq(notifications.shopId, activeShop.id), eq(notifications.userId, targetUserId))
+          : eq(notifications.userId, targetUserId)
+      );
       return NextResponse.json({ success: true });
     }
 
     if (id) {
       await db
         .delete(notifications)
-        .where(and(eq(notifications.id, id), eq(notifications.userId, session.user.id)));
+        .where(
+          activeShop
+            ? and(eq(notifications.id, id), or(eq(notifications.shopId, activeShop.id), eq(notifications.userId, targetUserId)))
+            : and(eq(notifications.id, id), eq(notifications.userId, targetUserId))
+        );
       return NextResponse.json({ success: true });
     }
 

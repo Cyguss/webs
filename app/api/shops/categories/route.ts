@@ -22,7 +22,7 @@ const DEFAULT_PRESET_CATEGORIES: ShopCategory[] = [
   { id: "gaming", name: "Gaming & Mods", icon: "Gamepad2", description: "Game enhancements, mod menus & assets" },
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -32,7 +32,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userShop = await getActiveMerchantShop(session.user.id);
+    const { searchParams } = new URL(req.url);
+    const shopId = searchParams.get("shopId");
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
     if (!userShop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
@@ -102,12 +104,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userShop = await getActiveMerchantShop(session.user.id);
+    const { searchParams } = new URL(req.url);
+    const body = await req.json();
+    const shopId = body.shopId || searchParams.get("shopId");
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
     if (!userShop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
-
-    const body = await req.json();
     const { name, slug, icon, description } = body;
 
     if (!name || typeof name !== "string" || !name.trim()) {
@@ -169,13 +172,14 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userShop = await getActiveMerchantShop(session.user.id);
+    const { searchParams } = new URL(req.url);
+    const categoryId = searchParams.get("id");
+    const shopId = searchParams.get("shopId");
+
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
     if (!userShop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
-
-    const { searchParams } = new URL(req.url);
-    const categoryId = searchParams.get("id");
 
     if (!categoryId) {
       return NextResponse.json({ error: "Category ID is required" }, { status: 400 });

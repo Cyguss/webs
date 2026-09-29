@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, use, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -23,6 +24,7 @@ import {
   Sparkles,
   Clock,
   CheckCircle2,
+  Video,
 } from "lucide-react";
 import { useToast } from "@/components/toast-context";
 import { KeyDurationSelector } from "@/components/key-duration-selector";
@@ -30,11 +32,22 @@ import { DURATION_OPTIONS, getKeyDurationDisplay, KeyDurationType } from "@/lib/
 import { ProductVariantsManager } from "@/components/product-variants-manager";
 import { ProductVariant } from "@/lib/validations/product";
 import { ProductCategorySelector } from "@/components/product-category-selector";
+import { ProductVideoShowcaseManager } from "@/components/product-video-showcase-manager";
+import { parseVideoShowcase } from "@/lib/media";
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: productId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlShopId = searchParams.get("shopId");
+  const [activeShopId, setActiveShopId] = useState<string | null>(urlShopId);
+  const querySuffix = activeShopId ? `?shopId=${encodeURIComponent(activeShopId)}` : "";
   const toast = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,6 +61,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [isActive, setIsActive] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [imageInput, setImageInput] = useState("");
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
 
   // Key duration state
   const [duration, setDuration] = useState<KeyDurationType>("lifetime");
@@ -67,6 +81,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     price: string;
     isActive: boolean;
     images: string[];
+    videoUrls: string[];
     duration: KeyDurationType;
     durationDays: number;
     customDurationLabel: string;
@@ -126,11 +141,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     async function loadProduct() {
       try {
-        const res = await fetch(`/api/products?id=${productId}`);
+        const query = activeShopId ? `&shopId=${encodeURIComponent(activeShopId)}` : "";
+        const res = await fetch(`/api/products?id=${productId}${query}`);
         if (!res.ok) {
           throw new Error("Failed to load product details");
         }
         const data = await res.json();
+        const resolvedShopId = data.shopId || data.product?.shopId;
+        if (resolvedShopId && !activeShopId) {
+          setActiveShopId(resolvedShopId);
+        }
         if (data.product) {
           setTitle(data.product.title || "");
           setDescription(data.product.description || "");
@@ -151,10 +171,29 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           const loadedDays = data.product.durationDays ?? 0;
           const loadedLabel = data.product.customDurationLabel || "";
           const loadedCategory = data.product.category || null;
+
+          let loadedVideoUrls: string[] = [];
+          if (data.product.youtubeUrl) {
+            const rawYt = data.product.youtubeUrl.trim();
+            if (rawYt.startsWith("[") && rawYt.endsWith("]")) {
+              try {
+                const parsed = JSON.parse(rawYt);
+                if (Array.isArray(parsed)) {
+                  loadedVideoUrls = parsed.filter((u: any) => typeof u === "string" && u.trim());
+                }
+              } catch {
+                loadedVideoUrls = [rawYt];
+              }
+            } else {
+              loadedVideoUrls = [rawYt];
+            }
+          }
+
           setCategory(loadedCategory);
           setDuration(loadedDuration);
           setDurationDays(loadedDays);
           setCustomDurationLabel(loadedLabel);
+          setVideoUrls(loadedVideoUrls);
 
           let loadedVariants: ProductVariant[] = [];
           if (Array.isArray(data.product.parsedVariants) && data.product.parsedVariants.length > 0) {
@@ -174,6 +213,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             price: (data.product.price || "").toString(),
             isActive: data.product.isActive ?? true,
             images: loadedImages,
+            videoUrls: loadedVideoUrls,
             duration: loadedDuration,
             durationDays: loadedDays,
             customDurationLabel: loadedLabel,
@@ -285,7 +325,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     if (!confirm("Are you sure you want to remove this license key from inventory?")) return;
     setDeletingKeyId(keyId);
     try {
-      const res = await fetch(`/api/products/${productId}/keys?keyId=${keyId}`, {
+      const delQuery = activeShopId ? `&shopId=${encodeURIComponent(activeShopId)}` : "";
+      const res = await fetch(`/api/products/${productId}/keys?keyId=${keyId}${delQuery}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -318,11 +359,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     setSaving(true);
     try {
       const isMulti = variantsEnabled && variants.length > 0;
-      const res = await fetch("/api/products", {
+      const res = await fetch(`/api/products${querySuffix}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: productId,
+          shopId: activeShopId || undefined,
           title,
           description,
           category: category?.trim() || null,
@@ -330,6 +372,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           price: parseFloat(price),
           thumbnailUrl: images[0] || thumbnailUrl || null,
           images,
+          youtubeUrl: videoUrls.length > 0 ? JSON.stringify(videoUrls) : null,
           duration,
           durationDays: duration === "lifetime" ? 0 : durationDays,
           customDurationLabel: duration === "custom" ? customDurationLabel.trim() || null : null,
@@ -354,6 +397,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         price,
         isActive,
         images,
+        videoUrls,
         duration,
         durationDays,
         customDurationLabel,
@@ -361,7 +405,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       setNewKeysList([]);
       setCategorizedNewKeys({});
       // Reload keys
-      const keysRes = await fetch(`/api/products/${productId}/keys`);
+      const keysRes = await fetch(`/api/products/${productId}/keys${querySuffix}`);
       if (keysRes.ok) {
         const keysData = await keysRes.json();
         setDbKeys(keysData.keys || []);
@@ -387,6 +431,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         receiptNote !== initialState.receiptNote ||
         price !== initialState.price ||
         isActive !== initialState.isActive ||
+        JSON.stringify(videoUrls) !== JSON.stringify(initialState.videoUrls) ||
         duration !== initialState.duration ||
         durationDays !== initialState.durationDays ||
         customDurationLabel !== initialState.customDurationLabel ||
@@ -409,7 +454,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     if (isDirty) {
       setConfirmExitOpen(true);
     } else {
-      router.push("/dashboard/products");
+      router.push(`/dashboard/products${querySuffix}`);
     }
   }
 
@@ -489,7 +534,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
           <div style={{ display: "flex", gap: 10 }}>
             <Link
-              href={`/dashboard/products/${productId}/keys`}
+              href={`/dashboard/products/${productId}/keys${querySuffix}`}
               className="btn btn-secondary"
               style={{ fontSize: 13, gap: 6 }}
             >
@@ -706,6 +751,13 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
           </div>
+
+          {/* Product Video Showcase Manager (up to 5 videos) */}
+          <ProductVideoShowcaseManager
+            videos={videoUrls}
+            onChange={setVideoUrls}
+            maxVideos={5}
+          />
         </div>
 
         {/* License Key Duration & Validity Settings */}
@@ -1080,492 +1132,513 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       </form>
 
       {/* Bulk Paste Modal */}
-      {showBulkModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 999,
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
+      {showBulkModal &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="card"
             style={{
-              maxWidth: variantsEnabled && variants.length > 0 ? 680 : 520,
-              width: "100%",
-              padding: 24,
-              border: "1px solid rgba(139, 92, 246, 0.35)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
-              maxHeight: "90vh",
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              background: "rgba(0,0,0,0.78)",
+              backdropFilter: "blur(8px)",
               display: "flex",
-              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowBulkModal(false);
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              className="card modal-fly-in"
+              style={{
+                maxWidth: variantsEnabled && variants.length > 0 ? 680 : 520,
+                width: "100%",
+                padding: 24,
+                border: "1px solid rgba(139, 92, 246, 0.35)",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.85)",
+                maxHeight: "90vh",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      background: "rgba(55, 44, 102, 0.4)",
+                      border: "1px solid rgba(139, 92, 246, 0.45)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#c4b5fd",
+                    }}
+                  >
+                    <FileText size={17} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>Bulk Import Keys</h3>
+                    <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
+                      Paste serial keys separated by newlines or commas.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="btn btn-ghost"
+                  style={{ padding: 4 }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Mode selector if multi-variants */}
+              {variantsEnabled && variants.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  <button
+                    type="button"
+                    onClick={() => setBulkModalMode("single")}
+                    className={bulkModalMode === "single" ? "btn btn-primary" : "btn btn-secondary"}
+                    style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
+                  >
+                    Single Category Paste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkModalMode("multi")}
+                    className={bulkModalMode === "multi" ? "btn btn-primary" : "btn btn-secondary"}
+                    style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
+                  >
+                    Multi-Category Batch Paste
+                  </button>
+                </div>
+              )}
+
+              {/* Single category paste or single product */}
+              {(!variantsEnabled || variants.length === 0 || bulkModalMode === "single") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+                  {variantsEnabled && variants.length > 0 && (
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                        Target Duration Category:
+                      </label>
+                      <select
+                        className="input"
+                        value={bulkTargetVariantId}
+                        onChange={(e) => setBulkTargetVariantId(e.target.value)}
+                        style={{ fontSize: 13, height: 38 }}
+                      >
+                        {variants.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.label} (${v.price} USD)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <textarea
+                    className="input"
+                    rows={8}
+                    placeholder={"XXXX-YYYY-ZZZZ-1111\nXXXX-YYYY-ZZZZ-2222\nXXXX-YYYY-ZZZZ-3333"}
+                    value={bulkInput}
+                    onChange={(e) => setBulkInput(e.target.value)}
+                    style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}
+                  />
+                </div>
+              )}
+
+              {/* Multi-category batch paste */}
+              {variantsEnabled && variants.length > 0 && bulkModalMode === "multi" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, overflowY: "auto", paddingRight: 4 }}>
+                  {variants.map((v) => {
+                    const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
+                    return (
+                      <div key={v.id} style={{ background: "var(--color-surface)", padding: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
+                              {dMeta.shortLabel}
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
+                          </div>
+                          <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
+                            {(bulkMultiCategoryInputs[v.id] || "").split(/[\r\n,]+/).filter(Boolean).length} keys in draft
+                          </span>
+                        </div>
+                        <textarea
+                          className="input"
+                          rows={3}
+                          placeholder={`Paste serial keys for ${v.label} here...`}
+                          value={bulkMultiCategoryInputs[v.id] || ""}
+                          onChange={(e) =>
+                            setBulkMultiCategoryInputs({
+                              ...bulkMultiCategoryInputs,
+                              [v.id]: e.target.value,
+                            })
+                          }
+                          style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="btn btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddBulk}
+                  className="btn btn-primary"
+                >
+                  Stage Keys
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* View All Keys Modal */}
+      {showAllModal &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              background: "rgba(0,0,0,0.78)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowAllModal(false);
+            }}
+          >
+            <div
+              className="card modal-fly-in"
+              style={{
+                maxWidth: 680,
+                width: "100%",
+                padding: 24,
+                border: "1px solid rgba(139, 92, 246, 0.35)",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.85)",
+                display: "flex",
+                flexDirection: "column",
+                maxHeight: "85vh",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>All Available Inventory Keys</h3>
+                  <span className="badge badge-primary">{unusedDbKeys.length + stagedNewCount} Available</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllModal(false)}
+                  className="btn btn-ghost"
+                  style={{ padding: 4 }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Filter Search & Category Filter */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                {variantsEnabled && variants.length > 0 && (
+                  <select
+                    className="input"
+                    value={allModalCategoryFilter}
+                    onChange={(e) => setAllModalCategoryFilter(e.target.value)}
+                    style={{ width: 180, fontSize: 13, height: 36 }}
+                  >
+                    <option value="all">All Tiers ({unusedDbKeys.length + stagedNewCount})</option>
+                    {variants.map((v) => {
+                      const dbCount = dbKeys.filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration)).length;
+                      const stgCount = (categorizedNewKeys[v.id] || []).length;
+                      return (
+                        <option key={v.id} value={v.id}>
+                          {v.label} ({dbCount + stgCount})
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+
+                <div style={{ position: "relative", flex: 1 }}>
+                  <Search size={14} style={{ position: "absolute", left: 10, top: 11, color: "var(--color-muted-foreground)" }} />
+                  <input
+                    type="text"
+                    placeholder="Filter keys by code..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="input"
+                    style={{ paddingLeft: 32, fontSize: 13, height: 36, fontFamily: "var(--font-mono, monospace)" }}
+                  />
+                </div>
+              </div>
+
+              {/* Full Keys List */}
+              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6, paddingRight: 4 }}>
+                {(() => {
+                  const listToDisplay: Array<{ id: string; value: string; isNew: boolean; varId?: string; varLabel?: string }> = [];
+
+                  if (variantsEnabled && variants.length > 0) {
+                    for (const v of variants) {
+                      if (allModalCategoryFilter !== "all" && allModalCategoryFilter !== v.id) continue;
+                      const dbMatching = dbKeys
+                        .filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration))
+                        .map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: v.id, varLabel: v.label }));
+                      const stagedMatching = (categorizedNewKeys[v.id] || []).map((k, idx) => ({
+                        id: `new_${v.id}_${idx}`,
+                        value: k,
+                        isNew: true,
+                        varId: v.id,
+                        varLabel: v.label,
+                      }));
+                      listToDisplay.push(...dbMatching, ...stagedMatching);
+                    }
+                  } else {
+                    listToDisplay.push(
+                      ...unusedDbKeys.map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: "default", varLabel: "Single Duration" })),
+                      ...newKeysList.map((k, idx) => ({ id: `new_${idx}`, value: k, isNew: true, varId: "default", varLabel: "Single Duration" }))
+                    );
+                  }
+
+                  const filtered = listToDisplay.filter((item) =>
+                    !searchFilter.trim() || item.value.toLowerCase().includes(searchFilter.toLowerCase())
+                  );
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ padding: 24, textAlign: "center", color: "var(--color-muted-foreground)", fontSize: 13 }}>
+                        No matching keys found.
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      className="interactive-pill"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: item.isNew ? "rgba(55, 44, 102, 0.25)" : "var(--color-surface)",
+                        border: item.isNew ? "1px solid rgba(139, 92, 246, 0.45)" : "1px solid var(--color-border)",
+                        fontSize: 13,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", minWidth: 26 }}>
+                          #{idx + 1}
+                        </span>
+                        {variantsEnabled && variants.length > 0 && item.varLabel && (
+                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
+                            {item.varLabel}
+                          </span>
+                        )}
+                        <code style={{ fontFamily: "var(--font-mono, monospace)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {item.value}
+                        </code>
+                        {item.isNew && (
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 800,
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                              background: "rgba(55, 44, 102, 0.5)",
+                              color: "#c4b5fd",
+                              border: "1px solid rgba(139, 92, 246, 0.4)",
+                              fontFamily: "var(--font-mono, monospace)",
+                            }}
+                          >
+                            STAGED
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => copyKeyText(item.value, item.id)}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 8px" }}
+                          title="Copy key"
+                        >
+                          {copiedKeyId === item.id ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (item.isNew) {
+                              if (variantsEnabled && item.varId) {
+                                const idxInVar = (categorizedNewKeys[item.varId] || []).indexOf(item.value);
+                                if (idxInVar >= 0) handleRemoveNewKey(idxInVar, item.varId);
+                              } else {
+                                const idxInFlat = newKeysList.indexOf(item.value);
+                                if (idxInFlat >= 0) handleRemoveNewKey(idxInFlat);
+                              }
+                            } else {
+                              handleDeleteDbKey(item.id);
+                            }
+                          }}
+                          disabled={deletingKeyId === item.id}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 8px", color: "var(--color-danger)" }}
+                          title="Remove key"
+                        >
+                          {deletingKeyId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAllModal(false)}
+                  className="btn btn-primary"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Unsaved Changes Exit Confirmation Modal */}
+      {confirmExitOpen &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              background: "rgba(0,0,0,0.78)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setConfirmExitOpen(false);
+            }}
+          >
+            <div
+              className="card modal-fly-in"
+              style={{
+                maxWidth: 460,
+                width: "100%",
+                padding: 26,
+                boxShadow: "0 25px 60px rgba(0,0,0,0.85)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg, 16px)",
+                background: "var(--color-surface)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
                 <div
                   style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 8,
-                    background: "rgba(55, 44, 102, 0.4)",
-                    border: "1px solid rgba(139, 92, 246, 0.45)",
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: "rgba(245, 158, 11, 0.15)",
+                    color: "#f59e0b",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "#c4b5fd",
+                    flexShrink: 0,
                   }}
                 >
-                  <FileText size={17} />
+                  <AlertTriangle size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>Bulk Import Keys</h3>
-                  <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
-                    Paste serial keys separated by newlines or commas.
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "var(--color-foreground)" }}>
+                    Unsaved Product Changes
+                  </h3>
+                  <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-muted-foreground)" }}>
+                    Are you sure you want to exit without saving?
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowBulkModal(false)}
-                className="btn btn-ghost"
-                style={{ padding: 4 }}
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            {/* Mode selector if multi-variants */}
-            {variantsEnabled && variants.length > 0 && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", lineHeight: 1.5, marginBottom: 20 }}>
+                You have modified this product or added new license keys. If you exit now, any unsaved adjustments will be discarded.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <button
                   type="button"
-                  onClick={() => setBulkModalMode("single")}
-                  className={bulkModalMode === "single" ? "btn btn-primary" : "btn btn-secondary"}
-                  style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
-                >
-                  Single Category Paste
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkModalMode("multi")}
-                  className={bulkModalMode === "multi" ? "btn btn-primary" : "btn btn-secondary"}
-                  style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
-                >
-                  Multi-Category Batch Paste
-                </button>
-              </div>
-            )}
-
-            {/* Single category paste or single product */}
-            {(!variantsEnabled || variants.length === 0 || bulkModalMode === "single") && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {variantsEnabled && variants.length > 0 && (
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      Target Duration Category:
-                    </label>
-                    <select
-                      className="input"
-                      value={bulkTargetVariantId}
-                      onChange={(e) => setBulkTargetVariantId(e.target.value)}
-                      style={{ fontSize: 13, height: 38 }}
-                    >
-                      {variants.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.label} (${v.price} USD)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <textarea
-                  className="input"
-                  rows={8}
-                  placeholder={"XXXX-YYYY-ZZZZ-1111\nXXXX-YYYY-ZZZZ-2222\nXXXX-YYYY-ZZZZ-3333"}
-                  value={bulkInput}
-                  onChange={(e) => setBulkInput(e.target.value)}
-                  style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}
-                />
-              </div>
-            )}
-
-            {/* Multi-category batch paste */}
-            {variantsEnabled && variants.length > 0 && bulkModalMode === "multi" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, overflowY: "auto", paddingRight: 4 }}>
-                {variants.map((v) => {
-                  const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
-                  return (
-                    <div key={v.id} style={{ background: "var(--color-surface)", padding: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
-                            {dMeta.shortLabel}
-                          </span>
-                          <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
-                        </div>
-                        <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
-                          {(bulkMultiCategoryInputs[v.id] || "").split(/[\r\n,]+/).filter(Boolean).length} keys in draft
-                        </span>
-                      </div>
-                      <textarea
-                        className="input"
-                        rows={3}
-                        placeholder={`Paste serial keys for ${v.label} here...`}
-                        value={bulkMultiCategoryInputs[v.id] || ""}
-                        onChange={(e) =>
-                          setBulkMultiCategoryInputs({
-                            ...bulkMultiCategoryInputs,
-                            [v.id]: e.target.value,
-                          })
-                        }
-                        style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>
-              <button
-                type="button"
-                onClick={() => setShowBulkModal(false)}
-                className="btn btn-ghost"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleAddBulk}
-                className="btn btn-primary"
-              >
-                Stage Keys
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View All Keys Modal */}
-      {showAllModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 999,
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          <div
-            className="card"
-            style={{
-              maxWidth: 680,
-              width: "100%",
-              padding: 24,
-              border: "1px solid rgba(139, 92, 246, 0.35)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
-              display: "flex",
-              flexDirection: "column",
-              maxHeight: "85vh",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>All Available Inventory Keys</h3>
-                <span className="badge badge-primary">{unusedDbKeys.length + stagedNewCount} Available</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAllModal(false)}
-                className="btn btn-ghost"
-                style={{ padding: 4 }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Filter Search & Category Filter */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              {variantsEnabled && variants.length > 0 && (
-                <select
-                  className="input"
-                  value={allModalCategoryFilter}
-                  onChange={(e) => setAllModalCategoryFilter(e.target.value)}
-                  style={{ width: 180, fontSize: 13, height: 36 }}
-                >
-                  <option value="all">All Tiers ({unusedDbKeys.length + stagedNewCount})</option>
-                  {variants.map((v) => {
-                    const dbCount = dbKeys.filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration)).length;
-                    const stgCount = (categorizedNewKeys[v.id] || []).length;
-                    return (
-                      <option key={v.id} value={v.id}>
-                        {v.label} ({dbCount + stgCount})
-                      </option>
-                    );
-                  })}
-                </select>
-              )}
-
-              <div style={{ position: "relative", flex: 1 }}>
-                <Search size={14} style={{ position: "absolute", left: 10, top: 11, color: "var(--color-muted-foreground)" }} />
-                <input
-                  type="text"
-                  placeholder="Filter keys by code..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="input"
-                  style={{ paddingLeft: 32, fontSize: 13, height: 36, fontFamily: "var(--font-mono, monospace)" }}
-                />
-              </div>
-            </div>
-
-            {/* Full Keys List */}
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6, paddingRight: 4 }}>
-              {(() => {
-                const listToDisplay: Array<{ id: string; value: string; isNew: boolean; varId?: string; varLabel?: string }> = [];
-
-                if (variantsEnabled && variants.length > 0) {
-                  for (const v of variants) {
-                    if (allModalCategoryFilter !== "all" && allModalCategoryFilter !== v.id) continue;
-                    const dbMatching = dbKeys
-                      .filter((k) => !k.isUsed && (k.variantId === v.id || k.duration === v.duration))
-                      .map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: v.id, varLabel: v.label }));
-                    const stagedMatching = (categorizedNewKeys[v.id] || []).map((k, idx) => ({
-                      id: `new_${v.id}_${idx}`,
-                      value: k,
-                      isNew: true,
-                      varId: v.id,
-                      varLabel: v.label,
-                    }));
-                    listToDisplay.push(...dbMatching, ...stagedMatching);
-                  }
-                } else {
-                  listToDisplay.push(
-                    ...unusedDbKeys.map((k) => ({ id: k.id, value: k.keyValue, isNew: false, varId: "default", varLabel: "Single Duration" })),
-                    ...newKeysList.map((k, idx) => ({ id: `new_${idx}`, value: k, isNew: true, varId: "default", varLabel: "Single Duration" }))
-                  );
-                }
-
-                const filtered = listToDisplay.filter((item) =>
-                  !searchFilter.trim() || item.value.toLowerCase().includes(searchFilter.toLowerCase())
-                );
-
-                if (filtered.length === 0) {
-                  return (
-                    <div style={{ padding: 24, textAlign: "center", color: "var(--color-muted-foreground)", fontSize: 13 }}>
-                      No matching keys found.
-                    </div>
-                  );
-                }
-
-                return filtered.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="interactive-pill"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: item.isNew ? "rgba(55, 44, 102, 0.25)" : "var(--color-surface)",
-                      border: item.isNew ? "1px solid rgba(139, 92, 246, 0.45)" : "1px solid var(--color-border)",
-                      fontSize: 13,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", minWidth: 26 }}>
-                        #{idx + 1}
-                      </span>
-                      {variantsEnabled && variants.length > 0 && item.varLabel && (
-                        <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
-                          {item.varLabel}
-                        </span>
-                      )}
-                      <code style={{ fontFamily: "var(--font-mono, monospace)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {item.value}
-                      </code>
-                      {item.isNew && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 800,
-                            padding: "1px 6px",
-                            borderRadius: 4,
-                            background: "rgba(55, 44, 102, 0.5)",
-                            color: "#c4b5fd",
-                            border: "1px solid rgba(139, 92, 246, 0.4)",
-                            fontFamily: "var(--font-mono, monospace)",
-                          }}
-                        >
-                          STAGED
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => copyKeyText(item.value, item.id)}
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 8px" }}
-                        title="Copy key"
-                      >
-                        {copiedKeyId === item.id ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.isNew) {
-                            if (variantsEnabled && item.varId) {
-                              const idxInVar = (categorizedNewKeys[item.varId] || []).indexOf(item.value);
-                              if (idxInVar >= 0) handleRemoveNewKey(idxInVar, item.varId);
-                            } else {
-                              const idxInFlat = newKeysList.indexOf(item.value);
-                              if (idxInFlat >= 0) handleRemoveNewKey(idxInFlat);
-                            }
-                          } else {
-                            handleDeleteDbKey(item.id);
-                          }
-                        }}
-                        disabled={deletingKeyId === item.id}
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 8px", color: "var(--color-danger)" }}
-                        title="Remove key"
-                      >
-                        {deletingKeyId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>
-              <button
-                type="button"
-                onClick={() => setShowAllModal(false)}
-                className="btn btn-primary"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Unsaved Changes Exit Confirmation Modal */}
-      {confirmExitOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 999,
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(6px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          <div
-            className="card"
-            style={{
-              maxWidth: 460,
-              width: "100%",
-              padding: 26,
-              boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-lg, 16px)",
-              background: "var(--color-surface)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: "rgba(245, 158, 11, 0.15)",
-                  color: "#f59e0b",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <AlertTriangle size={22} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "var(--color-foreground)" }}>
-                  Unsaved Product Changes
-                </h3>
-                <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-muted-foreground)" }}>
-                  Are you sure you want to exit without saving?
-                </p>
-              </div>
-            </div>
-
-            <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", lineHeight: 1.5, marginBottom: 20 }}>
-              You have modified this product or added new license keys. If you exit now, any unsaved adjustments will be discarded.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={saving}
-                onClick={async () => {
-                  const ok = await handleSave();
-                  if (ok) {
-                    setConfirmExitOpen(false);
-                    router.push("/dashboard/products");
-                  }
-                }}
-                style={{ justifyContent: "center", gap: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700 }}
-              >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                Save and Close
-              </button>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setConfirmExitOpen(false)}
-                  style={{ justifyContent: "center", fontSize: 13 }}
-                >
-                  Continue Editing
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => {
-                    setConfirmExitOpen(false);
-                    router.push("/dashboard/products");
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={async () => {
+                    const ok = await handleSave();
+                    if (ok) {
+                      setConfirmExitOpen(false);
+                      router.push(`/dashboard/products${querySuffix}`);
+                    }
                   }}
-                  style={{ justifyContent: "center", color: "var(--color-danger)", fontSize: 13 }}
+                  style={{ justifyContent: "center", gap: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700 }}
                 >
-                  Discard & Exit
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Save and Close
                 </button>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setConfirmExitOpen(false)}
+                    style={{ justifyContent: "center", fontSize: 13 }}
+                  >
+                    Continue Editing
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setConfirmExitOpen(false);
+                      router.push(`/dashboard/products${querySuffix}`);
+                    }}
+                    style={{ justifyContent: "center", color: "var(--color-danger)", fontSize: 13 }}
+                  >
+                    Discard & Exit
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

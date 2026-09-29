@@ -211,6 +211,20 @@ export async function GET() {
       };
     });
 
+    // Enrich payout requests with merchant + shop info
+    const enrichedPayouts = allPayouts.map((p) => {
+      const owner = allUsers.find((u) => u.id === p.userId);
+      const shop = allShops.find((s) => s.userId === p.userId);
+      return {
+        ...p,
+        merchantName: owner?.name || "Unknown Merchant",
+        merchantEmail: owner?.email || "N/A",
+        merchantDiscord: owner?.discordUsername || null,
+        shopName: shop?.name || null,
+        shopSlug: shop?.slug || null,
+      };
+    });
+
     const { parseAdminPermissions } = await import("@/lib/admin-gate");
     const currentUserPermissions = isSuperAdmin
       ? {
@@ -220,6 +234,7 @@ export async function GET() {
           canManagePayouts: true,
           canViewFinancials: true,
           canManageSettings: true,
+          canAccessDebug: true,
         }
       : parseAdminPermissions(currentDbUser?.adminPermissions);
 
@@ -242,7 +257,7 @@ export async function GET() {
       users: userStats,
       shops: enrichedShops,
       orders: allOrders.slice(0, 30),
-      payouts: allPayouts,
+      payouts: enrichedPayouts,
       approvalRequests: enrichedApprovalRequests,
     });
   } catch (err: any) {

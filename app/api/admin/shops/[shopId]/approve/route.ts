@@ -48,6 +48,13 @@ export async function POST(
       if (dbUser?.role !== "admin" && dbUser?.role !== "superadmin") {
         return NextResponse.json({ error: "Admin access required" }, { status: 403 });
       }
+      if (dbUser?.role === "admin" && dbUser?.adminPermissionsActive === false) {
+        return NextResponse.json({ error: "Your administrator permissions have been suspended." }, { status: 403 });
+      }
+      const { hasAdminPermission } = await import("@/lib/admin-gate");
+      if (!hasAdminPermission(dbUser, "canApproveShops")) {
+        return NextResponse.json({ error: "You do not have permission to approve or reject shops." }, { status: 403 });
+      }
       isAdmin = true;
       adminName = dbUser?.discordUsername || dbUser?.name || "Admin";
     }

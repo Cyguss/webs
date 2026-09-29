@@ -3,6 +3,7 @@
 import React from "react";
 import { Palette, Type } from "lucide-react";
 import { COLOR_PRESETS, FONT_OPTIONS, getPresetTextColor } from "./storefront-constants";
+import { StorefrontFontSelector } from "@/components/storefront-font-selector";
 
 interface StorefrontThemeCardProps {
   backgroundColor: string;
@@ -257,18 +258,7 @@ export function StorefrontThemeCard({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label className="label">Preset Font Family</label>
-        <select
-          className="input"
-          value={fontStyle}
-          onChange={(e) => setFontStyle(e.target.value)}
-          style={{ cursor: "pointer" }}
-        >
-          {FONT_OPTIONS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+        <StorefrontFontSelector value={fontStyle} onChange={setFontStyle} />
       </div>
 
       {/* Custom Font URL */}

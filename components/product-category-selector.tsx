@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Layers,
   Plus,
@@ -18,8 +19,6 @@ import {
   Bot,
   Wrench,
   Shield,
-  HelpCircle,
-  Tag,
   FolderPlus,
   Loader2,
 } from "lucide-react";
@@ -83,26 +82,31 @@ interface ProductCategorySelectorProps {
 export function ProductCategorySelector({
   value,
   onChange,
-  accentColor = "var(--color-primary, #6366f1)",
+  accentColor = "#8b5cf6",
 }: ProductCategorySelectorProps) {
   const [categories, setCategories] = useState<CategoryOption[]>(PRESET_CATEGORIES);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatIcon, setNewCatIcon] = useState("Code");
   const [newCatDesc, setNewCatDesc] = useState("");
   const [savingCategory, setSavingCategory] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Fetch shop categories
   useEffect(() => {
-    let mounted = true;
+    let active = true;
     async function loadShopCategories() {
       try {
         setLoading(true);
         const res = await fetch("/api/shops/categories");
         if (res.ok) {
           const data = await res.json();
-          if (mounted && Array.isArray(data.categories) && data.categories.length > 0) {
+          if (active && Array.isArray(data.categories) && data.categories.length > 0) {
             // Merge with presets
             const mergedMap = new Map<string, CategoryOption>();
             for (const p of PRESET_CATEGORIES) {
@@ -117,12 +121,12 @@ export function ProductCategorySelector({
       } catch (err) {
         console.error("Error loading categories:", err);
       } finally {
-        if (mounted) setLoading(false);
+        if (active) setLoading(false);
       }
     }
     loadShopCategories();
     return () => {
-      mounted = false;
+      active = false;
     };
   }, []);
 
@@ -207,7 +211,7 @@ export function ProductCategorySelector({
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Preset / Custom Category Chips */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         {/* Uncategorized / None */}
@@ -224,9 +228,10 @@ export function ProductCategorySelector({
             fontSize: 12,
             fontWeight: 600,
             cursor: "pointer",
-            background: !value ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.03)",
-            border: !value ? "1px solid rgba(255,255,255,0.3)" : "1px solid rgba(255,255,255,0.08)",
-            color: !value ? "#fff" : "rgba(255,255,255,0.6)",
+            background: !value ? `${accentColor}25` : "var(--color-surface)",
+            border: !value ? `1px solid ${accentColor}80` : "1px solid var(--color-border)",
+            color: !value ? "#ffffff" : "var(--color-muted-foreground)",
+            boxShadow: !value ? `0 0 12px ${accentColor}40` : "none",
           }}
         >
           <Layers size={13} style={{ opacity: !value ? 1 : 0.6 }} />
@@ -251,18 +256,22 @@ export function ProductCategorySelector({
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
-                background: isSelected ? `${accentColor}25` : "rgba(255,255,255,0.03)",
-                border: isSelected ? `1px solid ${accentColor}80` : "1px solid rgba(255,255,255,0.08)",
-                color: isSelected ? "#fff" : "rgba(255,255,255,0.75)",
-                boxShadow: isSelected ? `0 0 12px ${accentColor}30` : "none",
+                background: isSelected ? `${accentColor}25` : "var(--color-surface)",
+                border: isSelected ? `1px solid ${accentColor}90` : "1px solid var(--color-border)",
+                color: isSelected ? "#ffffff" : "var(--color-muted-foreground)",
+                boxShadow: isSelected ? `0 0 12px ${accentColor}40` : "none",
                 transform: isSelected ? "scale(1.02)" : "scale(1)",
               }}
             >
-              <span style={{ color: isSelected ? accentColor : "rgba(255,255,255,0.6)", transition: "color 0.15s ease" }}>
+              <span style={{ color: isSelected ? accentColor : "var(--color-muted-foreground)", transition: "color 0.15s ease" }}>
                 {getCategoryIcon(cat.icon, 13)}
               </span>
               <span>{cat.name}</span>
-              {isSelected && <span className="animate-checkmark"><Check size={12} style={{ color: accentColor, marginLeft: 2 }} /></span>}
+              {isSelected && (
+                <span className="animate-checkmark">
+                  <Check size={12} style={{ color: accentColor, marginLeft: 2 }} />
+                </span>
+              )}
             </button>
           );
         })}
@@ -279,15 +288,16 @@ export function ProductCategorySelector({
             padding: "6px 12px",
             borderRadius: 8,
             fontSize: 12,
-            fontWeight: 600,
+            fontWeight: 700,
+            fontFamily: "var(--font-mono, monospace)",
             cursor: "pointer",
-            background: "rgba(99,102,241,0.1)",
-            border: "1px dashed rgba(99,102,241,0.4)",
-            color: "#818cf8",
+            background: "rgba(55, 44, 102, 0.25)",
+            border: "1px dashed rgba(139, 92, 246, 0.5)",
+            color: "#c4b5fd",
           }}
         >
           <Plus size={13} />
-          <span>+ Custom Category</span>
+          <span>Custom Category</span>
         </button>
       </div>
 
@@ -301,15 +311,15 @@ export function ProductCategorySelector({
             gap: 8,
             padding: "8px 12px",
             borderRadius: 8,
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(55, 44, 102, 0.15)",
+            border: "1px solid rgba(139, 92, 246, 0.3)",
             fontSize: 12,
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--color-foreground)",
           }}
         >
-          <span style={{ color: accentColor }}>{getCategoryIcon(selectedCategory.icon, 14)}</span>
+          <span style={{ color: "#c4b5fd" }}>{getCategoryIcon(selectedCategory.icon, 14)}</span>
           <span>
-            Assigned to: <strong style={{ color: "#fff" }}>{selectedCategory.name}</strong>
+            Assigned to: <strong style={{ color: "#ffffff" }}>{selectedCategory.name}</strong>
             {selectedCategory.description ? ` — ${selectedCategory.description}` : ""}
           </span>
           <button
@@ -319,7 +329,7 @@ export function ProductCategorySelector({
               marginLeft: "auto",
               background: "none",
               border: "none",
-              color: "rgba(255,255,255,0.4)",
+              color: "var(--color-muted-foreground)",
               cursor: "pointer",
               padding: 2,
               display: "flex",
@@ -330,7 +340,7 @@ export function ProductCategorySelector({
               e.currentTarget.style.transform = "scale(1.2)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+              e.currentTarget.style.color = "var(--color-muted-foreground)";
               e.currentTarget.style.transform = "scale(1)";
             }}
             title="Remove category"
@@ -340,222 +350,180 @@ export function ProductCategorySelector({
         </div>
       )}
 
-      {/* Create Custom Category Modal */}
-      {showCreateModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(8px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowCreateModal(false);
-          }}
-        >
+      {/* Create Custom Category Modal rendered directly on document.body via Portal */}
+      {showCreateModal &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="modal-fly-in"
             style={{
-              width: "100%",
-              maxWidth: 440,
-              background: "#12141c",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 16,
-              padding: 24,
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)",
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              background: "rgba(0, 0, 0, 0.78)",
+              backdropFilter: "blur(8px)",
               display: "flex",
-              flexDirection: "column",
-              gap: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowCreateModal(false);
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: "rgba(99,102,241,0.15)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#818cf8",
-                  }}
+            <div
+              className="card modal-fly-in"
+              style={{
+                width: "100%",
+                maxWidth: 460,
+                background: "var(--color-surface)",
+                border: "1px solid rgba(139, 92, 246, 0.35)",
+                borderRadius: 14,
+                padding: 24,
+                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      background: "rgba(55, 44, 102, 0.4)",
+                      border: "1px solid rgba(139, 92, 246, 0.45)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#c4b5fd",
+                    }}
+                  >
+                    <FolderPlus size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>
+                      Create Custom Category
+                    </h3>
+                    <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
+                      Add a new category filter for your store products
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn btn-ghost"
+                  style={{ padding: 4 }}
                 >
-                  <FolderPlus size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#fff" }}>
-                    Create Custom Category
-                  </h3>
-                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: 0 }}>
-                    Add a new category filter for your store products
-                  </p>
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Category Name Input */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label className="label" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. FiveM Softwares, Valorant Tools, Discord Bots"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="input"
+                  style={{ fontSize: 13 }}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreateCategory();
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Icon Picker */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <label className="label" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>
+                  Category Icon
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+                  {iconOptions.map((ico) => {
+                    const isIcoSelected = newCatIcon === ico.name;
+                    return (
+                      <button
+                        key={ico.name}
+                        type="button"
+                        onClick={() => setNewCatIcon(ico.name)}
+                        title={ico.label}
+                        className="interactive-pill"
+                        style={{
+                          padding: "8px 4px",
+                          borderRadius: 8,
+                          background: isIcoSelected ? `${accentColor}25` : "var(--color-surface-2)",
+                          border: isIcoSelected ? `1px solid ${accentColor}` : "1px solid var(--color-border)",
+                          color: isIcoSelected ? accentColor : "var(--color-muted-foreground)",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 4,
+                          cursor: "pointer",
+                          transform: isIcoSelected ? "scale(1.05)" : "scale(1)",
+                        }}
+                      >
+                        {getCategoryIcon(ico.name, 17)}
+                        <span style={{ fontSize: 9, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%", textAlign: "center", fontFamily: "var(--font-mono, monospace)" }}>
+                          {ico.name}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "none",
-                  borderRadius: 6,
-                  color: "rgba(255,255,255,0.6)",
-                  padding: 6,
-                  cursor: "pointer",
-                  transition: "color 0.15s ease",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            {/* Category Name Input */}
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
-                Category Name *
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. FiveM Softwares, Valorant Tools, Discord Bots"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  fontSize: 13,
-                  outline: "none",
-                }}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleCreateCategory();
-                  }
-                }}
-              />
-            </div>
+              {/* Optional Description */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label className="label" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>
+                  Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Short tagline shown under category title"
+                  value={newCatDesc}
+                  onChange={(e) => setNewCatDesc(e.target.value)}
+                  className="input"
+                  style={{ fontSize: 13 }}
+                />
+              </div>
 
-            {/* Icon Picker */}
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 8 }}>
-                Category Icon
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-                {iconOptions.map((ico) => {
-                  const isIcoSelected = newCatIcon === ico.name;
-                  return (
-                    <button
-                      key={ico.name}
-                      type="button"
-                      onClick={() => setNewCatIcon(ico.name)}
-                      title={ico.label}
-                      className="interactive-pill"
-                      style={{
-                        padding: "8px 4px",
-                        borderRadius: 8,
-                        background: isIcoSelected ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                        border: isIcoSelected ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.06)",
-                        color: isIcoSelected ? "#818cf8" : "rgba(255,255,255,0.6)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 4,
-                        cursor: "pointer",
-                        transform: isIcoSelected ? "scale(1.05)" : "scale(1)",
-                      }}
-                    >
-                      {getCategoryIcon(ico.name, 18)}
-                      <span style={{ fontSize: 9, opacity: 0.8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%", textAlign: "center" }}>
-                        {ico.name}
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* Actions */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateCategory}
+                  disabled={!newCatName.trim() || savingCategory}
+                  className="btn btn-primary"
+                  style={{ gap: 6 }}
+                >
+                  {savingCategory ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>Add Category</span>
+                </button>
               </div>
             </div>
-
-            {/* Optional Description */}
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
-                Description (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Short tagline shown under category title"
-                value={newCatDesc}
-                onChange={(e) => setNewCatDesc(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  fontSize: 13,
-                  outline: "none",
-                }}
-              />
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="interactive-pill"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "rgba(255,255,255,0.8)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateCategory}
-                disabled={!newCatName.trim() || savingCategory}
-                className="interactive-pill"
-                style={{
-                  padding: "8px 20px",
-                  borderRadius: 8,
-                  background: "#6366f1",
-                  border: "none",
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: !newCatName.trim() || savingCategory ? "not-allowed" : "pointer",
-                  opacity: !newCatName.trim() || savingCategory ? 0.5 : 1,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  boxShadow: "0 4px 14px rgba(99,102,241,0.4)",
-                }}
-              >
-                {savingCategory ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                <span>Add Category</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
+
+export default ProductCategorySelector;

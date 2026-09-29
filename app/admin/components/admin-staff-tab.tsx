@@ -56,6 +56,11 @@ const PERMISSION_LABELS: { key: keyof AdminPermissions; label: string; desc: str
     label: "Platform Configuration",
     desc: "Adjust platform toggles, fees, and global maintenance modes.",
   },
+  {
+    key: "canAccessDebug",
+    label: "Debug & Diagnostics",
+    desc: "Access debug diagnostics, payment reversal simulation, and ledger testing tools.",
+  },
 ];
 
 export function AdminStaffTab({
@@ -81,6 +86,7 @@ export function AdminStaffTab({
     canManagePayouts: true,
     canViewFinancials: true,
     canManageSettings: false,
+    canAccessDebug: false,
   });
 
   function openPermissionsEditor(admin: any) {
@@ -94,6 +100,7 @@ export function AdminStaffTab({
       canManagePayouts: admin.adminPermissions?.canManagePayouts ?? true,
       canViewFinancials: admin.adminPermissions?.canViewFinancials ?? true,
       canManageSettings: admin.adminPermissions?.canManageSettings ?? false,
+      canAccessDebug: admin.adminPermissions?.canAccessDebug ?? false,
     });
     setModalOpen(true);
   }
@@ -205,6 +212,7 @@ export function AdminStaffTab({
               canManagePayouts: true,
               canViewFinancials: true,
               canManageSettings: false,
+              canAccessDebug: false,
             };
 
             return (
@@ -231,12 +239,12 @@ export function AdminStaffTab({
                         width: 40,
                         height: 40,
                         borderRadius: "var(--radius-sm)",
-                        background: "#161720",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        background: "var(--color-surface-2, rgba(125,125,125,0.1))",
+                        border: "1px solid var(--color-border)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "white",
+                        color: "var(--color-foreground)",
                         fontWeight: 700,
                         fontSize: 15,
                       }}
@@ -244,7 +252,7 @@ export function AdminStaffTab({
                       {adminUser.discordUsername?.[0]?.toUpperCase() || adminUser.name?.[0]?.toUpperCase() || "A"}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 6, color: "var(--color-foreground)" }}>
                         <span>{adminUser.name || "Administrator"}</span>
                         <span
                           style={{
@@ -280,8 +288,8 @@ export function AdminStaffTab({
                   style={{
                     padding: "8px 10px",
                     borderRadius: "var(--radius-sm)",
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid rgba(255, 255, 255, 0.04)",
+                    background: "var(--color-surface-2, rgba(125,125,125,0.06))",
+                    border: "1px solid var(--color-border)",
                     display: "flex",
                     flexDirection: "column",
                     gap: 4,
@@ -290,13 +298,13 @@ export function AdminStaffTab({
                 >
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "var(--color-muted-foreground)" }}>Discord Handle:</span>
-                    <span style={{ fontWeight: 600, color: "#ffffff" }}>
+                    <span style={{ fontWeight: 600, color: "var(--color-foreground)" }}>
                       @{adminUser.discordUsername || "Unknown"}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "var(--color-muted-foreground)" }}>Discord ID:</span>
-                    <span style={{ fontFamily: "monospace" }}>{adminUser.discordId || "None"}</span>
+                    <span style={{ fontFamily: "monospace", color: "var(--color-foreground)" }}>{adminUser.discordId || "None"}</span>
                   </div>
                 </div>
 
@@ -394,9 +402,9 @@ export function AdminStaffTab({
               maxWidth: 540,
               width: "100%",
               padding: 26,
-              background: "#0d0e14",
-              border: "1px solid rgba(99, 102, 241, 0.3)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
@@ -473,8 +481,8 @@ export function AdminStaffTab({
                           gap: 12,
                           padding: "10px 12px",
                           borderRadius: "var(--radius-sm)",
-                          background: isChecked ? "rgba(99, 102, 241, 0.08)" : "rgba(255, 255, 255, 0.02)",
-                          border: isChecked ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid var(--color-border)",
+                          background: isChecked ? "var(--color-primary-subtle, rgba(99, 102, 241, 0.08))" : "var(--color-surface-2)",
+                          border: isChecked ? "1px solid var(--color-primary-light, #6366f1)" : "1px solid var(--color-border)",
                           cursor: "pointer",
                           transition: "all 0.15s ease",
                         }}
@@ -484,8 +492,8 @@ export function AdminStaffTab({
                             width: 18,
                             height: 18,
                             borderRadius: 4,
-                            background: isChecked ? "#6366f1" : "rgba(255,255,255,0.05)",
-                            border: isChecked ? "none" : "1px solid rgba(255,255,255,0.2)",
+                            background: isChecked ? "var(--color-primary, #6366f1)" : "var(--color-surface-2)",
+                            border: isChecked ? "none" : "1px solid var(--color-border)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -497,7 +505,7 @@ export function AdminStaffTab({
                           {isChecked && <Check size={13} strokeWidth={3} />}
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: isChecked ? "#ffffff" : "var(--color-muted-foreground)" }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: isChecked ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>
                             {p.label}
                           </div>
                           <div style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>

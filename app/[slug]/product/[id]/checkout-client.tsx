@@ -6,6 +6,7 @@ import { CreditCard, Coins, Zap, ShieldCheck, Loader2, Tag, Plus, Minus, Clock, 
 import { useToast } from "@/components/toast-context";
 import { isDisposableEmail } from "@/lib/anti-fraud/disposable-email";
 import { getKeyDurationDisplay, KeyDurationType } from "@/lib/key-duration";
+import { StorefrontTosModal } from "@/components/storefront-tos-modal";
 
 export default function ProductCheckoutClient({
   product,
@@ -28,9 +29,17 @@ export default function ProductCheckoutClient({
     }
   }, [product]);
 
-  const [selectedVariantId, setSelectedVariantId] = useState<string>(
-    parsedVariants.length > 0 ? parsedVariants[0].id : ""
-  );
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(() => {
+    if (!parsedVariants.length) return "";
+    // Prefer the first variant that actually has stock in vault
+    const inStockVar = parsedVariants.find((v) => {
+      const vs = product.isUnlimitedStock
+        ? 9999
+        : (variantStocks[v.id] ?? variantStocks[v.duration] ?? 0);
+      return vs > 0;
+    });
+    return inStockVar ? inStockVar.id : parsedVariants[0].id;
+  });
 
   const selectedVariant = useMemo(() => {
     if (parsedVariants.length === 0) return null;
@@ -43,6 +52,7 @@ export default function ProductCheckoutClient({
     if (selectedVariant) {
       if (variantStocks[selectedVariant.id] !== undefined) return variantStocks[selectedVariant.id];
       if (variantStocks[selectedVariant.duration] !== undefined) return variantStocks[selectedVariant.duration];
+      return 0;
     }
     return stock;
   }, [product.isUnlimitedStock, selectedVariant, variantStocks, stock]);
@@ -217,37 +227,37 @@ export default function ProductCheckoutClient({
         display: "flex",
         flexDirection: "column",
         gap: 18,
-        background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-        border: "1px solid rgba(55, 44, 102, 0.45)",
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
         borderRadius: 16,
         padding: 24,
         backdropFilter: "blur(14px)",
-        boxShadow: "0 12px 40px rgba(0, 0, 0, 0.8)",
+        boxShadow: "0 12px 40px rgba(0, 0, 0, 0.08)",
       }}
     >
-      {/* Price Summary Box (HUD Style) */}
+      {/* Price Summary Box */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           gap: 6,
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: "1px solid var(--color-border)",
           paddingBottom: 16,
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Total Price
             </span>
-            <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd" }}>
+            <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: accentColor, fontWeight: 700 }}>
               {product.type === "key" ? "Digital Key" : "Instant Delivery"} • Qty: {quantity}
             </span>
           </div>
 
           <div style={{ textAlign: "right" }}>
             {appliedCoupon && (
-              <span style={{ fontSize: 13, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", textDecoration: "line-through", marginRight: 8 }}>
+              <span style={{ fontSize: 13, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", textDecoration: "line-through", marginRight: 8 }}>
                 ${rawTotal.toFixed(2)}
               </span>
             )}
@@ -256,18 +266,17 @@ export default function ProductCheckoutClient({
                 fontSize: 26,
                 fontWeight: 800,
                 fontFamily: "var(--font-mono, monospace)",
-                color: "#ffffff",
+                color: "var(--color-foreground)",
                 letterSpacing: "-0.02em",
-                textShadow: "0 0 16px rgba(139, 92, 246, 0.35)",
               }}
             >
-              ${finalTotal.toFixed(2)} <span style={{ fontSize: 13, color: "#c4b5fd" }}>USD</span>
+              ${finalTotal.toFixed(2)} <span style={{ fontSize: 13, color: accentColor }}>USD</span>
             </span>
           </div>
         </div>
 
         {appliedCoupon && (
-          <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "#c4b5fd", display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+          <div style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: accentColor, display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
             <Tag size={11} /> Coupon: {appliedCoupon.code} (-${discountAmount.toFixed(2)})
           </div>
         )}
@@ -277,11 +286,11 @@ export default function ProductCheckoutClient({
       {parsedVariants.length > 0 && (
         <div className="animate-slide-up" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
               <Clock size={13} /> Select Plan / Duration:
             </label>
             {selectedVariant && (
-              <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: currentActiveStock > 0 ? "#c4b5fd" : "#ef4444", fontWeight: 700 }}>
+              <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: currentActiveStock > 0 ? accentColor : "#ef4444", fontWeight: 700 }}>
                 {product.isUnlimitedStock ? "Instant Delivery" : currentActiveStock > 0 ? `${currentActiveStock} in stock` : "Out of stock"}
               </span>
             )}
@@ -293,11 +302,7 @@ export default function ProductCheckoutClient({
               const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
               const vStock = product.isUnlimitedStock
                 ? 9999
-                : (variantStocks[v.id] !== undefined
-                    ? variantStocks[v.id]
-                    : variantStocks[v.duration] !== undefined
-                    ? variantStocks[v.duration]
-                    : stock);
+                : (variantStocks[v.id] ?? variantStocks[v.duration] ?? 0);
               const isVariantOutOfStock = !product.isUnlimitedStock && vStock <= 0;
 
               return (
@@ -314,12 +319,12 @@ export default function ProductCheckoutClient({
                     padding: "10px 12px",
                     borderRadius: 8,
                     border: isSelected
-                      ? "1px solid #8b5cf6"
-                      : "1px solid rgba(255, 255, 255, 0.08)",
+                      ? `1px solid ${accentColor}`
+                      : "1px solid var(--color-border)",
                     background: isSelected
-                      ? "rgb(55, 44, 102)"
-                      : "rgba(255, 255, 255, 0.02)",
-                    color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
+                      ? `${accentColor}25`
+                      : "var(--color-surface-2)",
+                    color: isSelected ? "#ffffff" : "var(--color-foreground)",
                     cursor: isVariantOutOfStock ? "not-allowed" : "pointer",
                     textAlign: "left",
                     display: "flex",
@@ -328,12 +333,12 @@ export default function ProductCheckoutClient({
                     position: "relative",
                     overflow: "hidden",
                     transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
-                    boxShadow: isSelected ? "0 0 16px rgba(139, 92, 246, 0.35)" : "none",
+                    boxShadow: isSelected ? `0 0 16px ${accentColor}40` : "none",
                     opacity: isVariantOutOfStock ? 0.4 : 1,
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: isSelected ? "#ffffff" : "rgba(255,255,255,0.9)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: isSelected ? "#ffffff" : "var(--color-foreground)" }}>
                       {v.label || dMeta.shortLabel}
                     </span>
                     <span
@@ -343,9 +348,9 @@ export default function ProductCheckoutClient({
                         fontWeight: 800,
                         padding: "1px 5px",
                         borderRadius: 3,
-                        background: isSelected ? "rgba(255, 255, 255, 0.18)" : "rgba(55, 44, 102, 0.4)",
-                        color: isSelected ? "#ffffff" : "#c4b5fd",
-                        border: isSelected ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid rgba(139, 92, 246, 0.4)",
+                        background: isSelected ? "rgba(255, 255, 255, 0.2)" : `${accentColor}18`,
+                        color: isSelected ? "#ffffff" : accentColor,
+                        border: isSelected ? "1px solid rgba(255, 255, 255, 0.3)" : `1px solid ${accentColor}35`,
                       }}
                     >
                       {dMeta.shortLabel}
@@ -353,10 +358,10 @@ export default function ProductCheckoutClient({
                   </div>
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 2 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: "#ffffff" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: isSelected ? "#ffffff" : "var(--color-foreground)" }}>
                       ${parseFloat(v.price).toFixed(2)}
                     </div>
-                    <span style={{ fontSize: 9, fontFamily: "var(--font-mono, monospace)", color: isVariantOutOfStock ? "#ef4444" : "rgba(255,255,255,0.45)" }}>
+                    <span style={{ fontSize: 9, fontFamily: "var(--font-mono, monospace)", color: isVariantOutOfStock ? "#ef4444" : "var(--color-muted-foreground)" }}>
                       {isVariantOutOfStock ? "DEPLETED" : product.isUnlimitedStock ? "INSTANT" : `${vStock} left`}
                     </span>
                   </div>
@@ -371,7 +376,7 @@ export default function ProductCheckoutClient({
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Email input */}
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)", letterSpacing: "0.02em" }}>
+          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "var(--color-foreground)", letterSpacing: "0.02em" }}>
             Email Address *
           </label>
           <input
@@ -383,20 +388,20 @@ export default function ProductCheckoutClient({
               width: "100%",
               padding: "10px 14px",
               borderRadius: 8,
-              background: "rgba(3, 3, 5, 0.9)",
-              border: "1px solid rgba(139, 92, 246, 0.25)",
-              color: "#ffffff",
+              background: "var(--color-surface-2)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-foreground)",
               fontSize: 13,
               fontFamily: "var(--font-mono, monospace)",
               outline: "none",
               transition: "all 0.15s ease",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#8b5cf6";
-              e.currentTarget.style.boxShadow = "0 0 12px rgba(139, 92, 246, 0.25)";
+              e.currentTarget.style.borderColor = accentColor;
+              e.currentTarget.style.boxShadow = `0 0 12px ${accentColor}40`;
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.25)";
+              e.currentTarget.style.borderColor = "var(--color-border)";
               e.currentTarget.style.boxShadow = "none";
             }}
             required
@@ -405,7 +410,7 @@ export default function ProductCheckoutClient({
 
         {/* Promo code input */}
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)", letterSpacing: "0.02em" }}>
+          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "var(--color-foreground)", letterSpacing: "0.02em" }}>
             Discount Code
           </label>
           <form onSubmit={handleApplyCoupon} style={{ display: "flex", gap: 8 }}>
@@ -418,9 +423,9 @@ export default function ProductCheckoutClient({
                 flex: 1,
                 padding: "9px 12px",
                 borderRadius: 8,
-                background: "rgba(3, 3, 5, 0.9)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "#fff",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-foreground)",
                 fontSize: 12,
                 fontFamily: "var(--font-mono, monospace)",
                 textTransform: "uppercase",
@@ -433,9 +438,9 @@ export default function ProductCheckoutClient({
               style={{
                 padding: "9px 16px",
                 borderRadius: 8,
-                background: "rgba(55, 44, 102, 0.4)",
-                color: "#c4b5fd",
-                border: "1px solid rgba(139, 92, 246, 0.4)",
+                background: `${accentColor}18`,
+                color: accentColor,
+                border: `1px solid ${accentColor}40`,
                 fontSize: 12,
                 fontFamily: "var(--font-mono, monospace)",
                 fontWeight: 700,
@@ -453,10 +458,10 @@ export default function ProductCheckoutClient({
         {!product.isUnlimitedStock && (
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)" }}>
+              <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "var(--color-foreground)" }}>
                 Quantity
               </label>
-              <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: stock > 0 ? "rgba(255,255,255,0.4)" : "#ef4444" }}>
+              <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: stock > 0 ? "var(--color-muted-foreground)" : "#ef4444" }}>
                 {stock > 0 ? `${stock} available` : "Out of stock"}
               </span>
             </div>
@@ -466,8 +471,8 @@ export default function ProductCheckoutClient({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  background: "rgba(3, 3, 5, 0.9)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  background: "var(--color-surface-2)",
+                  border: "1px solid var(--color-border)",
                   borderRadius: 8,
                   overflow: "hidden",
                 }}
@@ -481,7 +486,7 @@ export default function ProductCheckoutClient({
                     height: 34,
                     border: "none",
                     background: "transparent",
-                    color: quantity <= 1 || stock <= 0 ? "rgba(255,255,255,0.2)" : "#fff",
+                    color: quantity <= 1 || stock <= 0 ? "var(--color-muted-foreground)" : "var(--color-foreground)",
                     cursor: quantity <= 1 || stock <= 0 ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -502,7 +507,7 @@ export default function ProductCheckoutClient({
                     height: 34,
                     border: "none",
                     background: "transparent",
-                    color: "#ffffff",
+                    color: "var(--color-foreground)",
                     textAlign: "center",
                     fontSize: 13,
                     fontFamily: "var(--font-mono, monospace)",
@@ -520,7 +525,7 @@ export default function ProductCheckoutClient({
                     height: 34,
                     border: "none",
                     background: "transparent",
-                    color: quantity >= stock || stock <= 0 ? "rgba(255,255,255,0.2)" : "#fff",
+                    color: quantity >= stock || stock <= 0 ? "var(--color-muted-foreground)" : "var(--color-foreground)",
                     cursor: quantity >= stock || stock <= 0 ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -538,7 +543,7 @@ export default function ProductCheckoutClient({
 
         {/* Payment Method Selector */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "rgba(255, 255, 255, 0.7)" }}>
+          <label style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "var(--color-foreground)" }}>
             Payment Method
           </label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -548,9 +553,9 @@ export default function ProductCheckoutClient({
               style={{
                 padding: "10px",
                 borderRadius: 8,
-                border: paymentMethod === "stripe" ? "1px solid #8b5cf6" : "1px solid rgba(255,255,255,0.08)",
-                background: paymentMethod === "stripe" ? "rgb(55, 44, 102)" : "rgba(255,255,255,0.02)",
-                color: paymentMethod === "stripe" ? "#ffffff" : "rgba(255,255,255,0.6)",
+                border: paymentMethod === "stripe" ? `1px solid ${accentColor}` : "1px solid var(--color-border)",
+                background: paymentMethod === "stripe" ? `${accentColor}25` : "var(--color-surface-2)",
+                color: paymentMethod === "stripe" ? "#ffffff" : "var(--color-foreground)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -559,7 +564,7 @@ export default function ProductCheckoutClient({
                 fontWeight: 700,
                 fontSize: 11,
                 cursor: "pointer",
-                boxShadow: paymentMethod === "stripe" ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
+                boxShadow: paymentMethod === "stripe" ? `0 0 14px ${accentColor}40` : "none",
               }}
             >
               <CreditCard size={14} /> Card (Stripe)
@@ -571,9 +576,9 @@ export default function ProductCheckoutClient({
               style={{
                 padding: "10px",
                 borderRadius: 8,
-                border: paymentMethod === "crypto" ? "1px solid #8b5cf6" : "1px solid rgba(255,255,255,0.08)",
-                background: paymentMethod === "crypto" ? "rgb(55, 44, 102)" : "rgba(255,255,255,0.02)",
-                color: paymentMethod === "crypto" ? "#ffffff" : "rgba(255,255,255,0.6)",
+                border: paymentMethod === "crypto" ? `1px solid ${accentColor}` : "1px solid var(--color-border)",
+                background: paymentMethod === "crypto" ? `${accentColor}25` : "var(--color-surface-2)",
+                color: paymentMethod === "crypto" ? "#ffffff" : "var(--color-foreground)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -582,7 +587,7 @@ export default function ProductCheckoutClient({
                 fontWeight: 700,
                 fontSize: 11,
                 cursor: "pointer",
-                boxShadow: paymentMethod === "crypto" ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
+                boxShadow: paymentMethod === "crypto" ? `0 0 14px ${accentColor}40` : "none",
               }}
             >
               <Coins size={14} /> Crypto
@@ -616,6 +621,10 @@ export default function ProductCheckoutClient({
             gap: 8,
             opacity: stock <= 0 ? 0.45 : 1,
             marginTop: 4,
+            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+            border: `1px solid ${accentColor}88`,
+            boxShadow: `0 0 18px ${accentColor}50`,
+            color: "#ffffff",
           }}
         >
           {loading ? (
@@ -632,9 +641,23 @@ export default function ProductCheckoutClient({
           )}
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.4)" }}>
-          <ShieldCheck size={13} color="#c4b5fd" />
-          <span>Encrypted & Automated Checkout</span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, marginTop: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)" }}>
+            <ShieldCheck size={13} color={accentColor} />
+            <span>Encrypted & Automated Key Vault Checkout</span>
+          </div>
+
+          <div style={{ fontSize: 10, textAlign: "center" }}>
+            <StorefrontTosModal
+              shopName={shop.name}
+              termsOfService={shop.termsOfService}
+              supportEmail={shop.supportEmail}
+              contactInfo={shop.contactInfo}
+              discordUrl={shop.discordUrl}
+              telegramUrl={shop.telegramUrl}
+              accentColor={accentColor}
+            />
+          </div>
         </div>
       </div>
     </div>

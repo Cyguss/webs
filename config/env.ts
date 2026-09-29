@@ -6,6 +6,20 @@ if (!process.env.DATABASE_URL) {
   dotenv.config();
 }
 
+// Seamless Railway MySQL Support: Map Railway variables to DATABASE_URL if not directly set
+if (!process.env.DATABASE_URL) {
+  const railwayUrl =
+    process.env.MYSQL_URL ||
+    process.env.MYSQL_PRIVATE_URL ||
+    (process.env.MYSQLHOST
+      ? `mysql://${encodeURIComponent(process.env.MYSQLUSER || "root")}:${encodeURIComponent(process.env.MYSQLPASSWORD || "")}@${process.env.MYSQLHOST}:${process.env.MYSQLPORT || 3306}/${process.env.MYSQLDATABASE || "railway"}`
+      : undefined);
+
+  if (railwayUrl) {
+    process.env.DATABASE_URL = railwayUrl;
+  }
+}
+
 /**
  * Validated, typed environment variables schema.
  * Prevents runtime bugs by catching missing or invalid keys early.
@@ -86,7 +100,14 @@ const envSchema = z.object({
       }
       return clean.replace(/\/+$/, "");
     }),
-  NEXT_PUBLIC_APP_DOMAIN: z.string().default("localhost:3000"),
+  NEXT_PUBLIC_APP_DOMAIN: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val && val.trim()) return val.trim();
+      if (process.env.RAILWAY_PUBLIC_DOMAIN) return process.env.RAILWAY_PUBLIC_DOMAIN.trim();
+      return "localhost:3000";
+    }),
 });
 
 const parsed = envSchema.safeParse(process.env);

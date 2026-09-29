@@ -171,7 +171,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -181,24 +181,32 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await db.query.user.findFirst({
-      where: eq(user.id, session.user.id),
-    });
+    const { searchParams } = new URL(req.url);
+    const requestedShopId = searchParams.get("shopId");
+
+    const { getMerchantShopContext } = await import("@/lib/tenant");
+    const ctx = await getMerchantShopContext(session.user.id, requestedShopId);
 
     const userShops = await db.query.shops.findMany({
       where: eq(shops.userId, session.user.id),
     });
 
-    const cookieHeader = (await headers()).get("cookie") || "";
-    const activeShopMatch = cookieHeader.match(/vlt_active_shop_id=([^;]+)/);
-    const activeShopId = activeShopMatch ? activeShopMatch[1] : null;
-
-    let userShop = activeShopId
-      ? userShops.find((s) => s.id === activeShopId) || userShops[0]
-      : userShops[0];
-
     const { shopApprovalRequests } = await import("@/lib/db/schema");
     const { desc } = await import("drizzle-orm");
+
+    let activeApprovalStatus: "approved" | "pending" | "rejected" | null = null;
+
+    if (ctx.shop) {
+      if (ctx.shop.isAccepted) {
+        activeApprovalStatus = "approved";
+      } else {
+        const reqRecord = await db.query.shopApprovalRequests.findFirst({
+          where: eq(shopApprovalRequests.shopId, ctx.shop.id),
+          orderBy: [desc(shopApprovalRequests.requestedAt)],
+        } as any);
+        activeApprovalStatus = reqRecord ? (reqRecord.status as any) : null;
+      }
+    }
 
     const allShopReqs = await db.query.shopApprovalRequests.findMany({
       where: eq(shopApprovalRequests.userId, session.user.id),
@@ -206,34 +214,55 @@ export async function GET() {
     } as any);
 
     const shopsWithStatus = userShops.map((s) => {
-      let status: "approved" | "pending" | "rejected" = "pending";
+      let status: "approved" | "pending" | "rejected" | null = null;
       if (s.isAccepted) {
         status = "approved";
       } else {
-        const req = allShopReqs.find((r) => r.shopId === s.id);
-        if (req?.status === "rejected") {
-          status = "rejected";
-        } else {
-          status = "pending";
-        }
+        const r = allShopReqs.find((req) => req.shopId === s.id);
+        status = r ? (r.status as any) : null;
       }
-      return {
-        ...s,
-        approvalStatus: status,
-      };
+      return { ...s, approvalStatus: status };
     });
 
-    const currentShopWithStatus = userShop
-      ? shopsWithStatus.find((s) => s.id === userShop.id) || shopsWithStatus[0]
+    const activeShopData = ctx.shop
+      ? { ...ctx.shop, approvalStatus: activeApprovalStatus }
       : null;
 
+    let returnedShopsList = shopsWithStatus;
+    if (ctx.isPreviewMode && ctx.shop && activeShopData) {
+      const targetMerchantShops = await db.query.shops.findMany({
+        where: eq(shops.userId, ctx.shop.userId),
+      });
+      returnedShopsList = targetMerchantShops.map((s) => ({
+        ...s,
+        approvalStatus: s.isAccepted ? "approved" : (s.id === ctx.shop?.id ? activeApprovalStatus : null),
+      }));
+    }
+
+    const dbUser = await db.query.user.findFirst({
+      where: eq(user.id, session.user.id),
+    });
+
+    const { getPlatformFeePercent } = await import("@/lib/platform-settings");
+    const platformFeePercent = await getPlatformFeePercent();
+
     return NextResponse.json({
-      shop: currentShopWithStatus || null,
-      shops: shopsWithStatus || [],
+      shop: activeShopData,
+      shops: returnedShopsList,
       role: dbUser?.role || "user",
       hasDiscordConnected: !!dbUser?.discordId,
       discordUsername: dbUser?.discordUsername || null,
-      approvalStatus: currentShopWithStatus?.approvalStatus || "pending",
+      approvalStatus: activeApprovalStatus,
+      isAdminViewingMode: ctx.isPreviewMode,
+      platformFeePercent,
+      adminOverrideInfo: ctx.isPreviewMode && ctx.shop
+        ? {
+            shopId: ctx.shop.id,
+            shopName: ctx.shop.name,
+            ownerEmail: ctx.ownerUser?.email || undefined,
+            ownerName: ctx.ownerUser?.name || undefined,
+          }
+        : null,
     });
   } catch (err: any) {
     console.error("Error fetching shop:", err);
@@ -252,26 +281,21 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const shopId = body.shopId as string | undefined;
+    const { searchParams } = new URL(req.url);
+    const shopId = (body.shopId || searchParams.get("shopId")) as string | undefined;
 
-    // Find target shop
-    let userShop: any;
-    if (shopId) {
-      userShop = await db.query.shops.findFirst({
-        where: eq(shops.id, shopId),
-      });
-      if (!userShop || userShop.userId !== session.user.id) {
-        return NextResponse.json({ error: "Shop not found or not yours" }, { status: 404 });
-      }
-    } else {
-      userShop = await db.query.shops.findFirst({
-        where: eq(shops.userId, session.user.id),
-      });
+    const { getMerchantShopContext } = await import("@/lib/tenant");
+    const ctx = await getMerchantShopContext(session.user.id, shopId);
+
+    if (!ctx.shop) {
+      return NextResponse.json({ error: "Shop not found or access denied" }, { status: 404 });
     }
 
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    if (!ctx.isOwner && !ctx.isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
+
+    const userShop = ctx.shop;
 
     const parseResult = updateStorefrontSchema.safeParse(body);
     if (!parseResult.success) {
@@ -305,6 +329,9 @@ export async function PUT(req: Request) {
       cardColor,
       borderColor,
       themeMode,
+      supportEmail,
+      contactInfo,
+      termsOfService,
     } = parseResult.data;
 
     // Validate + uniqueness check for slug
@@ -378,21 +405,26 @@ export async function PUT(req: Request) {
       }
     }
 
+    const { normalizeDiscordUrl, normalizeTelegramUrl, normalizeImageUrl } = await import("@/lib/media");
+
     await db
       .update(shops)
       .set({
         name: newName,
         slug: newSlug,
-        description: description ?? userShop.description,
-        logoUrl: logoUrl ?? userShop.logoUrl,
-        bannerUrl: bannerUrl ?? userShop.bannerUrl,
+        description: description !== undefined ? (description?.trim() || null) : userShop.description,
+        logoUrl: logoUrl !== undefined ? normalizeImageUrl(logoUrl) : userShop.logoUrl,
+        bannerUrl: bannerUrl !== undefined ? normalizeImageUrl(bannerUrl) : userShop.bannerUrl,
         backgroundColor: backgroundColor ?? userShop.backgroundColor,
         accentColor: accentColor ?? userShop.accentColor,
-        twitterUrl: twitterUrl ?? userShop.twitterUrl,
-        discordUrl: discordUrl ?? userShop.discordUrl,
-        youtubeUrl: youtubeUrl ?? userShop.youtubeUrl,
-        trustpilotUrl: trustpilotUrl ?? userShop.trustpilotUrl,
-        telegramUrl: telegramUrl ?? userShop.telegramUrl,
+        twitterUrl: twitterUrl !== undefined ? (twitterUrl?.trim() || null) : userShop.twitterUrl,
+        discordUrl: discordUrl !== undefined ? normalizeDiscordUrl(discordUrl) : userShop.discordUrl,
+        youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl?.trim() || null) : userShop.youtubeUrl,
+        trustpilotUrl: trustpilotUrl !== undefined ? (trustpilotUrl?.trim() || null) : userShop.trustpilotUrl,
+        telegramUrl: telegramUrl !== undefined ? normalizeTelegramUrl(telegramUrl) : userShop.telegramUrl,
+        supportEmail: supportEmail !== undefined ? (supportEmail?.trim() || null) : userShop.supportEmail,
+        contactInfo: contactInfo !== undefined ? (contactInfo?.trim() || null) : userShop.contactInfo,
+        termsOfService: termsOfService !== undefined ? (termsOfService?.trim() || null) : userShop.termsOfService,
         metaTitle: metaTitle ?? userShop.metaTitle,
         metaDescription: metaDescription ?? userShop.metaDescription,
         customDomain: cleanCustomDomain,

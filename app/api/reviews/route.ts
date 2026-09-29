@@ -21,10 +21,15 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { orderId, rating, comment, token } = body;
+    const { orderId, rating, comment, token, secret } = body;
+    const providedSecret = secret || token;
 
     if (!orderId || !rating || rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Order ID and valid rating (1-5) are required" }, { status: 400 });
+    }
+
+    if (!providedSecret) {
+      return NextResponse.json({ error: "Order verification secret is required to submit a review." }, { status: 403 });
     }
 
     const order = await db.query.orders.findFirst({
@@ -43,9 +48,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Authenticate review submission via order token if provided
-    if (token && !verifyOrderAccessToken(order.id, order.buyerEmail, token)) {
-      return NextResponse.json({ error: "Invalid order verification token." }, { status: 403 });
+    // Authenticate review submission via order secret
+    const { verifyOrderSecret } = await import("@/lib/order-auth");
+    const isAuthorized = verifyOrderSecret({
+      orderId: order.id,
+      buyerEmail: order.buyerEmail,
+      providedSecret,
+      storedSecretHash: order.accessSecretHash,
+    });
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Invalid order verification secret." }, { status: 403 });
     }
 
     // Check if review already submitted

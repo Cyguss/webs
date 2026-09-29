@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Lock, Loader2, ShieldCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AdminLoginGateProps {
   usernameInput: string;
@@ -30,8 +31,13 @@ export function AdminLoginGate({
         justifyContent: "center",
         background: "var(--color-background)",
         padding: "24px",
+        position: "relative",
       }}
     >
+      <div style={{ position: "absolute", top: 20, right: 24, zIndex: 10 }}>
+        <ThemeToggle variant="pill" />
+      </div>
+
       <div
         className="card"
         style={{
@@ -40,7 +46,7 @@ export function AdminLoginGate({
           padding: "36px 32px",
           borderRadius: "var(--radius-lg, 16px)",
           border: "1px solid var(--color-border)",
-          boxShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.5)",
+          boxShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.15)",
           background: "var(--color-surface)",
         }}
       >
@@ -50,13 +56,13 @@ export function AdminLoginGate({
               width: 50,
               height: 50,
               borderRadius: "var(--radius-md)",
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "var(--color-surface-2)",
+              border: "1px solid var(--color-border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 16px",
-              color: "#ffffff",
+              color: "var(--color-primary-light, #8b5cf6)",
             }}
           >
             <Lock size={22} />

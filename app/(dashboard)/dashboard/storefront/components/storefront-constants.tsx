@@ -58,13 +58,8 @@ export function getPresetTextColor(bgHex: string): string {
   return lum > 0.55 ? "#0f172a" : "#ffffff";
 }
 
-export const FONT_OPTIONS = [
-  { value: "inter", label: "Inter" },
-  { value: "outfit", label: "Outfit" },
-  { value: "space-grotesk", label: "Space Grotesk" },
-  { value: "plus-jakarta", label: "Plus Jakarta Sans" },
-  { value: "dm-sans", label: "DM Sans" },
-];
+import { STOREFRONT_FONT_OPTIONS } from "@/lib/fonts";
+export const FONT_OPTIONS = STOREFRONT_FONT_OPTIONS;
 
 export const COLOR_PRESETS = [
   {

@@ -2,8 +2,8 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { payoutRequests, sellerBalances, balanceTransactions } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { payoutRequests, sellerBalances, balanceTransactions, notifications, shops } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -54,10 +54,27 @@ export async function POST(req: Request) {
           { status: 403 }
         );
       }
+
+      if (currentDbUser?.adminPermissionsActive === false) {
+        return NextResponse.json(
+          { error: "Your administrator permissions have been suspended." },
+          { status: 403 }
+        );
+      }
+
+      // Granular permissions check
+      const { parseAdminPermissions } = await import("@/lib/admin-gate");
+      const perms = parseAdminPermissions(currentDbUser?.adminPermissions);
+      if (!perms.canManagePayouts) {
+        return NextResponse.json(
+          { error: "You do not have permission to manage payouts." },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();
-    const { payoutId, action, adminNote } = body; // action: "approve" | "reject"
+    const { payoutId, action, adminNote } = body; // action: "approve" | "accept" | "reject"
 
     if (!payoutId || !action) {
       return NextResponse.json({ error: "Missing payout ID or action" }, { status: 400 });
@@ -72,56 +89,74 @@ export async function POST(req: Request) {
     }
 
     const requestedAmount = parseFloat(payout.amountRequested);
-    const amountSent = parseFloat(payout.amountSent || payout.amountRequested);
+    const shop = await db.query.shops.findFirst({
+      where: eq(shops.userId, payout.userId),
+    });
 
-    if (action === "approve") {
-      // Mark completed
+    if (action === "approve" || action === "accept") {
+      // 1. Mark payout request completed
       await db
         .update(payoutRequests)
         .set({
           status: "completed",
-          adminNote: adminNote || "Approved and sent by platform admin",
+          adminNote: adminNote || "Approved and disbursed manually outside the platform.",
           processedAt: new Date(),
         })
         .where(eq(payoutRequests.id, payoutId));
 
-      // Update totalWithdrawn in seller balances
+      // 2. Increment totalWithdrawn in seller balance (availableBalance was already deducted when request was created)
       const sellerBal = await db.query.sellerBalances.findFirst({
         where: eq(sellerBalances.userId, payout.userId),
       });
 
       if (sellerBal) {
-        const newWithdrawn = (parseFloat(sellerBal.totalWithdrawn) + requestedAmount).toFixed(2);
+        const newWithdrawn = (parseFloat(sellerBal.totalWithdrawn || "0") + requestedAmount).toFixed(2);
         await db
           .update(sellerBalances)
           .set({ totalWithdrawn: newWithdrawn, updatedAt: new Date() })
           .where(eq(sellerBalances.userId, payout.userId));
       }
+
+      // 3. Dispatch Inbox Notification to Merchant with Discord contact instructions
+      const cryptoInfo = payout.cryptoCurrency ? ` (${payout.cryptoCurrency})` : "";
+      const noteDetails = adminNote?.trim() ? ` Note from admin: "${adminNote.trim()}".` : "";
+
+      await db.insert(notifications).values({
+        id: crypto.randomUUID(),
+        userId: payout.userId,
+        shopId: shop?.id || null,
+        type: "payout_completed",
+        title: `Payout Request Approved ($${requestedAmount.toFixed(2)})`,
+        message: `Your payout request for $${requestedAmount.toFixed(2)} via ${payout.method.toUpperCase()}${cryptoInfo} has been approved and processed manually outside the site to destination address: ${payout.destinationAddress}.${noteDetails} In case of any problems or questions, please contact our support on Discord: https://discord.gg/krypt`,
+        reason: adminNote ? adminNote.trim() : "Approved by platform administration. Contact support on Discord (https://discord.gg/krypt) in case of any issues.",
+        isRead: false,
+        createdAt: new Date(),
+      });
     } else if (action === "reject") {
-      // Mark failed
+      // 1. Mark payout request rejected
       await db
         .update(payoutRequests)
         .set({
-          status: "failed",
-          adminNote: adminNote || "Rejected by admin — funds refunded to balance",
+          status: "rejected",
+          adminNote: adminNote || "Rejected by administrator — funds refunded to available balance.",
           processedAt: new Date(),
         })
         .where(eq(payoutRequests.id, payoutId));
 
-      // Refund deducted funds back to seller available balance
+      // 2. Refund deducted funds back to merchant available balance
       const sellerBal = await db.query.sellerBalances.findFirst({
         where: eq(sellerBalances.userId, payout.userId),
       });
 
       if (sellerBal) {
-        const newAvailable = (parseFloat(sellerBal.availableBalance) + requestedAmount).toFixed(2);
+        const newAvailable = (parseFloat(sellerBal.availableBalance || "0") + requestedAmount).toFixed(2);
         await db
           .update(sellerBalances)
           .set({ availableBalance: newAvailable, updatedAt: new Date() })
           .where(eq(sellerBalances.userId, payout.userId));
       }
 
-      // Add balance transaction record
+      // 3. Add balance transaction refund record
       await db.insert(balanceTransactions).values({
         id: crypto.randomUUID(),
         userId: payout.userId,
@@ -131,6 +166,23 @@ export async function POST(req: Request) {
         netAmount: requestedAmount.toFixed(2),
         description: `Payout #${payoutId.slice(0, 8)} rejected — refunded to available balance`,
       });
+
+      // 4. Dispatch Inbox Notification to Merchant with Discord contact instructions
+      const reasonDetails = adminNote?.trim() ? ` Reason: "${adminNote.trim()}".` : "";
+
+      await db.insert(notifications).values({
+        id: crypto.randomUUID(),
+        userId: payout.userId,
+        shopId: shop?.id || null,
+        type: "payout_rejected",
+        title: `Payout Request Rejected ($${requestedAmount.toFixed(2)})`,
+        message: `Your payout request for $${requestedAmount.toFixed(2)} was rejected and the funds have been returned to your available balance.${reasonDetails} In case of any problems or questions, please contact our support on Discord: https://discord.gg/krypt`,
+        reason: adminNote ? adminNote.trim() : "Rejected by platform administration. Funds refunded to balance. Contact support on Discord (https://discord.gg/krypt) for assistance.",
+        isRead: false,
+        createdAt: new Date(),
+      });
+    } else {
+      return NextResponse.json({ error: "Invalid action. Supported actions: approve, reject" }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });

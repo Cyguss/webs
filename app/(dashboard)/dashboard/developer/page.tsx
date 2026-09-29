@@ -11,7 +11,13 @@ export const metadata = {
   description: "Manage merchant API keys, outbound webhooks, and integrate with external bots and services.",
 };
 
-export default async function DeveloperPage() {
+import { getActiveMerchantShop } from "@/lib/tenant";
+
+export default async function DeveloperPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shopId?: string }>;
+}) {
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
 
@@ -19,9 +25,8 @@ export default async function DeveloperPage() {
     redirect("/login");
   }
 
-  const shop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
+  const { shopId } = await searchParams;
+  const shop = await getActiveMerchantShop(session.user.id, shopId);
 
   if (!shop) {
     redirect("/dashboard/onboarding");

@@ -7,7 +7,13 @@ import { eq, desc } from "drizzle-orm";
 import CouponsClientUI from "./coupons-client-ui";
 import { Tag, Sparkles, AlertCircle } from "lucide-react";
 
-export default async function CouponsPage() {
+import { getActiveMerchantShop } from "@/lib/tenant";
+
+export default async function CouponsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shopId?: string }>;
+}) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -16,9 +22,8 @@ export default async function CouponsPage() {
     redirect("/login");
   }
 
-  const userShop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
+  const { shopId } = await searchParams;
+  const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
   if (!userShop) {
     redirect("/dashboard");

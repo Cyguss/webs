@@ -44,6 +44,8 @@ export interface OrderEmailParams {
   keyDuration?: string;
   keyExpiresAt?: string | null;
   keys: string[];
+  accessSecret?: string;
+  receiptUrl?: string;
   customNote?: string | null;
 }
 
@@ -127,13 +129,25 @@ export async function sendOrderDeliveryEmail(params: OrderEmailParams) {
     keyDuration,
     keyExpiresAt,
     keys,
+    accessSecret,
     customNote,
   } = params;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const { generateOrderAccessToken } = await import("@/lib/order-auth");
-  const token = generateOrderAccessToken(orderId, buyerEmail);
-  const receiptUrl = `${appUrl}/order/${orderId}?token=${token}`;
+  let receiptUrl = params.receiptUrl;
+  if (!receiptUrl) {
+    if (accessSecret) {
+      receiptUrl = `${appUrl}/order/${orderId}?secret=${accessSecret}`;
+    } else {
+      const { generateOrderAccessToken } = await import("@/lib/order-auth");
+      try {
+        const token = generateOrderAccessToken(orderId, buyerEmail);
+        receiptUrl = `${appUrl}/order/${orderId}?token=${token}`;
+      } catch {
+        receiptUrl = `${appUrl}/order/${orderId}`;
+      }
+    }
+  }
   const shortOrderId = orderId.slice(0, 8).toUpperCase();
 
   const keysHtml = keys

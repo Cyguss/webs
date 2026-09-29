@@ -96,7 +96,12 @@ export async function POST(req: Request) {
       "announcement_banner_active",
       "announcement_banner_text",
       "announcement_banner_type",
+      "announcement_banner_target",
+      "announcement_banner_link_url",
+      "announcement_banner_link_text",
+      "announcement_banner_dismissible",
       "max_shops_per_user",
+      "payout_hold_days",
     ];
 
     for (const key of allowedKeys) {

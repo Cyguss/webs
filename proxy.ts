@@ -4,7 +4,10 @@ import { rateLimit, rateLimitPresets, getClientIp, createRateLimitResponse } fro
 export function proxy(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get("host") || "";
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "localhost:3000";
+  const appDomain =
+    process.env.NEXT_PUBLIC_APP_DOMAIN ||
+    process.env.RAILWAY_PUBLIC_DOMAIN ||
+    "localhost:3000";
 
   // 1. Anti-DDoS & Flood Protection (Global Edge Rate Limiter)
   const clientIp = getClientIp(request);
@@ -40,7 +43,9 @@ export function proxy(request: NextRequest) {
     host === appDomain ||
     host === "localhost" ||
     host.startsWith("localhost:") ||
-    host.endsWith(".vercel.app");
+    host.endsWith(".vercel.app") ||
+    host.endsWith(".up.railway.app") ||
+    host.endsWith(".railway.app");
 
   if (!isLocalOrSystemHost) {
     if (host.endsWith(`.${appDomain}`)) {

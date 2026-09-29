@@ -13,17 +13,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const shop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
-
-  if (!shop) {
-    return NextResponse.json({ error: "Store not found" }, { status: 404 });
-  }
-
   try {
     const body = await req.json();
-    const { endpointId } = body;
+    const { endpointId, shopId } = body;
+
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const shop = await getActiveMerchantShop(session.user.id, shopId);
+
+    if (!shop) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
 
     const endpoint = await db.query.webhookEndpoints.findFirst({
       where: and(eq(webhookEndpoints.id, endpointId), eq(webhookEndpoints.shopId, shop.id)),

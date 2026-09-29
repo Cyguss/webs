@@ -17,14 +17,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const body = await req.json();
+    const shopId = body.shopId || searchParams.get("shopId");
+
     // Get active user shop
-    const userShop = await getActiveMerchantShop(session.user.id);
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
     if (!userShop) {
       return NextResponse.json({ error: "Shop not found. Please create a shop first." }, { status: 404 });
     }
-
-    const body = await req.json();
     const result = createProductSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
       categorizedKeys,
       thumbnailUrl,
       images,
+      youtubeUrl,
       receiptNote,
       duration,
       durationDays,
@@ -61,6 +64,7 @@ export async function POST(req: Request) {
     const prodDuration = duration || "lifetime";
     const prodDurationDays = durationDays ?? 0;
     const prodCustomLabel = customDurationLabel?.trim() || null;
+    const prodYoutubeUrl = youtubeUrl?.trim() || null;
 
     let prodVariants = null;
     if (Array.isArray(variants) && variants.length > 0) {
@@ -99,6 +103,7 @@ export async function POST(req: Request) {
       stockLimit: null,
       thumbnailUrl: primaryThumb,
       images: processedImages.length > 0 ? JSON.stringify(processedImages) : null,
+      youtubeUrl: prodYoutubeUrl,
       duration: prodDuration,
       durationDays: prodDurationDays,
       customDurationLabel: prodCustomLabel,
@@ -206,24 +211,34 @@ export async function DELETE(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get("id");
+    const shopId = searchParams.get("shopId");
 
     if (!productId) {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }
 
-    const userShop = await getActiveMerchantShop(session.user.id);
-
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
-
-    // Verify product belongs to user shop
     const existingProduct = await db.query.products.findFirst({
-      where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+      where: eq(products.id, productId),
     });
 
     if (!existingProduct) {
-      return NextResponse.json({ error: "Product not found or access denied" }, { status: 404 });
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const targetShop = await db.query.shops.findFirst({
+      where: eq(shops.id, existingProduct.shopId),
+    });
+
+    if (!targetShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const isSuperAdmin = session.user.role === "superadmin";
+    const isAdmin = (session.user.role === "admin" && (session.user as any).adminPermissionsActive !== false) || isSuperAdmin;
+    const isOwner = targetShop.userId === session.user.id;
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     await db.delete(products).where(eq(products.id, productId));
@@ -247,20 +262,31 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get("id");
-
-    const userShop = await getActiveMerchantShop(session.user.id);
-
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
+    const shopId = searchParams.get("shopId");
 
     if (productId) {
       const product = await db.query.products.findFirst({
-        where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+        where: eq(products.id, productId),
       });
 
       if (!product) {
         return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      }
+
+      const targetShop = await db.query.shops.findFirst({
+        where: eq(shops.id, product.shopId),
+      });
+
+      if (!targetShop) {
+        return NextResponse.json({ error: "Product shop not found" }, { status: 404 });
+      }
+
+      const isSuperAdmin = session.user.role === "superadmin";
+      const isAdmin = (session.user.role === "admin" && (session.user as any).adminPermissionsActive !== false) || isSuperAdmin;
+      const isOwner = targetShop.userId === session.user.id;
+
+      if (!isOwner && !isAdmin) {
+        return NextResponse.json({ error: "Unauthorized access to product" }, { status: 403 });
       }
 
       let parsedImages: string[] = [];
@@ -289,7 +315,12 @@ export async function GET(req: Request) {
         .from(inventoryKeys)
         .where(eq(inventoryKeys.productId, productId));
 
-      return NextResponse.json({ product: { ...product, parsedImages, parsedVariants }, keys });
+      return NextResponse.json({ product: { ...product, parsedImages, parsedVariants }, keys, shopId: product.shopId });
+    }
+
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
+    if (!userShop) {
+      return NextResponse.json({ error: "No active shop found" }, { status: 404 });
     }
 
     const allProducts = await db
@@ -314,7 +345,9 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
     const body = await req.json();
+    const shopId = body.shopId || searchParams.get("shopId");
     const result = updateProductSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -331,6 +364,7 @@ export async function PUT(req: Request) {
       price,
       thumbnailUrl,
       images,
+      youtubeUrl,
       isActive,
       newKeys,
       structuredKeys,
@@ -342,18 +376,28 @@ export async function PUT(req: Request) {
       variants,
     } = result.data;
 
-    const userShop = await getActiveMerchantShop(session.user.id);
-
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
-
     const existingProduct = await db.query.products.findFirst({
-      where: and(eq(products.id, id), eq(products.shopId, userShop.id)),
+      where: eq(products.id, id),
     });
 
     if (!existingProduct) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const targetShop = await db.query.shops.findFirst({
+      where: eq(shops.id, existingProduct.shopId),
+    });
+
+    if (!targetShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const isSuperAdmin = session.user.role === "superadmin";
+    const isAdmin = (session.user.role === "admin" && (session.user as any).adminPermissionsActive !== false) || isSuperAdmin;
+    const isOwner = targetShop.userId === session.user.id;
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const updateData: Record<string, any> = { updatedAt: new Date() };
@@ -362,6 +406,7 @@ export async function PUT(req: Request) {
     if (category !== undefined) updateData.category = category ? category.trim() : null;
     if (price !== undefined) updateData.price = price.toString();
     if (receiptNote !== undefined) updateData.receiptNote = receiptNote || null;
+    if (youtubeUrl !== undefined) updateData.youtubeUrl = youtubeUrl?.trim() || null;
     if (duration !== undefined) updateData.duration = duration;
     if (durationDays !== undefined) updateData.durationDays = durationDays;
     if (customDurationLabel !== undefined) updateData.customDurationLabel = customDurationLabel?.trim() || null;

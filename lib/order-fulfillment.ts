@@ -22,20 +22,32 @@ export interface FulfillOrderResult {
   error?: string;
 }
 
+export interface FulfillOrderOptions {
+  accessSecret?: string;
+}
+
 /**
  * Idempotent, atomic fulfillment of an order.
- * Safe against concurrent invocations (Webhook + Client Verification).
+ * Safe against concurrent invocations (Webhook + Client Verification) using row-level locking.
  */
-export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult> {
+export async function fulfillOrder(
+  orderId: string,
+  options?: FulfillOrderOptions
+): Promise<FulfillOrderResult> {
   let deliveredKeyValues: string[] = [];
   let emailPayload: any = null;
+  let alreadyCompleted = false;
 
   try {
     await db.transaction(async (tx) => {
-      // 1. Fetch and verify order status (Idempotency Guard)
-      const order = await tx.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-      });
+      // 1. Fetch and verify order status with row-level locking (Idempotency & Concurrency Guard)
+      const orderRows = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .for("update");
+
+      const order = orderRows[0];
 
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
@@ -43,6 +55,7 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
 
       if (order.paymentStatus === "completed") {
         // Already fulfilled safely by another handler
+        alreadyCompleted = true;
         return;
       }
 
@@ -68,8 +81,9 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
 
       // 2. Assign digital keys if product type is 'key' (Atomic row-level lock prevents double-spend)
       if (product.type === "key") {
-        // Try to find keys matching specific duration variant first, or fallback to any available unused key
         let availableKeys: any[] = [];
+
+        // Strict variant matching: do not silently substitute keys from other variants
         if (order.variantId || order.keyDuration) {
           availableKeys = await tx
             .select()
@@ -85,10 +99,7 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
             )
             .limit(quantity)
             .for("update");
-        }
-
-        if (availableKeys.length < quantity) {
-          // Fallback to any unused keys for this product
+        } else {
           availableKeys = await tx
             .select()
             .from(inventoryKeys)
@@ -104,7 +115,7 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
 
         if (availableKeys.length < quantity) {
           throw new Error(
-            `Insufficient stock during fulfillment. Needed ${quantity}, found ${availableKeys.length}`
+            `Insufficient stock during fulfillment for requested variant. Needed ${quantity}, found ${availableKeys.length}`
           );
         }
 
@@ -169,7 +180,7 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
         const sellerId = shop.userId;
         const isStripe = order.paymentMethod === "stripe" || order.paymentMethod === "card";
         const gatewayFee = isStripe ? (totalAmountNum * 0.029 + 0.3) : (totalAmountNum * 0.01);
-        
+
         // Fetch dynamic platform fee percent from platform settings
         let feePercent = 5.0;
         try {
@@ -183,27 +194,96 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
         const totalFees = gatewayFee + platformFee;
         const netSellerCredit = Math.max(0, totalAmountNum - totalFees);
 
-        const sellerBal = await tx.query.sellerBalances.findFirst({
-          where: eq(sellerBalances.userId, sellerId),
-        });
+        const sellerBalRows = await tx
+          .select()
+          .from(sellerBalances)
+          .where(eq(sellerBalances.userId, sellerId))
+          .for("update");
+
+        const sellerBal = sellerBalRows[0];
+
+        const currentAvailable = sellerBal ? parseFloat(sellerBal.availableBalance || "0") : 0;
+        const currentPending = sellerBal ? parseFloat(sellerBal.pendingBalance || "0") : 0;
+        const currentEarned = sellerBal ? parseFloat(sellerBal.totalEarned || "0") : 0;
 
         if (!sellerBal) {
           const newBalId = crypto.randomUUID();
           await tx.insert(sellerBalances).values({
             id: newBalId,
             userId: sellerId,
-            availableBalance: "0",
+            availableBalance: "0.00",
             pendingBalance: netSellerCredit.toFixed(2),
             totalEarned: totalAmountNum.toFixed(2),
-            totalWithdrawn: "0",
+            totalWithdrawn: "0.00",
           });
+
+          // Ledger transaction entry (unreleased pending escrow)
+          await tx.insert(balanceTransactions).values({
+            id: crypto.randomUUID(),
+            userId: sellerId,
+            orderId: order.id,
+            type: "sale",
+            amount: totalAmountNum.toFixed(2),
+            feeAmount: totalFees.toFixed(2),
+            netAmount: netSellerCredit.toFixed(2),
+            currency: order.currency || "USD",
+            description: `Sale (${quantity}x): ${product.title} (${order.buyerEmail}) [Fee: $${totalFees.toFixed(2)}]`,
+            isReleased: false,
+          });
+        } else if (currentAvailable < 0) {
+          // Merchant has outstanding debt (negative available balance).
+          // Subsequent sale first repays the debt, and any surplus moves to available balance.
+          const currentDebt = Math.abs(currentAvailable);
+          const debtRepaid = Math.min(netSellerCredit, currentDebt);
+          const surplus = netSellerCredit - debtRepaid;
+
+          const newAvailable = (currentAvailable + debtRepaid + surplus).toFixed(2);
+          const newEarned = (currentEarned + totalAmountNum).toFixed(2);
+
+          await tx
+            .update(sellerBalances)
+            .set({
+              availableBalance: newAvailable,
+              totalEarned: newEarned,
+              updatedAt: new Date(),
+            })
+            .where(eq(sellerBalances.userId, sellerId));
+
+          // Record main sale ledger entry
+          await tx.insert(balanceTransactions).values({
+            id: crypto.randomUUID(),
+            userId: sellerId,
+            orderId: order.id,
+            type: "sale",
+            amount: totalAmountNum.toFixed(2),
+            feeAmount: totalFees.toFixed(2),
+            netAmount: netSellerCredit.toFixed(2),
+            currency: order.currency || "USD",
+            description: `Sale (${quantity}x): ${product.title} (${order.buyerEmail}) [Applied to debt & balance]`,
+            isReleased: true,
+            releasedAt: new Date(),
+          });
+
+          // Record debt settlement ledger transaction
+          if (debtRepaid > 0) {
+            await tx.insert(balanceTransactions).values({
+              id: crypto.randomUUID(),
+              userId: sellerId,
+              orderId: order.id,
+              type: "debt_settlement",
+              amount: debtRepaid.toFixed(2),
+              feeAmount: "0.00",
+              netAmount: debtRepaid.toFixed(2),
+              currency: order.currency || "USD",
+              description: `Automatic debt repayment of $${debtRepaid.toFixed(2)} from sale #${order.id.slice(0, 8)}`,
+              isReleased: true,
+              releasedAt: new Date(),
+            });
+          }
         } else {
-          const newPending = (
-            parseFloat(sellerBal.pendingBalance) + netSellerCredit
-          ).toFixed(2);
-          const newEarned = (
-            parseFloat(sellerBal.totalEarned) + totalAmountNum
-          ).toFixed(2);
+          // Normal flow: credit pending balance
+          const newPending = (currentPending + netSellerCredit).toFixed(2);
+          const newEarned = (currentEarned + totalAmountNum).toFixed(2);
 
           await tx
             .update(sellerBalances)
@@ -213,19 +293,21 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
               updatedAt: new Date(),
             })
             .where(eq(sellerBalances.userId, sellerId));
-        }
 
-        // Ledger transaction entry
-        await tx.insert(balanceTransactions).values({
-          id: crypto.randomUUID(),
-          userId: sellerId,
-          orderId: order.id,
-          type: "sale",
-          amount: totalAmountNum.toFixed(2),
-          feeAmount: totalFees.toFixed(2),
-          netAmount: netSellerCredit.toFixed(2),
-          description: `Sale (${quantity}x): ${product.title} (${order.buyerEmail}) [Fee: $${totalFees.toFixed(2)}]`,
-        });
+          // Ledger transaction entry (unreleased pending escrow)
+          await tx.insert(balanceTransactions).values({
+            id: crypto.randomUUID(),
+            userId: sellerId,
+            orderId: order.id,
+            type: "sale",
+            amount: totalAmountNum.toFixed(2),
+            feeAmount: totalFees.toFixed(2),
+            netAmount: netSellerCredit.toFixed(2),
+            currency: order.currency || "USD",
+            description: `Sale (${quantity}x): ${product.title} (${order.buyerEmail}) [Fee: $${totalFees.toFixed(2)}]`,
+            isReleased: false,
+          });
+        }
 
         const durationInfo = getKeyDurationDisplay(assignedDuration, assignedDurationDays, product.customDurationLabel);
         emailPayload = {
@@ -241,6 +323,7 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
           paymentMethod: order.paymentMethod,
           keyDuration: durationInfo.label,
           keyExpiresAt: keyExpiresAt ? keyExpiresAt.toISOString() : null,
+          accessSecret: options?.accessSecret,
           keys:
             deliveredKeyValues.length > 0
               ? deliveredKeyValues
@@ -249,6 +332,14 @@ export async function fulfillOrder(orderId: string): Promise<FulfillOrderResult>
         };
       }
     });
+
+    if (alreadyCompleted) {
+      return {
+        success: true,
+        orderId,
+        alreadyFulfilled: true,
+      };
+    }
 
     // 6. Asynchronous Notifications & Webhooks (Dispatched outside transaction)
     if (emailPayload) {

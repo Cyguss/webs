@@ -71,9 +71,9 @@ export default function OrderReceiptClient({
         style={{
           padding: 16,
           borderRadius: 8,
-          background: "rgba(3, 4, 7, 0.9)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          color: "rgba(255, 255, 255, 0.6)",
+          background: "var(--color-surface-2)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-muted-foreground)",
           fontSize: 12,
           fontFamily: "var(--font-mono, monospace)",
         }}
@@ -95,9 +95,9 @@ export default function OrderReceiptClient({
           gap: 10,
           padding: "12px 16px",
           borderRadius: 8,
-          background: "rgba(55, 44, 102, 0.25)",
-          border: "1px solid rgba(139, 92, 246, 0.4)",
-          boxShadow: "0 0 16px rgba(55, 44, 102, 0.35)",
+          background: "rgba(55, 44, 102, 0.15)",
+          border: "1px solid rgba(139, 92, 246, 0.35)",
+          boxShadow: "0 0 16px var(--color-primary-glow)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -106,29 +106,29 @@ export default function OrderReceiptClient({
               width: 30,
               height: 30,
               borderRadius: 6,
-              background: "rgba(55, 44, 102, 0.4)",
-              border: "1px solid rgba(139, 92, 246, 0.45)",
+              background: "rgba(55, 44, 102, 0.25)",
+              border: "1px solid rgba(139, 92, 246, 0.4)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#c4b5fd",
+              color: "var(--color-primary-light)",
             }}
           >
             <Clock size={15} />
           </div>
           <div>
-            <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               License Duration
             </div>
-            <div style={{ fontSize: 13, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, fontFamily: "var(--font-mono, monospace)", color: "var(--color-foreground)", display: "flex", alignItems: "center", gap: 8 }}>
               <span>{durationMeta.label}</span>
               <span
                 style={{
                   fontSize: 9,
                   padding: "1px 5px",
                   borderRadius: 3,
-                  background: "rgba(55, 44, 102, 0.45)",
-                  color: "#c4b5fd",
+                  background: "rgba(55, 44, 102, 0.25)",
+                  color: "var(--color-primary-light)",
                   border: "1px solid rgba(139, 92, 246, 0.4)",
                 }}
               >
@@ -139,7 +139,7 @@ export default function OrderReceiptClient({
         </div>
 
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.5)" }}>
+          <div style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)" }}>
             {durationMeta.isLifetime ? "Status" : "Remaining"}
           </div>
           <div
@@ -147,7 +147,7 @@ export default function OrderReceiptClient({
               fontSize: 12,
               fontWeight: 800,
               fontFamily: "var(--font-mono, monospace)",
-              color: expired ? "#ef4444" : "#ffffff",
+              color: expired ? "#ef4444" : "var(--color-foreground)",
             }}
           >
             {durationMeta.isLifetime
@@ -162,8 +162,8 @@ export default function OrderReceiptClient({
       {/* Header bar with count and Copy All button */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Terminal size={14} color="#c4b5fd" />
-          <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <Terminal size={14} color="var(--color-primary-light)" />
+          <span style={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fontWeight: 700, color: "var(--color-primary-light)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
             {keys.length > 1 ? `${keys.length} License Keys Delivered` : "License Key"}
           </span>
         </div>
@@ -203,9 +203,9 @@ export default function OrderReceiptClient({
                 gap: 10,
                 padding: "10px 14px",
                 borderRadius: 8,
-                background: "rgba(3, 3, 5, 0.95)",
-                border: "1px solid rgba(55, 44, 102, 0.45)",
-                boxShadow: "0 0 12px rgba(0, 0, 0, 0.5)",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
               }}
             >
               {keys.length > 1 && (
@@ -213,8 +213,8 @@ export default function OrderReceiptClient({
                   style={{
                     fontSize: 10,
                     fontWeight: 800,
-                    color: "rgba(255,255,255,0.4)",
-                    background: "rgba(255,255,255,0.06)",
+                    color: "var(--color-muted-foreground)",
+                    background: "var(--btn-ghost-bg)",
                     padding: "2px 6px",
                     borderRadius: 4,
                     fontFamily: "var(--font-mono, monospace)",
@@ -230,11 +230,10 @@ export default function OrderReceiptClient({
                   fontFamily: "var(--font-mono, monospace)",
                   fontSize: 13,
                   fontWeight: 700,
-                  color: isMasked ? "rgba(255,255,255,0.4)" : "#ffffff",
+                  color: isMasked ? "var(--color-muted-foreground)" : "var(--color-foreground)",
                   letterSpacing: "0.06em",
                   wordBreak: "break-all",
                   userSelect: "all",
-                  textShadow: isMasked ? "none" : "0 0 10px rgba(139, 92, 246, 0.35)",
                 }}
               >
                 {isMasked ? maskKeyString(keyVal) : keyVal}
@@ -247,7 +246,7 @@ export default function OrderReceiptClient({
                 style={{
                   background: "none",
                   border: "none",
-                  color: "rgba(255, 255, 255, 0.4)",
+                  color: "var(--color-muted-foreground)",
                   cursor: "pointer",
                   padding: 4,
                   display: "flex",
@@ -264,9 +263,9 @@ export default function OrderReceiptClient({
                 style={{
                   padding: "6px 12px",
                   borderRadius: 6,
-                  background: isCopied ? "rgba(55, 44, 102, 0.8)" : "rgba(55, 44, 102, 0.4)",
+                  background: isCopied ? "rgba(55, 44, 102, 0.8)" : "rgba(55, 44, 102, 0.25)",
                   border: isCopied ? "1px solid #8b5cf6" : "1px solid rgba(139, 92, 246, 0.4)",
-                  color: isCopied ? "#ffffff" : "#c4b5fd",
+                  color: isCopied ? "#ffffff" : "var(--color-primary-light)",
                   fontWeight: 700,
                   fontSize: 11,
                   fontFamily: "var(--font-mono, monospace)",

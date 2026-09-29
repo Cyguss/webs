@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "@/lib/auth-client";
 import {
   LayoutDashboard,
@@ -33,25 +33,9 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/components/toast-context";
 import { DashboardLoadingView } from "./dashboard-loading-view";
+import { GlobalAnnouncementBanner } from "@/components/global-announcement-banner";
 
-function getApprovalStatusInfo(status?: string) {
-  if (status === "approved") {
-    return {
-      color: "#22c55e",
-      label: "Site approved",
-    };
-  }
-  if (status === "rejected") {
-    return {
-      color: "#ef4444",
-      label: "Rejected",
-    };
-  }
-  return {
-    color: "#f59e0b",
-    label: "Waiting for approval",
-  };
-}
+
 
 function DiscordIcon({ size = 16, color = "#5865F2" }: { size?: number; color?: string }) {
   return (
@@ -77,9 +61,11 @@ const secondaryNavItems = [
   { href: "/dashboard/settings", label: "Security & Settings", icon: Settings },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shopId = searchParams.get("shopId");
   const { data: session, isPending: sessionPending } = useSession();
   const toast = useToast();
 
@@ -100,6 +86,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   const [isNavigatingExiting, setIsNavigatingExiting] = useState(false);
   const [activeTargetPath, setActiveTargetPath] = useState<string | null>(null);
+
+  // Administrator Masquerade & Cockpit Mode state
+  const [isAdminViewingMode, setIsAdminViewingMode] = useState(false);
+  const [adminOverrideInfo, setAdminOverrideInfo] = useState<{ shopId: string; shopName: string; ownerEmail?: string; ownerName?: string } | null>(null);
+  const [exitingAdminMode, setExitingAdminMode] = useState(false);
 
   useEffect(() => {
     if (navigatingTo) {
@@ -164,7 +155,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     async function fetchShopData() {
       if (!session) return;
       try {
-        const res = await fetch("/api/storefront");
+        const querySuffix = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+        const res = await fetch(`/api/storefront${querySuffix}`);
         if (res.ok) {
           const data = await res.json();
           if (data.role) {
@@ -173,6 +165,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setHasDiscord(Boolean(data.hasDiscordConnected));
           if (data.discordUsername) {
             setDiscordUsername(data.discordUsername);
+          }
+          if (data.isAdminViewingMode) {
+            setIsAdminViewingMode(true);
+            setAdminOverrideInfo(data.adminOverrideInfo || null);
+          } else {
+            setIsAdminViewingMode(false);
+            setAdminOverrideInfo(null);
           }
           if (data.shop) {
             setActiveShop({
@@ -191,7 +190,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         // Fetch unread notifications count
         try {
-          const notifRes = await fetch("/api/notifications");
+          const notifQuery = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+          const notifRes = await fetch(`/api/notifications${notifQuery}`);
           if (notifRes.ok) {
             const notifData = await notifRes.json();
             setUnreadNotifs(notifData.unreadCount || 0);
@@ -202,7 +202,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     fetchShopData();
-  }, [session, router]);
+  }, [session, router, shopId]);
 
   // Refresh notifications count on route change & live background polling
   useEffect(() => {
@@ -210,7 +210,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     async function checkNotifs() {
       if (!session) return;
       try {
-        const notifRes = await fetch("/api/notifications");
+        const notifQuery = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+        const notifRes = await fetch(`/api/notifications${notifQuery}`);
         if (notifRes.ok && isMounted) {
           const notifData = await notifRes.json();
           setUnreadNotifs(notifData.unreadCount || 0);
@@ -228,7 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.removeEventListener("notifications-updated", handleNotifsUpdated);
       clearInterval(pollTimer);
     };
-  }, [pathname, session]);
+  }, [pathname, session, shopId]);
 
   // Close mobile menu & dropdown on outside click or route change
   useEffect(() => {
@@ -275,7 +276,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        const searchSuffix = shopId ? `&shopId=${encodeURIComponent(shopId)}` : "";
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}${searchSuffix}`);
         if (res.ok) {
           const data = await res.json();
           setSearchResults(data);
@@ -294,7 +296,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push("/login");
   }
 
+  function handleExitAdminMode() {
+    window.location.href = "/admin";
+  }
+
   function handleSelectShop(shop: { id: string; name: string; slug: string }) {
+    if (isAdminViewingMode) {
+      router.push(`/dashboard?shopId=${shop.id}`);
+      return;
+    }
     document.cookie = `vlt_active_shop_id=${shop.id}; path=/; max-age=31536000; SameSite=Lax`;
     setActiveShop(shop);
     setStoreDropdownOpen(false);
@@ -492,29 +502,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               Selected Store
             </div>
-            {activeShop && (() => {
-              const info = getApprovalStatusInfo(activeShop.approvalStatus);
-              return (
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    padding: "1px 6px",
-                    borderRadius: 4,
-                    background:
-                      info.label === "Site approved"
-                        ? "rgba(34, 197, 94, 0.15)"
-                        : info.label === "Rejected"
-                        ? "rgba(239, 68, 68, 0.15)"
-                        : "rgba(245, 158, 11, 0.15)",
-                    color: info.color,
-                  }}
-                  title={info.label}
-                >
-                  {info.label}
-                </span>
-              );
-            })()}
           </div>
           <button
             onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
@@ -525,8 +512,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               justifyContent: "space-between",
               padding: "9px 12px",
               borderRadius: "var(--radius-md)",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid var(--color-border)",
+              background: isAdminViewingMode
+                ? "rgba(139, 92, 246, 0.12)"
+                : "rgba(255, 255, 255, 0.03)",
+              border: isAdminViewingMode
+                ? "1px solid rgba(139, 92, 246, 0.4)"
+                : "1px solid var(--color-border)",
               color: "var(--color-foreground)",
               cursor: "pointer",
               fontSize: 13,
@@ -535,25 +526,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 9, overflow: "hidden" }}>
-              {(() => {
-                const info = getApprovalStatusInfo(activeShop?.approvalStatus);
-                return (
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: info.color,
-                      boxShadow: `0 0 6px ${info.color}`,
-                      flexShrink: 0,
-                    }}
-                    title={info.label}
-                  />
-                );
-              })()}
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {activeShop ? activeShop.name : "Select Store"}
-              </span>
+              <Store size={15} style={{ color: isAdminViewingMode ? "#f59e0b" : "#a78bfa", flexShrink: 0 }} />
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", overflow: "hidden", minWidth: 0 }}>
+                {isAdminViewingMode && (
+                  <span style={{ fontSize: 9, fontWeight: 900, color: "#f59e0b", letterSpacing: "0.05em", lineHeight: 1 }}>
+                    ADMIN OVERRIDE
+                  </span>
+                )}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {activeShop ? activeShop.name : "Select Store"}
+                </span>
+              </div>
             </div>
             <ChevronDown size={14} style={{ color: "var(--color-muted-foreground)", flexShrink: 0 }} />
           </button>
@@ -588,12 +571,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   letterSpacing: "0.06em",
                 }}
               >
-                Active Storefronts
+                {isAdminViewingMode ? "Previewed Store" : "Active Storefronts"}
               </div>
 
               {allShops.map((s) => {
                 const isCurrent = activeShop?.id === s.id;
-                const sInfo = getApprovalStatusInfo(s.approvalStatus);
                 return (
                   <div
                     key={s.id}
@@ -613,17 +595,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
-                      <span
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: "50%",
-                          background: sInfo.color,
-                          boxShadow: `0 0 4px ${sInfo.color}`,
-                          flexShrink: 0,
-                        }}
-                        title={sInfo.label}
-                      />
+                      <Store size={14} style={{ color: isCurrent ? "#a78bfa" : "var(--color-muted-foreground)", flexShrink: 0 }} />
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {s.name}
                       </span>
@@ -635,29 +607,80 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <div style={{ height: 1, background: "var(--color-border)", margin: "4px 0" }} />
 
-              <button
-                onClick={() => {
-                  setStoreDropdownOpen(false);
-                  setShowCreateModal(true);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 10px",
-                  borderRadius: "var(--radius-sm)",
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--color-foreground)",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                <Plus size={14} />
-                <span>+ Create New Store</span>
-              </button>
+              {isAdminViewingMode ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setStoreDropdownOpen(false);
+                      router.push("/dashboard");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 10px",
+                      borderRadius: "var(--radius-sm)",
+                      background: "rgba(99, 102, 241, 0.1)",
+                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      color: "#818cf8",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <LayoutDashboard size={13} />
+                    <span>Return to My Dashboard</span>
+                  </button>
+
+                  <button
+                    onClick={handleExitAdminMode}
+                    disabled={exitingAdminMode}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 10px",
+                      borderRadius: "var(--radius-sm)",
+                      background: "rgba(239, 68, 68, 0.1)",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      color: "#f87171",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <LogOut size={13} />
+                    <span>Exit to Admin Panel</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setStoreDropdownOpen(false);
+                    setShowCreateModal(true);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 10px",
+                    borderRadius: "var(--radius-sm)",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--color-foreground)",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <Plus size={14} />
+                  <span>+ Create New Store</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -673,13 +696,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {mainNavItems.map((item) => {
                 const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
                 const isItemNavigating = navigatingTo === item.href;
+                const itemHref = shopId ? `${item.href}?shopId=${encodeURIComponent(shopId)}` : item.href;
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={itemHref}
                     prefetch={true}
                     onMouseEnter={() => {
-                      try { router.prefetch(item.href); } catch {}
+                      try { router.prefetch(itemHref); } catch {}
                     }}
                     onClick={() => {
                       if (pathname !== item.href) {
@@ -731,13 +755,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               ].map((item: any) => {
                 const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                 const isItemNavigating = navigatingTo === item.href;
+                const itemHref = shopId ? `${item.href}?shopId=${encodeURIComponent(shopId)}` : item.href;
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={itemHref}
                     prefetch={true}
                     onMouseEnter={() => {
-                      try { router.prefetch(item.href); } catch {}
+                      try { router.prefetch(itemHref); } catch {}
                     }}
                     onClick={() => {
                       if (pathname !== item.href) {
@@ -839,7 +864,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ) : (
             <div style={{ marginBottom: 10 }}>
               <Link
-                href="/dashboard/settings"
+                href={shopId ? `/dashboard/settings?shopId=${encodeURIComponent(shopId)}` : "/dashboard/settings"}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -921,6 +946,105 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Viewport */}
       <div className="main-with-sidebar" style={{ marginLeft: 260, flex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <GlobalAnnouncementBanner currentLocation="dashboard" />
+
+        {/* High Quality Admin Cockpit Masquerade HUD */}
+        {isAdminViewingMode && (
+          <div
+            style={{
+              background: "linear-gradient(90deg, rgba(99, 102, 241, 0.16) 0%, rgba(139, 92, 246, 0.16) 50%, rgba(245, 158, 11, 0.14) 100%)",
+              borderBottom: "1px solid rgba(139, 92, 246, 0.4)",
+              padding: "9px 24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 4px 20px rgba(99, 102, 241, 0.1)",
+              position: "sticky",
+              top: 0,
+              zIndex: 40,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  padding: "3px 8px",
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  color: "#ffffff",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  fontWeight: 900,
+                  letterSpacing: "0.08em",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  textTransform: "uppercase",
+                  boxShadow: "0 0 10px rgba(99, 102, 241, 0.4)",
+                }}
+              >
+                <ShieldAlert size={12} />
+                ADMIN PREVIEW
+              </div>
+              <div style={{ fontSize: 13, color: "var(--color-foreground)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ color: "var(--color-muted-foreground)" }}>Previewing Merchant Store:</span>
+                <span style={{ fontWeight: 800, color: "var(--color-primary-light, #818cf8)" }}>
+                  {activeShop?.name || "Store"}
+                </span>
+                {activeShop?.slug && (
+                  <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "monospace" }}>
+                    (/{activeShop.slug})
+                  </span>
+                )}
+                {adminOverrideInfo?.ownerEmail && (
+                  <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", background: "var(--color-surface-2)", padding: "1px 7px", borderRadius: 4, border: "1px solid var(--color-border)" }}>
+                    Owner: {adminOverrideInfo.ownerEmail}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Link
+                href="/dashboard"
+                className="btn btn-secondary"
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  gap: 6,
+                  height: 28,
+                  textDecoration: "none",
+                  background: "var(--color-surface-2)",
+                  borderColor: "var(--color-border)",
+                }}
+              >
+                <LayoutDashboard size={12} />
+                <span>My Dashboard</span>
+              </Link>
+
+              <Link
+                href="/admin"
+                className="btn btn-primary"
+                style={{
+                  padding: "4px 12px",
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  gap: 6,
+                  height: 28,
+                  textDecoration: "none",
+                  background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                  borderColor: "#ef4444",
+                  boxShadow: "0 0 12px rgba(239, 68, 68, 0.3)",
+                }}
+              >
+                <LogOut size={12} />
+                <span>Back to Admin</span>
+              </Link>
+            </div>
+          </div>
+        )}
         {/* Top Header Bar */}
         <header
           style={{
@@ -1018,12 +1142,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             item.desc.toLowerCase().includes(searchQuery.toLowerCase())
                         )
                         .slice(0, 4)
-                        .map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setSearchOpen(false)}
-                            style={{
+                        .map((item) => {
+                          const itemHref = shopId ? `${item.href}?shopId=${encodeURIComponent(shopId)}` : item.href;
+                          return (
+                            <Link
+                              key={item.href}
+                              href={itemHref}
+                              onClick={() => setSearchOpen(false)}
+                              style={{
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
@@ -1045,7 +1171,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             </div>
                             <ArrowRight size={12} color="var(--color-muted-foreground)" />
                           </Link>
-                        ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1056,12 +1183,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         Products ({searchResults.products.length})
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {searchResults.products.map((p) => (
-                          <Link
-                            key={p.id}
-                            href={`/dashboard/products/${p.id}/edit`}
-                            onClick={() => setSearchOpen(false)}
-                            style={{
+                        {searchResults.products.map((p) => {
+                          const productEditHref = `/dashboard/products/${p.id}/edit${shopId ? `?shopId=${encodeURIComponent(shopId)}` : ""}`;
+                          return (
+                            <Link
+                              key={p.id}
+                              href={productEditHref}
+                              onClick={() => setSearchOpen(false)}
+                              style={{
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
@@ -1082,7 +1211,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             </div>
                             <span className="badge badge-neutral" style={{ fontSize: 10 }}>Edit</span>
                           </Link>
-                        ))}
+                        );
+                      })}
                       </div>
                     </div>
                   )}
@@ -1094,12 +1224,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         Orders ({searchResults.orders.length})
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {searchResults.orders.map((o) => (
-                          <Link
-                            key={o.id}
-                            href="/dashboard/orders"
-                            onClick={() => setSearchOpen(false)}
-                            style={{
+                        {searchResults.orders.map((o) => {
+                          const ordersHref = `/dashboard/orders${shopId ? `?shopId=${encodeURIComponent(shopId)}` : ""}`;
+                          return (
+                            <Link
+                              key={o.id}
+                              href={ordersHref}
+                              onClick={() => setSearchOpen(false)}
+                              style={{
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
@@ -1120,7 +1252,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             </div>
                             <span className="badge badge-success" style={{ fontSize: 10 }}>{o.status}</span>
                           </Link>
-                        ))}
+                        );
+                      })}
                       </div>
                     </div>
                   )}
@@ -1138,37 +1271,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Top Header Actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Live Storefront Link with Approval Status Dot */}
-            {activeShop && (() => {
-              const info = getApprovalStatusInfo(activeShop.approvalStatus);
-              return (
-                <a
-                  href={liveStoreUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-secondary hidden sm:flex"
-                  style={{ padding: "7px 14px", fontSize: 12, gap: 8 }}
-                  title={`${activeShop.name} • ${info.label}`}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: info.color,
-                      boxShadow: `0 0 6px ${info.color}`,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span>Visit /{activeShop.slug}</span>
-                  <ExternalLink size={13} color="var(--color-muted-foreground)" />
-                </a>
-              );
-            })()}
+            {/* Live Storefront Link */}
+            {activeShop && (
+              <a
+                href={liveStoreUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary hidden sm:flex"
+                style={{ padding: "7px 14px", fontSize: 12, gap: 8 }}
+                title={`Visit ${activeShop.name}`}
+              >
+                <span>Visit /{activeShop.slug}</span>
+                <ExternalLink size={13} color="var(--color-muted-foreground)" />
+              </a>
+            )}
 
             {/* Notifications Bell -> Links to Inbox */}
             <Link
-              href="/dashboard/inbox"
+              href={shopId ? `/dashboard/inbox?shopId=${encodeURIComponent(shopId)}` : "/dashboard/inbox"}
               style={{
                 width: 38,
                 height: 38,
@@ -1389,3 +1509,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </div>
   );
 }
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<DashboardLoadingView />}>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </Suspense>
+  );
+}
+

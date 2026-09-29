@@ -6,16 +6,18 @@ import { webhookEndpoints, webhookLogs, shops } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "crypto";
 
-export async function GET() {
+export async function GET(req: Request) {
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const shop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
+  const { searchParams } = new URL(req.url);
+  const shopId = searchParams.get("shopId");
+
+  const { getActiveMerchantShop } = await import("@/lib/tenant");
+  const shop = await getActiveMerchantShop(session.user.id, shopId);
 
   if (!shop) {
     return NextResponse.json({ error: "Store not found" }, { status: 404 });
@@ -51,17 +53,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const shop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
-
-  if (!shop) {
-    return NextResponse.json({ error: "Store not found" }, { status: 404 });
-  }
-
   try {
     const body = await req.json();
-    const { url, events } = body;
+    const { url, events, shopId } = body;
+
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const shop = await getActiveMerchantShop(session.user.id, shopId);
+
+    if (!shop) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "Webhook URL is required" }, { status: 400 });
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
 
     await db.insert(webhookEndpoints).values({
       id,
-      userId: session.user.id,
+      userId: shop.userId,
       shopId: shop.id,
       url: url.trim(),
       secret,
@@ -112,16 +113,31 @@ export async function DELETE(req: Request) {
 
   try {
     const body = await req.json();
-    const { endpointId } = body;
+    const { endpointId, shopId } = body;
 
     if (!endpointId) {
       return NextResponse.json({ error: "Endpoint ID is required" }, { status: 400 });
     }
 
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const shop = await getActiveMerchantShop(session.user.id, shopId);
+
+    if (!shop) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
+
+    const endpoint = await db.query.webhookEndpoints.findFirst({
+      where: and(eq(webhookEndpoints.id, endpointId), eq(webhookEndpoints.shopId, shop.id)),
+    });
+
+    if (!endpoint) {
+      return NextResponse.json({ error: "Webhook endpoint not found" }, { status: 404 });
+    }
+
     await db
       .update(webhookEndpoints)
       .set({ isActive: false })
-      .where(and(eq(webhookEndpoints.id, endpointId), eq(webhookEndpoints.userId, session.user.id)));
+      .where(eq(webhookEndpoints.id, endpointId));
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

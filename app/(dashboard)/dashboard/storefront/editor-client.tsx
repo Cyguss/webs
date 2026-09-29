@@ -8,11 +8,21 @@ import { StorefrontIdentityCard } from "./components/storefront-identity-card";
 import { StorefrontThemeCard } from "./components/storefront-theme-card";
 import { StorefrontSocialsCard } from "./components/storefront-socials-card";
 import { StorefrontDomainCard } from "./components/storefront-domain-card";
+import { StorefrontSupportTosCard } from "./components/storefront-support-tos-card";
 import { StorefrontPreview } from "./components/storefront-preview";
 import { StorefrontExitDialog } from "./components/storefront-exit-dialog";
 import { FONT_OPTIONS } from "./components/storefront-constants";
+import { resolveStorefrontFont } from "@/lib/fonts";
 
-export default function StorefrontEditorClient({ shop }: { shop: any }) {
+export default function StorefrontEditorClient({
+  shop,
+  initialProducts = [],
+  initialCategories = [],
+}: {
+  shop: any;
+  initialProducts?: any[];
+  initialCategories?: any[];
+}) {
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -38,6 +48,9 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
   const [metaTitle, setMetaTitle] = useState(shop.metaTitle || "");
   const [metaDescription, setMetaDescription] = useState(shop.metaDescription || "");
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState(shop.discordWebhookUrl || "");
+  const [supportEmail, setSupportEmail] = useState(shop.supportEmail || "");
+  const [contactInfo, setContactInfo] = useState(shop.contactInfo || "");
+  const [termsOfService, setTermsOfService] = useState(shop.termsOfService || "");
 
   // Discord verification state
   const [discordChecking, setDiscordChecking] = useState(false);
@@ -86,7 +99,10 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
     customDomain !== (shop.customDomain || "") ||
     metaTitle !== (shop.metaTitle || "") ||
     metaDescription !== (shop.metaDescription || "") ||
-    discordWebhookUrl !== (shop.discordWebhookUrl || "");
+    discordWebhookUrl !== (shop.discordWebhookUrl || "") ||
+    supportEmail !== (shop.supportEmail || "") ||
+    contactInfo !== (shop.contactInfo || "") ||
+    termsOfService !== (shop.termsOfService || "");
 
   // Auto-verify social links on mount if already configured
   useEffect(() => {
@@ -184,6 +200,7 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          shopId: shop.id,
           name,
           description,
           logoUrl,
@@ -204,6 +221,9 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
           mutedTextColor,
           cardColor,
           borderColor,
+          supportEmail,
+          contactInfo,
+          termsOfService,
         }),
       });
       const data = await res.json();
@@ -273,19 +293,9 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
     }
   }
 
-  // Custom font extraction for mock preview
-  let customFontFamily = null;
-  if (customFontUrl) {
-    const famMatch = customFontUrl.match(/family=([a-zA-Z0-9+]+)/i);
-    if (famMatch) {
-      customFontFamily = `'${decodeURIComponent(famMatch[1].replace(/\+/g, " "))}', sans-serif`;
-    }
-  }
-  const previewFont =
-    customFontFamily ||
-    (FONT_OPTIONS.find((f) => f.value === fontStyle)?.label === "Inter"
-      ? "Inter, sans-serif"
-      : `${FONT_OPTIONS.find((f) => f.value === fontStyle)?.label}, Inter, sans-serif`);
+  const resolvedFont = resolveStorefrontFont(fontStyle, customFontUrl);
+  const previewFont = resolvedFont.fontFamily;
+  const fontStylesheetUrl = resolvedFont.stylesheetUrl;
 
   const handleExit = () => {
     if (isDirty) {
@@ -318,6 +328,21 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
             setLogoUrl={setLogoUrl}
             bannerUrl={bannerUrl}
             setBannerUrl={setBannerUrl}
+            customDomain={customDomain}
+            setCustomDomain={setCustomDomain}
+          />
+
+          <StorefrontSupportTosCard
+            supportEmail={supportEmail}
+            setSupportEmail={setSupportEmail}
+            discordUrl={discordUrl}
+            setDiscordUrl={setDiscordUrl}
+            telegramUrl={telegramUrl}
+            setTelegramUrl={setTelegramUrl}
+            contactInfo={contactInfo}
+            setContactInfo={setContactInfo}
+            termsOfService={termsOfService}
+            setTermsOfService={setTermsOfService}
           />
 
           <StorefrontThemeCard
@@ -383,6 +408,7 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
           cardColor={cardColor}
           borderColor={borderColor}
           previewFont={previewFont}
+          fontStylesheetUrl={fontStylesheetUrl}
           customFontUrl={customFontUrl}
           bannerUrl={bannerUrl}
           logoUrl={logoUrl}
@@ -392,8 +418,12 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
           discordUrl={discordUrl}
           youtubeUrl={youtubeUrl}
           telegramUrl={telegramUrl}
+          contactInfo={contactInfo}
+          supportEmail={supportEmail}
           discordInfo={discordInfo}
           socialPreviews={socialPreviews}
+          products={initialProducts}
+          shopCategories={initialCategories}
         />
       </div>
 
@@ -404,13 +434,13 @@ export default function StorefrontEditorClient({ shop }: { shop: any }) {
           const success = await handleSave();
           if (success) {
             setConfirmExitOpen(false);
-            router.push(pendingExitUrl || "/dashboard");
+            router.push(pendingExitUrl || `/dashboard?shopId=${encodeURIComponent(shop.id)}`);
           }
         }}
         onContinueEditing={() => setConfirmExitOpen(false)}
         onDiscardAndExit={() => {
           setConfirmExitOpen(false);
-          router.push(pendingExitUrl || "/dashboard");
+          router.push(pendingExitUrl || `/dashboard?shopId=${encodeURIComponent(shop.id)}`);
         }}
       />
     </div>

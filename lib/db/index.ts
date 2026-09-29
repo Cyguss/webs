@@ -9,10 +9,16 @@ if (!process.env.DATABASE_URL) {
   dotenv.config();
 }
 
-const connectionUri = process.env.DATABASE_URL;
+const connectionUri =
+  process.env.DATABASE_URL ||
+  process.env.MYSQL_URL ||
+  process.env.MYSQL_PRIVATE_URL ||
+  (process.env.MYSQLHOST
+    ? `mysql://${encodeURIComponent(process.env.MYSQLUSER || "root")}:${encodeURIComponent(process.env.MYSQLPASSWORD || "")}@${process.env.MYSQLHOST}:${process.env.MYSQLPORT || 3306}/${process.env.MYSQLDATABASE || "railway"}`
+    : undefined);
 
 if (!connectionUri) {
-  throw new Error("DATABASE_URL environment variable is missing. Please set it in .env.local");
+  throw new Error("DATABASE_URL or MYSQL_URL environment variable is missing. Please set it in Railway or .env.local");
 }
 
 // Global cached pool to survive HMR in development
@@ -20,6 +26,8 @@ const globalForDb = globalThis as unknown as {
   pool: mysql.Pool | undefined;
   dbInitRan: boolean | undefined;
 };
+
+const requiresSsl = connectionUri.includes("ssl=") || process.env.DB_SSL === "true";
 
 export const pool =
   globalForDb.pool ??
@@ -30,6 +38,7 @@ export const pool =
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
+    ...(requiresSsl ? { ssl: { rejectUnauthorized: false } } : {}),
   });
 
 globalForDb.pool = pool;

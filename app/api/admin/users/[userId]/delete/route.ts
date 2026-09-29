@@ -31,7 +31,12 @@ export async function DELETE(
     if (session?.user?.id) {
       const callerDb = await db.query.user.findFirst({ where: eq(user.id, session.user.id) });
       if (callerDb?.role === "superadmin") isSuperAdminSession = true;
-      if (callerDb?.role === "admin") isAdminSession = true;
+      if (callerDb?.role === "admin" && callerDb.adminPermissionsActive !== false) {
+        const { hasAdminPermission } = await import("@/lib/admin-gate");
+        if (hasAdminPermission(callerDb, "canManageUsers")) {
+          isAdminSession = true;
+        }
+      }
     }
 
     if (!isSuperAdminTicket && !isSuperAdminSession) {

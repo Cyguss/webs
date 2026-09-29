@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { ArrowLeft, ExternalLink, Save, Loader2 } from "lucide-react";
+import { ExternalLink, Save, Loader2 } from "lucide-react";
 
 interface StorefrontHeaderProps {
   isDirty: boolean;
   loading: boolean;
   shopSlug: string;
-  onExit: () => void;
+  onExit?: () => void;
   onSave: () => void;
 }
 
@@ -15,7 +15,6 @@ export function StorefrontHeader({
   isDirty,
   loading,
   shopSlug,
-  onExit,
   onSave,
 }: StorefrontHeaderProps) {
   return (
@@ -30,22 +29,6 @@ export function StorefrontHeader({
       }}
     >
       <div>
-        <button
-          type="button"
-          onClick={onExit}
-          className="btn btn-ghost"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 8px",
-            fontSize: 13,
-            marginBottom: 8,
-            color: "var(--color-muted-foreground)",
-          }}
-        >
-          <ArrowLeft size={15} /> Back to Dashboard
-        </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <h1
             style={{
@@ -76,14 +59,6 @@ export function StorefrontHeader({
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <button
-          type="button"
-          onClick={onExit}
-          className="btn btn-ghost"
-          style={{ fontSize: 13 }}
-        >
-          Exit
-        </button>
         <a
           href={`/${shopSlug}`}
           target="_blank"

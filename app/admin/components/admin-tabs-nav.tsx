@@ -12,12 +12,14 @@ export type AdminTab =
   | "payouts"
   | "staff"
   | "bot-config"
-  | "settings";
+  | "settings"
+  | "debug";
 
 interface AdminTabsNavProps {
   activeTab: AdminTab;
   setActiveTab: (tab: AdminTab) => void;
   isSuperAdmin: boolean;
+  canAccessDebug?: boolean;
   usersCount: number;
   shopsCount: number;
   pendingApprovalsCount: number;
@@ -34,6 +36,7 @@ export function AdminTabsNav({
   activeTab,
   setActiveTab,
   isSuperAdmin,
+  canAccessDebug = false,
   usersCount,
   shopsCount,
   pendingApprovalsCount,
@@ -57,6 +60,9 @@ export function AdminTabsNav({
       { id: "settings", label: "Platform Config", count: null },
       { id: "bot-config", label: "Bot Config", count: null },
     ] : []),
+    ...(isSuperAdmin || canAccessDebug ? [
+      { id: "debug", label: "Debug Tools", count: null },
+    ] : []),
   ];
 
   return (
@@ -73,54 +79,57 @@ export function AdminTabsNav({
       }}
     >
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as AdminTab)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: "var(--radius-md)",
-              border: "none",
-              background: activeTab === tab.id ? "#ffffff" : "transparent",
-              color: activeTab === tab.id ? "#000000" : "var(--color-muted-foreground)",
-              fontWeight: 600,
-              fontSize: 13,
-              cursor: "pointer",
-              transition: "all 0.12s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span>{tab.label}</span>
-            {tab.count !== null && (
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: "1px 6px",
-                  borderRadius: 4,
-                  background:
-                    tab.highlight && tab.count > 0
-                      ? activeTab === tab.id
-                        ? "rgba(245,158,11,0.3)"
-                        : "rgba(245,158,11,0.15)"
-                      : activeTab === tab.id
-                      ? "rgba(0,0,0,0.15)"
-                      : "rgba(255,255,255,0.06)",
-                  color:
-                    tab.highlight && tab.count > 0
-                      ? "#f59e0b"
-                      : activeTab === tab.id
-                      ? "#000000"
-                      : "var(--color-muted-foreground)",
-                  fontWeight: 700,
-                }}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as AdminTab)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "var(--radius-md)",
+                border: isActive ? "1px solid var(--color-primary-light, #8b5cf6)" : "1px solid var(--color-border, transparent)",
+                background: isActive ? "var(--color-primary-subtle, rgba(55,44,102,0.15))" : "transparent",
+                color: isActive ? "var(--color-primary-light, #8b5cf6)" : "var(--color-muted-foreground)",
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                transition: "all 0.12s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span>{tab.label}</span>
+              {tab.count !== null && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    background:
+                      tab.highlight && tab.count > 0
+                        ? isActive
+                          ? "rgba(245,158,11,0.25)"
+                          : "rgba(245,158,11,0.15)"
+                        : isActive
+                        ? "var(--color-primary-subtle, rgba(55,44,102,0.25))"
+                        : "var(--color-surface-2)",
+                    color:
+                      tab.highlight && tab.count > 0
+                        ? "#f59e0b"
+                        : isActive
+                        ? "var(--color-primary-light, #8b5cf6)"
+                        : "var(--color-muted-foreground)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

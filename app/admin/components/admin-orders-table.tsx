@@ -51,7 +51,7 @@ export function AdminOrdersTable({ orders }: AdminOrdersTableProps) {
                 const isCopied = copiedId === ord.id;
 
                 return (
-                  <tr key={ord.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <tr key={ord.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                         <span
@@ -61,9 +61,9 @@ export function AdminOrdersTable({ orders }: AdminOrdersTableProps) {
                             fontWeight: 600,
                             padding: "3px 8px",
                             borderRadius: 6,
-                            background: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                            color: "#f3f4f6",
+                            background: "var(--color-surface-2, rgba(125,125,125,0.08))",
+                            border: "1px solid var(--color-border)",
+                            color: "var(--color-foreground)",
                             userSelect: "all",
                           }}
                           title={ord.id}
@@ -106,8 +106,25 @@ export function AdminOrdersTable({ orders }: AdminOrdersTableProps) {
                           background:
                             ord.paymentStatus === "completed"
                               ? "rgba(34,197,94,0.15)"
+                              : ord.paymentStatus === "disputed"
+                              ? "rgba(244,63,94,0.15)"
+                              : ord.paymentStatus === "reversed" || ord.paymentStatus === "refunded"
+                              ? "rgba(239,68,68,0.15)"
                               : "rgba(245,158,11,0.15)",
-                          color: ord.paymentStatus === "completed" ? "#22c55e" : "#f59e0b",
+                          color:
+                            ord.paymentStatus === "completed"
+                              ? "#22c55e"
+                              : ord.paymentStatus === "disputed"
+                              ? "#f43f5e"
+                              : ord.paymentStatus === "reversed" || ord.paymentStatus === "refunded"
+                              ? "#ef4444"
+                              : "#f59e0b",
+                          border:
+                            ord.paymentStatus === "disputed"
+                              ? "1px solid rgba(244,63,94,0.3)"
+                              : ord.paymentStatus === "reversed" || ord.paymentStatus === "refunded"
+                              ? "1px solid rgba(239,68,68,0.3)"
+                              : undefined,
                         }}
                       >
                         {ord.paymentStatus.toUpperCase()}

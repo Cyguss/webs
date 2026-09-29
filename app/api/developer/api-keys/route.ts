@@ -6,16 +6,18 @@ import { apiKeys, shops } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { createMerchantApiKey, revokeMerchantApiKey } from "@/lib/api-keys";
 
-export async function GET() {
+export async function GET(req: Request) {
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const shop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
+  const { searchParams } = new URL(req.url);
+  const shopId = searchParams.get("shopId");
+
+  const { getActiveMerchantShop } = await import("@/lib/tenant");
+  const shop = await getActiveMerchantShop(session.user.id, shopId);
 
   if (!shop) {
     return NextResponse.json({ error: "Store not found" }, { status: 404 });
@@ -51,24 +53,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const shop = await db.query.shops.findFirst({
-    where: eq(shops.userId, session.user.id),
-  });
-
-  if (!shop) {
-    return NextResponse.json({ error: "Store not found" }, { status: 404 });
-  }
-
   try {
     const body = await req.json();
-    const { name, permissions } = body;
+    const { name, permissions, shopId } = body;
+
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const shop = await getActiveMerchantShop(session.user.id, shopId);
+
+    if (!shop) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Key name is required" }, { status: 400 });
     }
 
     const created = await createMerchantApiKey({
-      userId: session.user.id,
+      userId: shop.userId,
       shopId: shop.id,
       name: name.trim(),
       permissions: permissions || ["orders:read", "licenses:verify", "products:read"],
@@ -93,13 +94,28 @@ export async function DELETE(req: Request) {
 
   try {
     const body = await req.json();
-    const { keyId } = body;
+    const { keyId, shopId } = body;
 
     if (!keyId) {
       return NextResponse.json({ error: "Key ID is required" }, { status: 400 });
     }
 
-    await revokeMerchantApiKey(keyId, session.user.id);
+    const { getActiveMerchantShop } = await import("@/lib/tenant");
+    const shop = await getActiveMerchantShop(session.user.id, shopId);
+
+    if (!shop) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
+
+    const key = await db.query.apiKeys.findFirst({
+      where: and(eq(apiKeys.id, keyId), eq(apiKeys.shopId, shop.id)),
+    });
+
+    if (!key) {
+      return NextResponse.json({ error: "API key not found" }, { status: 404 });
+    }
+
+    await db.update(apiKeys).set({ isActive: false }).where(eq(apiKeys.id, keyId));
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("[Revoke API Key Error]", err);

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Search, ExternalLink, Loader2, Trash2, ShieldAlert, ShieldCheck, Store, ChevronDown } from "lucide-react";
+import { Search, ExternalLink, Loader2, Trash2, ShieldAlert, ShieldCheck, Store, ChevronDown, LayoutDashboard } from "lucide-react";
 import { MAX_SHOPS_PER_USER } from "@/config/site";
 
 interface AdminUsersTableProps {
@@ -14,6 +14,7 @@ interface AdminUsersTableProps {
   onDeleteUser: (userId: string, nameOrEmail: string) => void;
   isSuperAdmin?: boolean;
   onToggleAdminPermissions?: (userId: string, currentActive: boolean) => void;
+  onLaunchDashboard?: (shopId: string, shopName: string) => void;
 }
 
 export function AdminUsersTable({
@@ -25,6 +26,7 @@ export function AdminUsersTable({
   onDeleteUser,
   isSuperAdmin = false,
   onToggleAdminPermissions,
+  onLaunchDashboard,
 }: AdminUsersTableProps) {
   const [mounted, setMounted] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<{
@@ -187,13 +189,11 @@ export function AdminUsersTable({
               const isDropdownOpen = activeDropdown?.userId === u.id;
 
               return (
-                <tr key={u.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <tr key={u.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <td style={{ padding: "12px 14px" }}>
                     <div style={{ fontWeight: 600 }}>{u.name}</div>
                     <div style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>{u.email}</div>
                   </td>
-
-                  {/* Role Column (Completely immune to overflow & cleanly styled) */}
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                     {u.role === "superadmin" ? (
                       <span
@@ -275,8 +275,8 @@ export function AdminUsersTable({
                           fontWeight: 700,
                           padding: "4px 9px",
                           borderRadius: 6,
-                          background: "rgba(255, 255, 255, 0.05)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          background: "var(--color-surface-2)",
+                          border: "1px solid var(--color-border)",
                           color: "var(--color-muted-foreground)",
                           letterSpacing: "0.03em",
                           whiteSpace: "nowrap",
@@ -286,18 +286,16 @@ export function AdminUsersTable({
                       </span>
                     )}
                   </td>
-
-                  {/* Discord Link */}
                   <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                     {u.discordUsername ? (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#ffffff" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--color-foreground)" }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
                         @{u.discordUsername}
                       </span>
                     ) : (
                       <span style={{ color: "var(--color-muted-foreground)", fontSize: 12 }}>Unlinked</span>
                     )}
-                  </td>                  {/* Stores Dropdown & Limit */}
+                  </td>
                   <td style={{ padding: "12px 14px" }}>
                     <button
                       type="button"
@@ -311,9 +309,9 @@ export function AdminUsersTable({
                         fontSize: 12,
                         gap: 6,
                         fontWeight: 600,
-                        background: isDropdownOpen ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
-                        borderColor: isDropdownOpen ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)",
-                        color: storesCount > 0 ? "#ffffff" : "var(--color-muted-foreground)",
+                        background: isDropdownOpen ? "var(--color-surface-hover)" : "var(--color-surface-2)",
+                        borderColor: "var(--color-border)",
+                        color: storesCount > 0 ? "var(--color-foreground)" : "var(--color-muted-foreground)",
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -331,7 +329,6 @@ export function AdminUsersTable({
                       />
                     </button>
                   </td>
-
                   <td style={{ padding: "12px 14px", fontWeight: 600, whiteSpace: "nowrap" }}>
                     ${parseFloat(u.totalEarned || "0").toFixed(2)}
                   </td>
@@ -401,10 +398,10 @@ export function AdminUsersTable({
             transform: activeDropdown.coords.placement === "top" ? "translateY(-100%)" : "none",
             zIndex: 99999,
             width: 320,
-            background: "#0c0d12",
-            border: "1px solid rgba(255, 255, 255, 0.16)",
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
             borderRadius: "var(--radius-md, 10px)",
-            boxShadow: "0 22px 50px -10px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255,255,255,0.06)",
+            boxShadow: "0 22px 50px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--color-border)",
             padding: 12,
             display: "flex",
             flexDirection: "column",
@@ -418,12 +415,12 @@ export function AdminUsersTable({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              borderBottom: "1px solid var(--color-border)",
               paddingBottom: 7,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Store size={13} style={{ color: "#818cf8" }} />
+              <Store size={13} style={{ color: "var(--color-primary-light, #818cf8)" }} />
               <span
                 style={{
                   fontSize: 11,
@@ -445,11 +442,11 @@ export function AdminUsersTable({
                 background:
                   activeStoresCount >= MAX_SHOPS_PER_USER
                     ? "rgba(245,158,11,0.15)"
-                    : "rgba(255,255,255,0.06)",
+                    : "var(--color-surface-2, rgba(125,125,125,0.1))",
                 border: `1px solid ${
                   activeStoresCount >= MAX_SHOPS_PER_USER
                     ? "rgba(245,158,11,0.3)"
-                    : "rgba(255,255,255,0.08)"
+                    : "var(--color-border)"
                 }`,
                 color:
                   activeStoresCount >= MAX_SHOPS_PER_USER
@@ -468,9 +465,9 @@ export function AdminUsersTable({
                 color: "var(--color-muted-foreground)",
                 padding: "16px 8px",
                 textAlign: "center",
-                background: "rgba(255,255,255,0.02)",
+                background: "var(--color-surface-2, rgba(125,125,125,0.05))",
                 borderRadius: 6,
-                border: "1px dashed rgba(255,255,255,0.08)",
+                border: "1px dashed var(--color-border)",
               }}
             >
               No stores registered yet.
@@ -491,8 +488,8 @@ export function AdminUsersTable({
                   key={s.id}
                   style={{
                     padding: "8px 10px",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "var(--color-surface-2, rgba(125,125,125,0.06))",
+                    border: "1px solid var(--color-border)",
                     borderRadius: 6,
                     display: "flex",
                     alignItems: "center",
@@ -506,7 +503,7 @@ export function AdminUsersTable({
                       style={{
                         fontWeight: 600,
                         fontSize: 12,
-                        color: "#ffffff",
+                        color: "var(--color-foreground)",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -515,44 +512,69 @@ export function AdminUsersTable({
                     >
                       {s.name}
                     </div>
-                    <div style={{ fontSize: 10, color: "#818cf8", fontFamily: "monospace", marginTop: 1 }}>
+                    <div style={{ fontSize: 10, color: "var(--color-primary-light, #818cf8)", fontFamily: "monospace", marginTop: 1 }}>
                       /{s.slug}
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    <span
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: "2px 6px",
-                        borderRadius: 4,
-                        background: s.isAccepted ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)",
-                        border: `1px solid ${s.isAccepted ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
-                        color: s.isAccepted ? "#22c55e" : "#f59e0b",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {s.isAccepted ? "LIVE" : "PENDING"}
-                    </span>
-                    <a
-                      href={`/${s.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn btn-ghost"
-                      style={{
-                        padding: 5,
-                        height: "auto",
-                        color: "var(--color-muted-foreground)",
-                        borderRadius: 4,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                      title="Open Storefront"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 800,
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          background: s.isAccepted ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)",
+                          border: `1px solid ${s.isAccepted ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                          color: s.isAccepted ? "#22c55e" : "#f59e0b",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {s.isAccepted ? "LIVE" : "PENDING"}
+                      </span>
+                      {onLaunchDashboard && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDropdown(null);
+                            onLaunchDashboard(s.id, s.name);
+                          }}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: "3px 6px",
+                            fontSize: 10,
+                            gap: 3,
+                            height: 22,
+                            fontWeight: 700,
+                            background: "rgba(99, 102, 241, 0.15)",
+                            color: "var(--color-primary-light, #818cf8)",
+                            borderColor: "rgba(99, 102, 241, 0.3)",
+                          }}
+                          title="Open Store Dashboard"
+                        >
+                          <LayoutDashboard size={11} />
+                          <span>Dashboard</span>
+                        </button>
+                      )}
+                      <a
+                        href={`/${s.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-ghost"
+                        style={{
+                          padding: 5,
+                          height: "auto",
+                          color: "var(--color-muted-foreground)",
+                          borderRadius: 4,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        title="Open Storefront"
+                      >
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
                 </div>
               ))}
             </div>
@@ -563,7 +585,7 @@ export function AdminUsersTable({
               style={{
                 fontSize: 10,
                 color: "var(--color-muted-foreground)",
-                borderTop: "1px solid rgba(255,255,255,0.06)",
+                borderTop: "1px solid var(--color-border)",
                 paddingTop: 6,
                 textAlign: "center",
                 display: "flex",

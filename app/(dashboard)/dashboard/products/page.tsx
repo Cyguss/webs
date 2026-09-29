@@ -8,13 +8,20 @@ import { formatCurrency } from "@/lib/utils";
 import { Plus, Key, Package, Edit, Trash2, ToggleLeft, ToggleRight, Layers } from "lucide-react";
 import Link from "next/link";
 import { getKeyDurationDisplay } from "@/lib/key-duration";
+import { getActiveMerchantShop } from "@/lib/tenant";
+import { ProductTypeCell } from "./product-type-cell";
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shopId?: string }>;
+}) {
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
   if (!session) redirect("/login");
 
-  const [shop] = await db.select().from(shops).where(eq(shops.userId, session.user.id)).limit(1);
+  const { shopId } = await searchParams;
+  const shop = await getActiveMerchantShop(session.user.id, shopId);
   if (!shop) redirect("/dashboard");
 
   const productList = await db.select().from(products).where(eq(products.shopId, shop.id));
@@ -35,6 +42,8 @@ export default async function ProductsPage() {
     stockMap = Object.fromEntries(stockResults.map((s) => [s.productId, s.stock]));
   }
 
+  const querySuffix = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+
   return (
     <div className="page-fly-in" style={{ maxWidth: 1240, margin: "0 auto", width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
@@ -44,7 +53,7 @@ export default async function ProductsPage() {
             {productList.length} product{productList.length !== 1 ? "s" : ""} in your store
           </p>
         </div>
-        <Link href="/dashboard/products/new" className="btn btn-primary">
+        <Link href={`/dashboard/products/new${querySuffix}`} className="btn btn-primary">
           <Plus size={16} />
           New product
         </Link>
@@ -60,7 +69,7 @@ export default async function ProductsPage() {
           <p style={{ color: "var(--color-muted-foreground)", fontSize: 14, marginBottom: 24 }}>
             Create your first product to start selling
           </p>
-          <Link href="/dashboard/products/new" className="btn btn-primary">
+          <Link href={`/dashboard/products/new${querySuffix}`} className="btn btn-primary">
             <Plus size={16} />
             Create product
           </Link>
@@ -137,39 +146,14 @@ export default async function ProductsPage() {
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                      <span className={`badge ${product.type === "key" ? "badge-primary" : "badge-muted"}`}>
-                        {product.type === "key" ? (
-                          <><Key size={11} /> Keys</>
-                        ) : (
-                          <><Package size={11} /> Manual</>
-                        )}
-                      </span>
-                      {(() => {
-                        const dMeta = getKeyDurationDisplay(
-                          product.duration,
-                          product.durationDays,
-                          product.customDurationLabel
-                        );
-                        return (
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontFamily: "monospace",
-                              fontWeight: 700,
-                              padding: "1px 6px",
-                              borderRadius: 4,
-                              background: `${dMeta.badgeColor}18`,
-                              color: dMeta.badgeColor,
-                              border: `1px solid ${dMeta.badgeColor}35`,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {dMeta.shortLabel}
-                          </span>
-                        );
-                      })()}
-                    </div>
+                    <ProductTypeCell
+                      type={product.type}
+                      duration={product.duration}
+                      durationDays={product.durationDays}
+                      customDurationLabel={product.customDurationLabel}
+                      variants={product.variants}
+                      price={product.price}
+                    />
                   </td>
                   <td style={{ fontWeight: 600 }}>
                     {formatCurrency(parseFloat(product.price))}
@@ -201,7 +185,7 @@ export default async function ProductsPage() {
                   <td>
                     <div style={{ display: "flex", gap: 8 }}>
                       <Link
-                        href={`/dashboard/products/${product.id}/edit`}
+                        href={`/dashboard/products/${product.id}/edit${querySuffix}`}
                         className="btn btn-ghost"
                         style={{ padding: "6px 10px" }}
                       >
@@ -209,7 +193,7 @@ export default async function ProductsPage() {
                       </Link>
                       {product.type === "key" && (
                         <Link
-                          href={`/dashboard/products/${product.id}/keys`}
+                          href={`/dashboard/products/${product.id}/keys${querySuffix}`}
                           className="btn btn-ghost"
                           style={{ padding: "6px 10px", fontSize: 12 }}
                         >

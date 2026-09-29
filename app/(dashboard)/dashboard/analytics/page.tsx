@@ -1,20 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { TrendingUp, ShoppingBag, DollarSign, CreditCard, ShieldCheck, Activity, Users, Sparkles } from "lucide-react";
 
 export default function AnalyticsPage() {
+  const searchParams = useSearchParams();
+  const shopId = searchParams.get("shopId");
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [shopId]);
 
   async function fetchAnalytics() {
     try {
       setLoading(true);
-      const res = await fetch("/api/analytics");
+      const querySuffix = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+      const res = await fetch(`/api/analytics${querySuffix}`);
       const json = await res.json();
       if (json.success) {
         setData(json);

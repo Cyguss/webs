@@ -17,6 +17,13 @@ import {
   Layers,
   Lock,
   Info,
+  Sparkles,
+  Globe,
+  ExternalLink,
+  Building2,
+  Home,
+  LayoutDashboard,
+  ShoppingBag,
 } from "lucide-react";
 import { useToast } from "@/components/toast-context";
 
@@ -46,8 +53,13 @@ export function AdminPlatformSettingsTab({
     cryptomus_sandbox_mode: true,
     announcement_banner_active: false,
     announcement_banner_text: "",
-    announcement_banner_type: "info" as "info" | "warning" | "alert",
+    announcement_banner_type: "info" as "info" | "warning" | "alert" | "promo",
+    announcement_banner_target: "all" as "all" | "platform" | "home" | "dashboard" | "storefronts",
+    announcement_banner_link_url: "",
+    announcement_banner_link_text: "",
+    announcement_banner_dismissible: true,
     max_shops_per_user: 10,
+    payout_hold_days: 14,
   });
 
   useEffect(() => {
@@ -195,7 +207,7 @@ export function AdminPlatformSettingsTab({
           </div>
 
           {/* Toggle: Allow Store Creation */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Allow New Store Creation</div>
               <div style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
@@ -214,7 +226,7 @@ export function AdminPlatformSettingsTab({
                   position: "absolute",
                   inset: 0,
                   borderRadius: 24,
-                  backgroundColor: settings.allow_store_creation ? "#10b981" : "rgba(255,255,255,0.15)",
+                  backgroundColor: settings.allow_store_creation ? "#10b981" : "var(--color-border)",
                   transition: "0.2s",
                 }}
               >
@@ -235,7 +247,7 @@ export function AdminPlatformSettingsTab({
           </div>
 
           {/* Toggle: Allow User Registration */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Allow User Registrations</div>
               <div style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
@@ -254,7 +266,7 @@ export function AdminPlatformSettingsTab({
                   position: "absolute",
                   inset: 0,
                   borderRadius: 24,
-                  backgroundColor: settings.allow_user_registration ? "#10b981" : "rgba(255,255,255,0.15)",
+                  backgroundColor: settings.allow_user_registration ? "#10b981" : "var(--color-border)",
                   transition: "0.2s",
                 }}
               >
@@ -313,7 +325,7 @@ export function AdminPlatformSettingsTab({
               alignItems: "center",
               justifyContent: "space-between",
               padding: "12px 14px",
-              background: settings.maintenance_mode ? "rgba(239, 68, 68, 0.08)" : "rgba(255,255,255,0.02)",
+              background: settings.maintenance_mode ? "rgba(239, 68, 68, 0.08)" : "var(--color-surface-2)",
               borderRadius: "var(--radius-sm)",
               border: settings.maintenance_mode ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid var(--color-border)",
             }}
@@ -338,7 +350,7 @@ export function AdminPlatformSettingsTab({
                   position: "absolute",
                   inset: 0,
                   borderRadius: 24,
-                  backgroundColor: settings.maintenance_mode ? "#ef4444" : "rgba(255,255,255,0.15)",
+                  backgroundColor: settings.maintenance_mode ? "#ef4444" : "var(--color-border)",
                   transition: "0.2s",
                 }}
               >
@@ -407,17 +419,43 @@ export function AdminPlatformSettingsTab({
             </div>
           </div>
 
+          {/* Payout Security Hold Days */}
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              Payout Security Hold Window (Days)
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="number"
+                min="0"
+                max="90"
+                value={settings.payout_hold_days ?? 14}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    payout_hold_days: parseInt(e.target.value, 10) || 0,
+                  })
+                }
+                className="input"
+                style={{ width: 140, fontSize: 14, fontWeight: 700 }}
+              />
+              <div style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
+                days holding window before sales mature from pending to available balance (standard: <strong>14 days</strong>).
+              </div>
+            </div>
+          </div>
+
           {/* Payment Gateways */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-muted-foreground)" }}>Payment Processors</div>
 
-            {/* Cryptomus */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+            {/* NOWPayments */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Coins size={16} style={{ color: "#a855f7" }} />
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600 }}>Cryptomus (Cryptocurrency)</div>
-                  <div style={{ fontSize: 10, color: "var(--color-muted-foreground)" }}>BTC, USDT, ETH, LTC and 30+ coins</div>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>NOWPayments (Cryptocurrency)</div>
+                  <div style={{ fontSize: 10, color: "var(--color-muted-foreground)" }}>BTC, USDT, ETH, LTC, SOL, XMR and 150+ coins</div>
                 </div>
               </div>
               <input
@@ -427,12 +465,12 @@ export function AdminPlatformSettingsTab({
               />
             </div>
 
-            {/* Cryptomus Sandbox */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+            {/* NOWPayments Sandbox */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Layers size={16} style={{ color: "#38bdf8" }} />
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600 }}>Cryptomus Sandbox / Testnet</div>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>NOWPayments Sandbox / Testnet</div>
                   <div style={{ fontSize: 10, color: "var(--color-muted-foreground)" }}>Toggle test payments vs production settlement</div>
                 </div>
               </div>
@@ -444,7 +482,7 @@ export function AdminPlatformSettingsTab({
             </div>
 
             {/* Stripe */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <CreditCard size={16} style={{ color: "#6366f1" }} />
                 <div>
@@ -462,23 +500,26 @@ export function AdminPlatformSettingsTab({
         </div>
 
         {/* Section 4: Global Announcement Banner */}
+        {/* Card: Global Announcement Banner */}
         <div className="card" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid var(--color-border)", paddingBottom: 12 }}>
-            <Megaphone size={18} style={{ color: "#ec4899" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid var(--color-border)", paddingBottom: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "var(--radius-sm)", background: "rgba(139, 92, 246, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8b5cf6" }}>
+              <Megaphone size={18} />
+            </div>
             <div>
               <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Global Announcement Banner</h3>
               <p style={{ fontSize: 11, color: "var(--color-muted-foreground)", margin: 0 }}>
-                Broadcast messages at top of all pages and customer storefronts
+                Broadcast messages at top of selected pages and customer storefronts
               </p>
             </div>
           </div>
 
           {/* Toggle: Announcement Active */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Display Announcement Banner</div>
               <div style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
-                Visible to every visitor on the platform
+                Enable or disable banner rendering globally
               </div>
             </div>
             <label style={{ position: "relative", display: "inline-block", width: 44, height: 24, cursor: "pointer", flexShrink: 0 }}>
@@ -493,7 +534,7 @@ export function AdminPlatformSettingsTab({
                   position: "absolute",
                   inset: 0,
                   borderRadius: 24,
-                  backgroundColor: settings.announcement_banner_active ? "#10b981" : "rgba(255,255,255,0.15)",
+                  backgroundColor: settings.announcement_banner_active ? "#10b981" : "var(--color-border)",
                   transition: "0.2s",
                 }}
               >
@@ -513,38 +554,105 @@ export function AdminPlatformSettingsTab({
             </label>
           </div>
 
-          {/* Banner Type */}
+          {/* Target Display Placement */}
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-              Banner Notice Style
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+              Where to Display Banner (Target Placement)
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {(["info", "warning", "alert"] as const).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setSettings({ ...settings, announcement_banner_type: type })}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: "var(--radius-sm)",
-                    border: settings.announcement_banner_type === type ? "1px solid #818cf8" : "1px solid var(--color-border)",
-                    background: settings.announcement_banner_type === type ? "rgba(99, 102, 241, 0.15)" : "rgba(255,255,255,0.02)",
-                    color: settings.announcement_banner_type === type ? "#ffffff" : "var(--color-muted-foreground)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    textTransform: "capitalize",
-                    cursor: "pointer",
-                  }}
-                >
-                  {type}
-                </button>
-              ))}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+              {[
+                { id: "all", label: "All Pages", desc: "Everywhere across network", icon: Globe },
+                { id: "platform", label: "Platform Only", desc: "Home, Auth & Dashboard (No stores)", icon: Building2 },
+                { id: "home", label: "Homepage", desc: "krypt.market landing only", icon: Home },
+                { id: "dashboard", label: "Dashboard", desc: "Merchant admin views only", icon: LayoutDashboard },
+                { id: "storefronts", label: "Storefronts", desc: "Buyer storefront pages only", icon: ShoppingBag },
+              ].map((item) => {
+                const isSelected = (settings.announcement_banner_target || "all") === item.id;
+                const IconComponent = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSettings({ ...settings, announcement_banner_target: item.id as any })}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: "var(--radius-sm)",
+                      border: isSelected ? "1px solid var(--color-primary-light, #818cf8)" : "1px solid var(--color-border)",
+                      background: isSelected ? "var(--color-primary-subtle, rgba(99, 102, 241, 0.15))" : "var(--color-surface-2)",
+                      color: isSelected ? "var(--color-primary-light, #818cf8)" : "var(--color-foreground)",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 12 }}>
+                      <IconComponent
+                        size={14}
+                        style={{
+                          color: isSelected ? "var(--color-primary-light, #818cf8)" : "var(--color-muted-foreground)",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{item.label}</span>
+                    </div>
+                    <span style={{ fontSize: 10, color: "var(--color-muted-foreground)", lineHeight: 1.2 }}>
+                      {item.desc}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Banner Text */}
+          {/* Banner Notice Style */}
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+              Banner Notice Style & Severity
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {[
+                { id: "info", label: "Info (Violet)", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.15)", icon: Info },
+                { id: "warning", label: "Warning (Amber)", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", icon: AlertTriangle },
+                { id: "alert", label: "Alert (Red)", color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)", icon: ShieldAlert },
+                { id: "promo", label: "Promo (Green)", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", icon: Sparkles },
+              ].map((styleItem) => {
+                const isSelected = (settings.announcement_banner_type || "info") === styleItem.id;
+                const StyleIcon = styleItem.icon;
+                return (
+                  <button
+                    key={styleItem.id}
+                    type="button"
+                    onClick={() => setSettings({ ...settings, announcement_banner_type: styleItem.id as any })}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: "var(--radius-sm)",
+                      border: isSelected ? `1px solid ${styleItem.color}` : "1px solid var(--color-border)",
+                      background: isSelected ? styleItem.bg : "var(--color-surface-2)",
+                      color: isSelected ? styleItem.color : "var(--color-muted-foreground)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <StyleIcon size={13} color={isSelected ? styleItem.color : "currentColor"} />
+                    <span>{styleItem.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Banner Text Message */}
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
               Announcement Message
             </label>
             <textarea
@@ -553,9 +661,144 @@ export function AdminPlatformSettingsTab({
               onChange={(e) => setSettings({ ...settings, announcement_banner_text: e.target.value })}
               className="input"
               style={{ width: "100%", fontSize: 12, resize: "vertical" }}
-              placeholder="e.g. ⚡ KRYPT 2.4 is live! Enjoy instant crypto fulfillment and zero setup fees."
+              placeholder="e.g. System Upgrade: Cryptomus payment node upgraded with sub-second confirmations."
             />
           </div>
+
+          {/* Action Link & CTA */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--color-muted-foreground)", marginBottom: 4 }}>
+                Action Link URL (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. https://discord.gg/... or /terms"
+                value={settings.announcement_banner_link_url || ""}
+                onChange={(e) => setSettings({ ...settings, announcement_banner_link_url: e.target.value })}
+                className="input"
+                style={{ width: "100%", fontSize: 12 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--color-muted-foreground)", marginBottom: 4 }}>
+                Action Link Text (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Read Changelog →"
+                value={settings.announcement_banner_link_text || ""}
+                onChange={(e) => setSettings({ ...settings, announcement_banner_link_text: e.target.value })}
+                className="input"
+                style={{ width: "100%", fontSize: 12 }}
+              />
+            </div>
+          </div>
+
+          {/* Toggle: Dismissible */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--color-surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Allow Visitors to Dismiss (Close 'X')</div>
+              <div style={{ fontSize: 10.5, color: "var(--color-muted-foreground)" }}>
+                Hides banner for the user's session once clicked
+              </div>
+            </div>
+            <label style={{ position: "relative", display: "inline-block", width: 38, height: 20, cursor: "pointer", flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={settings.announcement_banner_dismissible !== false}
+                onChange={(e) => setSettings({ ...settings, announcement_banner_dismissible: e.target.checked })}
+                style={{ opacity: 0, width: 0, height: 0 }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 20,
+                  backgroundColor: settings.announcement_banner_dismissible !== false ? "#10b981" : "var(--color-border)",
+                  transition: "0.2s",
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    height: 14,
+                    width: 14,
+                    left: settings.announcement_banner_dismissible !== false ? 20 : 3,
+                    bottom: 3,
+                    backgroundColor: "white",
+                    borderRadius: "50%",
+                    transition: "0.2s",
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+
+          {/* Interactive Live Banner Preview */}
+          {settings.announcement_banner_text && (
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+                Live Banner Preview
+              </label>
+              <div style={{ borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
+                <div
+                  style={{
+                    padding: "8px 14px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    background:
+                      settings.announcement_banner_type === "warning"
+                        ? "linear-gradient(90deg, rgba(88, 38, 10, 0.95), rgba(146, 64, 14, 0.95))"
+                        : settings.announcement_banner_type === "alert"
+                        ? "linear-gradient(90deg, rgba(88, 15, 15, 0.95), rgba(153, 27, 27, 0.95))"
+                        : settings.announcement_banner_type === "promo"
+                        ? "linear-gradient(90deg, rgba(6, 60, 45, 0.95), rgba(4, 120, 87, 0.95))"
+                        : "linear-gradient(90deg, rgba(45, 35, 88, 0.95), rgba(67, 24, 130, 0.95))",
+                    borderBottom: `1px solid ${
+                      settings.announcement_banner_type === "warning"
+                        ? "rgba(245, 158, 11, 0.5)"
+                        : settings.announcement_banner_type === "alert"
+                        ? "rgba(239, 68, 68, 0.5)"
+                        : settings.announcement_banner_type === "promo"
+                        ? "rgba(16, 185, 129, 0.5)"
+                        : "rgba(139, 92, 246, 0.5)"
+                    }`,
+                    color:
+                      settings.announcement_banner_type === "warning"
+                        ? "#fef3c7"
+                        : settings.announcement_banner_type === "alert"
+                        ? "#fee2e2"
+                        : settings.announcement_banner_type === "promo"
+                        ? "#d1fae5"
+                        : "#e0e7ff",
+                  }}
+                >
+                  <span>{settings.announcement_banner_text}</span>
+                  {settings.announcement_banner_link_url && (
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        padding: "1px 8px",
+                        borderRadius: 4,
+                        background: "rgba(255,255,255,0.2)",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        color: "#ffffff",
+                      }}
+                    >
+                      {settings.announcement_banner_link_text || "Learn More →"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </form>

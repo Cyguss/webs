@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fulfillOrder } from "@/lib/order-fulfillment";
+import { verifyNowPaymentsWebhook } from "@/lib/nowpayments";
 import { verifyCryptomusWebhook } from "@/lib/cryptomus";
 
 export const dynamic = "force-dynamic";
@@ -15,38 +16,98 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const paymentKey = (process.env.CRYPTOMUS_PAYMENT_KEY || "").trim();
-    const sign = body.sign || req.headers.get("sign") || "";
+    const nowpaymentsSig = req.headers.get("x-nowpayments-sig") || req.headers.get("x-nowpayments-signature");
+    const ipnSecret = (process.env.NOWPAYMENTS_IPN_SECRET || "").trim();
 
-    // Signature verification (Strict fail-closed security)
-    if (process.env.NODE_ENV === "production" || paymentKey) {
-      if (!paymentKey || !sign) {
-        console.error("[Cryptomus Webhook] Missing CRYPTOMUS_PAYMENT_KEY or signature header.");
-        return NextResponse.json({ error: "Missing webhook secret or signature" }, { status: 401 });
-      }
+    // ── 1. NOWPayments Webhook Verification ──
+    if (nowpaymentsSig || ipnSecret) {
+      if (process.env.NODE_ENV === "production" || ipnSecret) {
+        if (!nowpaymentsSig) {
+          console.error("[NOWPayments IPN] Missing x-nowpayments-sig header.");
+          return NextResponse.json({ error: "Missing signature header" }, { status: 401 });
+        }
 
-      const isValid = verifyCryptomusWebhook(rawBody, sign, paymentKey);
-      if (!isValid) {
-        console.error("[Cryptomus Webhook] Signature verification failed!");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+        const isValid = verifyNowPaymentsWebhook(body, nowpaymentsSig, ipnSecret);
+        if (!isValid) {
+          console.error("[NOWPayments IPN] Signature verification failed!");
+          return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+        }
       }
     } else {
-      console.warn("[Cryptomus Webhook] CRYPTOMUS_PAYMENT_KEY not set — skipping signature verification in development sandbox only.");
+      // ── 2. Fallback / Cryptomus Webhook Verification (Backward compatibility) ──
+      const cryptomusKey = (process.env.CRYPTOMUS_PAYMENT_KEY || "").trim();
+      const cryptomusSign = body.sign || req.headers.get("sign") || "";
+
+      if (cryptomusSign && cryptomusKey) {
+        const isValid = verifyCryptomusWebhook(rawBody, cryptomusSign, cryptomusKey);
+        if (!isValid) {
+          console.error("[Crypto Webhook] Cryptomus signature verification failed!");
+          return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+        }
+      }
     }
 
-    const { order_id, status, is_final } = body;
+    // Extract Order ID & Payment Status
+    const orderId = body.order_id || body.orderId;
+    const paymentStatus = (body.payment_status || body.status || "").toLowerCase();
+    const paymentId = body.payment_id || body.paymentId || body.uuid || body.id;
 
-    console.log(`[Cryptomus Webhook Event] Order: ${order_id}, Status: ${status}, IsFinal: ${is_final}`);
+    console.log(`[NOWPayments IPN Event] Order: ${orderId}, Status: ${paymentStatus}, PaymentId: ${paymentId}`);
 
-    // Cryptomus statuses: "paid" | "paid_over" mean order is fully funded
-    if (order_id && (status === "paid" || status === "paid_over")) {
-      const fulfillRes = await fulfillOrder(order_id);
-      console.log(`[Cryptomus Webhook] Fulfillment result for ${order_id}:`, fulfillRes.success);
+    if (!orderId) {
+      return NextResponse.json({ error: "Missing order_id in webhook payload" }, { status: 400 });
+    }
+
+    // ── Order Paid & Confirmed: Trigger Atomic Fulfillment ──
+    // NOWPayments: "finished" or "confirmed" means blockchain transfer confirmed & received
+    const isCompleted =
+      paymentStatus === "finished" ||
+      paymentStatus === "confirmed" ||
+      paymentStatus === "paid" ||
+      paymentStatus === "paid_over";
+
+    if (isCompleted) {
+      const fulfillRes = await fulfillOrder(orderId);
+      console.log(`[NOWPayments IPN] Fulfillment result for order ${orderId}:`, fulfillRes.success);
+    }
+
+    // ── Payment Refund / Reversal: Trigger Atomic Reversal ──
+    const isRefund =
+      paymentStatus === "refunded" ||
+      paymentStatus === "refund_paid" ||
+      paymentStatus === "refund_process" ||
+      body.type === "refund";
+
+    if (isRefund) {
+      const { handlePaymentReversal } = await import("@/lib/payment-reversal");
+      const eventId = String(body.payment_id || body.uuid || `nowpay_${orderId}_${paymentStatus}`);
+      console.log(`[NOWPayments IPN] Processing reversal for order ${orderId}, status: ${paymentStatus}`);
+
+      await handlePaymentReversal({
+        provider: "nowpayments",
+        eventId,
+        eventType: `nowpayments.${paymentStatus || "refund"}`,
+        reversalType: "refund",
+        orderId,
+        providerPaymentId: paymentId ? String(paymentId) : undefined,
+        amount: body.price_amount ? parseFloat(body.price_amount) : undefined,
+        currency: (body.price_currency || "USD").toUpperCase(),
+        reason: `NOWPayments refund status: ${paymentStatus}`,
+      });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("[Cryptomus Webhook Error]:", err);
+    console.error("[NOWPayments Webhook Error]:", err);
     return NextResponse.json({ error: err.message || "Webhook processing failed" }, { status: 500 });
   }
+}
+
+// Allow GET for webhook health checks
+export async function GET() {
+  return NextResponse.json({
+    status: "active",
+    gateway: "NOWPayments",
+    timestamp: new Date().toISOString(),
+  });
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   TrendingUp,
   ShoppingCart,
@@ -33,13 +34,18 @@ interface DashboardData {
   shop: any;
   stats: any;
   recentOrders: any[];
+  totalOrdersCount: number;
   balanceData: any;
   totalKeysAvailable: number;
   approvalStatus: string | null;
 }
 
-export default function DashboardOverviewClient() {
+function DashboardOverviewInner() {
   const toast = useToast();
+  const searchParams = useSearchParams();
+  const shopId = searchParams.get("shopId");
+  const querySuffix = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,12 +60,17 @@ export default function DashboardOverviewClient() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [showPendingTooltip, setShowPendingTooltip] = useState(false);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
+      const querySuffix = shopId ? `?shopId=${encodeURIComponent(shopId)}` : "";
+      const ordersSuffix = shopId ? `?limit=8&shopId=${encodeURIComponent(shopId)}` : "?limit=8";
+      const analyticsSuffix = shopId ? `?type=keys&shopId=${encodeURIComponent(shopId)}` : "?type=keys";
+
       const [storeRes, ordersRes, balanceRes] = await Promise.all([
-        fetch("/api/storefront"),
-        fetch("/api/orders?limit=8"),
-        fetch("/api/earnings/balance"),
+        fetch(`/api/storefront${querySuffix}`),
+        fetch(`/api/orders${ordersSuffix}`),
+        fetch(`/api/earnings/balance${querySuffix}`),
       ]);
 
       const storeData = await storeRes.json();
@@ -75,7 +86,7 @@ export default function DashboardOverviewClient() {
       // Count keys in stock via analytics
       let keysCount = 0;
       try {
-        const analyticsRes = await fetch("/api/analytics?type=keys");
+        const analyticsRes = await fetch(`/api/analytics${analyticsSuffix}`);
         if (analyticsRes.ok) {
           const analyticsData = await analyticsRes.json();
           keysCount = analyticsData.keysInStock || 0;
@@ -96,11 +107,11 @@ export default function DashboardOverviewClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [shopId]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   async function handleRequestApproval() {
     if (!data?.shop) return;
@@ -255,7 +266,8 @@ export default function DashboardOverviewClient() {
   const availableBalance = parseFloat(data?.balanceData?.availableBalance ?? "0");
   const pendingBalance = parseFloat(data?.balanceData?.pendingBalance ?? "0");
   const totalEarned = parseFloat(data?.balanceData?.totalEarned ?? "0");
-  const netEarnings = totalEarned * 0.95;
+  const feePercent = (data as any)?.platformFeePercent ?? 5.0;
+  const netEarnings = totalEarned * (1 - feePercent / 100);
   const totalOrdersCount = (data as any)?.totalOrdersCount ?? data?.recentOrders?.length ?? 0;
   const recentOrders = data?.recentOrders || [];
   const approvalStatus = data?.approvalStatus;
@@ -370,7 +382,7 @@ export default function DashboardOverviewClient() {
               <ExternalLink size={14} /> Preview Store
             </Link>
 
-            {!approvalStatus && (
+            {(!approvalStatus || approvalStatus === "rejected") && (
               <button
                 onClick={handleRequestApproval}
                 disabled={requestingApproval}
@@ -378,7 +390,7 @@ export default function DashboardOverviewClient() {
                 style={{ padding: "9px 20px", fontSize: 13, flexShrink: 0, gap: 6 }}
               >
                 {requestingApproval ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                <span>Request Approval</span>
+                <span>{approvalStatus === "rejected" ? "Resubmit Request" : "Request Approval"}</span>
               </button>
             )}
           </div>
@@ -647,7 +659,7 @@ export default function DashboardOverviewClient() {
             <span style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
               {pendingBalance > 0 ? "Pending funds clear automatically" : "Ready for payout"}
             </span>
-            <Link href="/dashboard/earnings" style={{ fontSize: 12, color: "var(--color-accent)", fontWeight: 600, textDecoration: "none" }}>
+            <Link href={`/dashboard/earnings${querySuffix}`} style={{ fontSize: 12, color: "var(--color-accent)", fontWeight: 600, textDecoration: "none" }}>
               Withdraw &rarr;
             </Link>
           </div>
@@ -668,7 +680,7 @@ export default function DashboardOverviewClient() {
             </div>
           </div>
           <div style={{ marginTop: 14, fontSize: 12, color: totalEarned > 0 ? "var(--color-success)" : "var(--color-muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
-            <CheckCircle2 size={13} /> {totalEarned > 0 ? `Gross sales: $${totalEarned.toFixed(2)} • 5% fee deducted` : "Flat 5% platform fee on sales • No monthly fees"}
+            <CheckCircle2 size={13} /> {totalEarned > 0 ? `Gross sales: $${totalEarned.toFixed(2)} • ${feePercent}% fee deducted` : `Flat ${feePercent}% platform fee on sales • No monthly fees`}
           </div>
         </div>
 
@@ -694,7 +706,7 @@ export default function DashboardOverviewClient() {
 
       {/* ─── QUICK SHORTCUTS ──────────────────────────────────────────────── */}
       <div className="stat-grid-3">
-        <Link href="/dashboard/products/new" className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
+        <Link href={`/dashboard/products/new${querySuffix}`} className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
           <div style={{ width: 40, height: 40, borderRadius: "var(--radius-sm)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", color: "var(--color-foreground)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Plus size={20} />
           </div>
@@ -704,7 +716,7 @@ export default function DashboardOverviewClient() {
           </div>
         </Link>
 
-        <Link href="/dashboard/coupons" className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
+        <Link href={`/dashboard/coupons${querySuffix}`} className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
           <div style={{ width: 40, height: 40, borderRadius: "var(--radius-sm)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", color: "var(--color-foreground)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Tag size={20} />
           </div>
@@ -714,7 +726,7 @@ export default function DashboardOverviewClient() {
           </div>
         </Link>
 
-        <Link href="/dashboard/earnings" className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
+        <Link href={`/dashboard/earnings${querySuffix}`} className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
           <div style={{ width: 40, height: 40, borderRadius: "var(--radius-sm)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", color: "var(--color-foreground)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Wallet size={20} />
           </div>
@@ -724,7 +736,7 @@ export default function DashboardOverviewClient() {
           </div>
         </Link>
 
-        <Link href="/dashboard/storefront" className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
+        <Link href={`/dashboard/storefront${querySuffix}`} className="card card-hover" style={{ padding: 18, display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
           <div style={{ width: 40, height: 40, borderRadius: "var(--radius-sm)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", color: "var(--color-foreground)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Palette size={20} />
           </div>
@@ -750,7 +762,7 @@ export default function DashboardOverviewClient() {
             <h2 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: 0 }}>Recent Orders</h2>
             <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>Latest customer purchases</p>
           </div>
-          <Link href="/dashboard/orders" className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, gap: 6 }}>
+          <Link href={`/dashboard/orders${querySuffix}`} className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, gap: 6 }}>
             <span>View All</span>
             <ArrowUpRight size={13} />
           </Link>
@@ -834,5 +846,13 @@ export default function DashboardOverviewClient() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function DashboardOverviewClient() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardOverviewInner />
+    </Suspense>
   );
 }

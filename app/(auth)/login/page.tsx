@@ -413,6 +413,7 @@ function LoginForm() {
                 setShowTwoFactor(false);
                 setError("");
                 setTotpCode("");
+                router.replace("/login");
               }}
               style={{ width: "100%", fontSize: 13 }}
             >

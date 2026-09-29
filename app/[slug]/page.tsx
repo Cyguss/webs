@@ -10,6 +10,7 @@ import {
   getDiscordInfo as getDiscordServerInfo,
   getTelegramInfo,
   getTrustpilotInfo,
+  parseDiscordInput,
 } from "@/lib/social";
 import {
   Key,
@@ -25,10 +26,14 @@ import {
   Activity,
   Radio,
   Share2,
+  Mail,
 } from "lucide-react";
 import { StorefrontProductsCatalog } from "@/components/storefront-products-catalog";
 import { StorefrontSidebarRecovery } from "@/components/storefront-sidebar-recovery";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { StorefrontSupportChannels } from "@/components/storefront-support-channels";
+import { StorefrontTosModal } from "@/components/storefront-tos-modal";
+import { resolveStorefrontFont } from "@/lib/fonts";
+import { GlobalAnnouncementBanner } from "@/components/global-announcement-banner";
 
 function DiscordIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -176,21 +181,51 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
   const productsWithStock = await Promise.all(
     shopProducts.map(async (p: any) => {
       let stock = 0;
+      const variantStocks: Record<string, number> = {};
+
       if (p.type === "key") {
-        const res = await db
-          .select({ count: count() })
+        const unusedKeys = await db
+          .select({
+            id: inventoryKeys.id,
+            duration: inventoryKeys.duration,
+            variantId: inventoryKeys.variantId,
+          })
           .from(inventoryKeys)
           .where(and(eq(inventoryKeys.productId, p.id), eq(inventoryKeys.isUsed, false as any)));
-        stock = res[0]?.count || 0;
+
+        stock = unusedKeys.length;
+        for (const k of unusedKeys) {
+          if (k.variantId) variantStocks[k.variantId] = (variantStocks[k.variantId] || 0) + 1;
+          if (k.duration) variantStocks[k.duration] = (variantStocks[k.duration] || 0) + 1;
+        }
       } else {
         stock = p.isUnlimitedStock ? 9999 : p.stockLimit || 0;
       }
-      return { ...p, stock };
+      return { ...p, stock, variantStocks };
     })
   );
 
-  const bg = "var(--color-background)";
-  const accent = "rgb(55, 44, 102)";
+  // Luminance calculation for intelligent fallback colors
+  const bgRaw = (shop.backgroundColor || "").trim();
+  const hasCustomBg = Boolean(bgRaw && bgRaw !== "");
+  
+  let isLightBg = false;
+  if (bgRaw.startsWith("#") && bgRaw.length >= 7) {
+    const c = bgRaw.replace("#", "");
+    const r = parseInt(c.substring(0, 2), 16) || 0;
+    const g = parseInt(c.substring(2, 4), 16) || 0;
+    const b = parseInt(c.substring(4, 6), 16) || 0;
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    isLightBg = lum > 0.55;
+  }
+
+  const storefrontBg = shop.backgroundColor || "var(--color-background)";
+  const storefrontAccent = shop.accentColor || "rgb(55, 44, 102)";
+  const storefrontSurface = shop.cardColor || (hasCustomBg ? (isLightBg ? "#ffffff" : "#11131a") : "var(--color-surface)");
+  const storefrontSurface2 = hasCustomBg ? (isLightBg ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)") : "var(--color-surface-2)";
+  const storefrontBorder = shop.borderColor || (hasCustomBg ? (isLightBg ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)") : "var(--color-border)");
+  const storefrontTextColor = shop.textColor || (hasCustomBg ? (isLightBg ? "#111827" : "#f1f5f9") : "var(--color-foreground)");
+  const storefrontMutedColor = shop.mutedTextColor || (hasCustomBg ? (isLightBg ? "rgba(17,24,39,0.65)" : "rgba(241,245,249,0.6)") : "var(--color-muted-foreground)");
 
   const { getPlatformConfig } = await import("@/lib/platform-settings");
   const platformConfig = await getPlatformConfig();
@@ -204,46 +239,59 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
     }
   }
 
+  const fontMeta = resolveStorefrontFont(shop.fontStyle, shop.customFontUrl);
+
   return (
     <div
       className="page-transition"
       style={{
         minHeight: "100vh",
-        background: "var(--color-background)",
-        color: "var(--color-foreground)",
-        fontFamily: "var(--font-mono, monospace)",
+        display: "flex",
+        flexDirection: "column",
+        background: storefrontBg,
+        color: storefrontTextColor,
+        fontFamily: fontMeta.fontFamily,
         position: "relative",
-      }}
+        "--color-background": storefrontBg,
+        "--color-surface": storefrontSurface,
+        "--color-surface-2": storefrontSurface2,
+        "--color-border": storefrontBorder,
+        "--color-foreground": storefrontTextColor,
+        "--color-muted-foreground": storefrontMutedColor,
+        "--color-primary": storefrontAccent,
+        "--color-primary-light": storefrontAccent,
+        "--color-primary-glow": `${storefrontAccent}40`,
+        "--input-bg": storefrontSurface2,
+      } as React.CSSProperties}
     >
-      {/* ─── Platform Global Announcement Banner ─── */}
-      {platformConfig.announcement_banner_active && platformConfig.announcement_banner_text && (
-        <div
-          style={{
-            background: "rgba(55, 44, 102, 0.45)",
-            borderBottom: "1px solid rgba(139, 92, 246, 0.35)",
-            padding: "7px 20px",
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#c4b5fd",
-            letterSpacing: "0.06em",
-            zIndex: 101,
-          }}
-        >
-          {platformConfig.announcement_banner_text}
-        </div>
+      {/* Dynamic Preset or Custom Google Font */}
+      {fontMeta.stylesheetUrl && (
+        <link rel="stylesheet" href={fontMeta.stylesheetUrl} />
       )}
+      {/* ─── Platform Global Announcement Banner ─── */}
+      <GlobalAnnouncementBanner
+        config={{
+          active: platformConfig.announcement_banner_active,
+          text: platformConfig.announcement_banner_text,
+          type: platformConfig.announcement_banner_type,
+          target: platformConfig.announcement_banner_target,
+          linkUrl: platformConfig.announcement_banner_link_url,
+          linkText: platformConfig.announcement_banner_link_text,
+          dismissible: platformConfig.announcement_banner_dismissible,
+        }}
+        currentLocation="storefront"
+      />
 
-      {/* ─── Top Tactical HUD Command Bar (Black & White with rgb(55, 44, 102) accent) ─── */}
+      {/* ─── Top Tactical HUD Command Bar ─── */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 90,
-          background: "rgba(4, 4, 6, 0.94)",
+          background: storefrontSurface,
           backdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.9)",
+          borderBottom: `1px solid ${storefrontBorder}`,
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
         }}
       >
         <div
@@ -267,7 +315,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 alignItems: "center",
                 gap: 8,
                 textDecoration: "none",
-                color: "#ffffff",
+                color: storefrontTextColor,
               }}
             >
               <div
@@ -275,27 +323,27 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   width: 30,
                   height: 30,
                   borderRadius: 6,
-                  background: "#08080c",
-                  border: "1px solid rgba(139, 92, 246, 0.4)",
+                  background: storefrontSurface2,
+                  border: `1px solid ${storefrontBorder}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#ffffff",
-                  boxShadow: "0 0 10px rgba(55, 44, 102, 0.5)",
+                  color: storefrontAccent,
+                  boxShadow: `0 0 10px ${storefrontAccent}40`,
                 }}
               >
                 {shop.logoUrl ? (
                   <img src={shop.logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 5 }} />
                 ) : (
-                  <ShoppingBag size={15} color="#c4b5fd" />
+                  <ShoppingBag size={15} color={storefrontAccent} />
                 )}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.04em", color: "#ffffff" }}>
+                <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.04em", color: storefrontTextColor }}>
                   {shop.name}
                 </span>
-                <span style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.45)" }}>
+                <span style={{ fontSize: 10, color: storefrontMutedColor }}>
                   powered by krypt.market
                 </span>
               </div>
@@ -313,23 +361,20 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 gap: 6,
                 padding: "6px 14px",
                 borderRadius: 6,
-                background: "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(75, 60, 138) 100%)",
-                border: "1px solid rgba(167, 139, 250, 0.4)",
+                background: `linear-gradient(135deg, ${storefrontAccent} 0%, ${storefrontAccent} 100%)`,
+                border: `1px solid ${storefrontAccent}88`,
                 color: "#ffffff",
                 textDecoration: "none",
                 fontSize: 11,
                 fontWeight: 800,
                 letterSpacing: "0.04em",
-                boxShadow: "0 0 14px rgba(55, 44, 102, 0.5)",
+                boxShadow: `0 0 14px ${storefrontAccent}50`,
                 transition: "all 0.15s ease",
               }}
             >
               <Key size={13} />
               <span>Find My Order</span>
             </Link>
-
-            {/* Theme Toggle */}
-            <ThemeToggle />
 
             {/* Hub root link */}
             <Link
@@ -340,9 +385,9 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 gap: 5,
                 padding: "6px 12px",
                 borderRadius: 6,
-                background: "rgba(255, 255, 255, 0.04)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "rgba(255, 255, 255, 0.8)",
+                background: storefrontSurface2,
+                border: `1px solid ${storefrontBorder}`,
+                color: storefrontTextColor,
                 textDecoration: "none",
                 fontSize: 11,
                 fontWeight: 700,
@@ -356,14 +401,13 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
 
       {/* ─── Main 2-Column Command Center Grid Layout ─── */}
       <div
+        className="storefront-layout-grid"
         style={{
+          flex: 1,
+          width: "100%",
           maxWidth: 1380,
           margin: "0 auto",
           padding: "24px 20px 60px",
-          display: "grid",
-          gridTemplateColumns: "330px 1fr",
-          gap: 24,
-          alignItems: "start",
         }}
       >
         {/* ─── LEFT COLUMN: Tactical Merchant Node Panel (Sticky HUD) ─── */}
@@ -379,20 +423,20 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
           {/* Node Identity Card */}
           <div
             style={{
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.45)",
+              background: storefrontSurface,
+              border: `1px solid ${storefrontBorder}`,
               borderRadius: 14,
               padding: 20,
               position: "relative",
               overflow: "hidden",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
             }}
           >
             {/* Cyber Corner HUD Notches */}
-            <div style={{ position: "absolute", top: 6, left: 6, width: 8, height: 8, borderTop: "2px solid rgba(139, 92, 246, 0.6)", borderLeft: "2px solid rgba(139, 92, 246, 0.6)" }} />
-            <div style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderTop: "2px solid rgba(139, 92, 246, 0.6)", borderRight: "2px solid rgba(139, 92, 246, 0.6)" }} />
-            <div style={{ position: "absolute", bottom: 6, left: 6, width: 8, height: 8, borderBottom: "2px solid rgba(139, 92, 246, 0.6)", borderLeft: "2px solid rgba(139, 92, 246, 0.6)" }} />
-            <div style={{ position: "absolute", bottom: 6, right: 6, width: 8, height: 8, borderBottom: "2px solid rgba(139, 92, 246, 0.6)", borderRight: "2px solid rgba(139, 92, 246, 0.6)" }} />
+            <div style={{ position: "absolute", top: 6, left: 6, width: 8, height: 8, borderTop: `2px solid ${storefrontAccent}`, borderLeft: `2px solid ${storefrontAccent}`, opacity: 0.8 }} />
+            <div style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderTop: `2px solid ${storefrontAccent}`, borderRight: `2px solid ${storefrontAccent}`, opacity: 0.8 }} />
+            <div style={{ position: "absolute", bottom: 6, left: 6, width: 8, height: 8, borderBottom: `2px solid ${storefrontAccent}`, borderLeft: `2px solid ${storefrontAccent}`, opacity: 0.8 }} />
+            <div style={{ position: "absolute", bottom: 6, right: 6, width: 8, height: 8, borderBottom: `2px solid ${storefrontAccent}`, borderRight: `2px solid ${storefrontAccent}`, opacity: 0.8 }} />
 
             {/* Merchant Avatar & Main Node Header */}
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
@@ -401,16 +445,16 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                   width: 56,
                   height: 56,
                   borderRadius: 10,
-                  background: "#08080c",
-                  border: "1px solid rgba(139, 92, 246, 0.45)",
+                  background: storefrontSurface2,
+                  border: `1px solid ${storefrontBorder}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 22,
                   fontWeight: 900,
-                  color: "#ffffff",
+                  color: storefrontTextColor,
                   flexShrink: 0,
-                  boxShadow: "0 0 16px rgba(55, 44, 102, 0.5)",
+                  boxShadow: `0 0 16px ${storefrontAccent}40`,
                   overflow: "hidden",
                 }}
               >
@@ -422,7 +466,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
               </div>
 
               <div>
-                <h1 style={{ fontSize: 17, fontWeight: 900, color: "#ffffff", margin: 0, letterSpacing: "0.02em" }}>
+                <h1 style={{ fontSize: 17, fontWeight: 900, color: storefrontTextColor, margin: 0, letterSpacing: "0.02em" }}>
                   {shop.name}
                 </h1>
               </div>
@@ -432,7 +476,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
             <p
               style={{
                 fontSize: 12,
-                color: "rgba(255, 255, 255, 0.7)",
+                color: storefrontMutedColor,
                 lineHeight: 1.5,
                 margin: "0 0 16px 0",
               }}
@@ -440,85 +484,68 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
               {shop.description || "Automated digital license dispatch node. Instant peer-to-peer delivery."}
             </p>
 
-            {/* 4-Cell Telemetry Matrix */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-                paddingTop: 12,
-                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Delivery</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Instant</div>
-              </div>
-
-              <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Products</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#c4b5fd", marginTop: 2 }}>{shopProducts.length} Available</div>
-              </div>
-
-              <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Security</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>Encrypted</div>
-              </div>
-
-              <div style={{ padding: "8px 10px", background: "rgba(255, 255, 255, 0.02)", borderRadius: 6, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <div style={{ fontSize: 9, color: "rgba(255, 255, 255, 0.4)", textTransform: "uppercase" }}>Rating</div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffffff", marginTop: 2 }}>5.0 ★</div>
-              </div>
-            </div>
+            {/* Merchant Support Channels (Replaces the 4-Cell Telemetry Matrix) */}
+            <StorefrontSupportChannels
+              supportEmail={shop.supportEmail}
+              discordUrl={shop.discordUrl}
+              telegramUrl={shop.telegramUrl}
+              contactInfo={shop.contactInfo}
+              discordPresenceCount={discordDetails?.presenceCount}
+              accentColor={storefrontAccent}
+            />
           </div>
 
           {/* Embedded Instant Key Recovery Widget */}
-          <StorefrontSidebarRecovery shopSlug={shop.slug} shopName={shop.name} accentColor={accent} />
+          <StorefrontSidebarRecovery shopSlug={shop.slug} shopName={shop.name} accentColor={storefrontAccent} />
 
-          {/* Socials & Community */}
+          {/* Socials & Community Channels */}
           {(shop.discordUrl || shop.telegramUrl || shop.youtubeUrl || shop.trustpilotUrl) && (
             <div
               style={{
-                background: "rgba(8, 8, 12, 0.95)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                background: storefrontSurface,
+                border: `1px solid ${storefrontBorder}`,
                 borderRadius: 12,
                 padding: 14,
+                boxShadow: "0 6px 20px rgba(0, 0, 0, 0.05)",
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255, 255, 255, 0.6)", marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: storefrontMutedColor, marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 Community & Links
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {shop.discordUrl && (
-                  <a
-                    href={shop.discordUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 6,
-                      background: "rgba(55, 44, 102, 0.2)",
-                      border: "1px solid rgba(139, 92, 246, 0.3)",
-                      color: "#ffffff",
-                      textDecoration: "none",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <DiscordIcon size={14} color="#a78bfa" />
-                      <span>Discord Server</span>
-                    </div>
-                    <span style={{ fontSize: 9.5, color: "#c4b5fd" }}>
-                      {discordDetails?.presenceCount ? `${discordDetails.presenceCount} online` : "Join"}
-                    </span>
-                  </a>
-                )}
+                {shop.discordUrl && (() => {
+                  const dcInfo = parseDiscordInput(shop.discordUrl);
+                  return (
+                    <a
+                      href={dcInfo.href || (dcInfo.type === "server" ? `https://${shop.discordUrl.replace(/^https?:\/\//i, "")}` : `https://discord.com/users/${dcInfo.handle.replace(/^@/, "")}`)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        background: `${storefrontAccent}18`,
+                        border: `1px solid ${storefrontAccent}35`,
+                        color: storefrontTextColor,
+                        textDecoration: "none",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <DiscordIcon size={14} color={storefrontAccent} />
+                        <span>{dcInfo.label}</span>
+                      </div>
+                      <span style={{ fontSize: 9.5, color: storefrontAccent }}>
+                        {dcInfo.type === "server" ? "Join" : (dcInfo.handle || "Contact")}
+                      </span>
+                    </a>
+                  );
+                })()}
 
                 {shop.telegramUrl && (
                   <a
@@ -528,9 +555,9 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                     style={{
                       padding: "8px 12px",
                       borderRadius: 6,
-                      background: "rgba(255, 255, 255, 0.03)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      color: "#ffffff",
+                      background: storefrontSurface2,
+                      border: `1px solid ${storefrontBorder}`,
+                      color: storefrontTextColor,
                       textDecoration: "none",
                       display: "flex",
                       justifyContent: "space-between",
@@ -540,10 +567,10 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <TelegramIcon size={14} color="#ffffff" />
+                      <TelegramIcon size={14} color={storefrontTextColor} />
                       <span>Telegram</span>
                     </div>
-                    <ExternalLink size={11} color="rgba(255,255,255,0.4)" />
+                    <ExternalLink size={11} color={storefrontMutedColor} />
                   </a>
                 )}
 
@@ -555,9 +582,9 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                     style={{
                       padding: "8px 12px",
                       borderRadius: 6,
-                      background: "rgba(255, 255, 255, 0.03)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      color: "#ffffff",
+                      background: storefrontSurface2,
+                      border: `1px solid ${storefrontBorder}`,
+                      color: storefrontTextColor,
                       textDecoration: "none",
                       display: "flex",
                       justifyContent: "space-between",
@@ -582,9 +609,9 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                     style={{
                       padding: "8px 12px",
                       borderRadius: 6,
-                      background: "rgba(255, 255, 255, 0.03)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      color: "#ffffff",
+                      background: storefrontSurface2,
+                      border: `1px solid ${storefrontBorder}`,
+                      color: storefrontTextColor,
                       textDecoration: "none",
                       display: "flex",
                       justifyContent: "space-between",
@@ -594,10 +621,10 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <YoutubeIcon size={14} color="#ffffff" />
-                      <span>YouTube</span>
+                      <YoutubeIcon size={14} color="#ef4444" />
+                      <span>YouTube Channel</span>
                     </div>
-                    <ExternalLink size={11} color="rgba(255,255,255,0.4)" />
+                    <ExternalLink size={11} color={storefrontMutedColor} />
                   </a>
                 )}
               </div>
@@ -612,11 +639,11 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
             style={{
               height: 180,
               borderRadius: 14,
-              border: "1px solid rgba(55, 44, 102, 0.45)",
+              border: `1px solid ${storefrontBorder}`,
               position: "relative",
               overflow: "hidden",
-              background: "#08080c",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.8)",
+              background: storefrontSurface,
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
             }}
           >
             {shop.bannerUrl ? (
@@ -629,14 +656,13 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    filter: "brightness(0.65) contrast(1.15)",
                   }}
                 />
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(180deg, rgba(3,3,5,0.2) 0%, rgba(3,3,5,0.9) 100%)",
+                    background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%)",
                   }}
                 />
               </>
@@ -645,7 +671,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "radial-gradient(circle at 80% 20%, rgba(55, 44, 102, 0.5) 0%, rgba(3,3,5,0.95) 70%)",
+                  background: `radial-gradient(circle at 80% 20%, ${storefrontAccent}66 0%, ${storefrontSurface} 70%)`,
                 }}
               />
             )}
@@ -655,7 +681,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
               style={{
                 position: "absolute",
                 inset: 0,
-                backgroundImage: "linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 50%)",
+                backgroundImage: "linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.2) 50%)",
                 backgroundSize: "100% 4px",
                 pointerEvents: "none",
               }}
@@ -671,7 +697,7 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
                 zIndex: 2,
               }}
             >
-              <div style={{ fontSize: 22, fontWeight: 900, color: "#ffffff", letterSpacing: "0.02em" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#ffffff", letterSpacing: "0.02em", textShadow: "0 2px 10px rgba(0,0,0,0.7)" }}>
                 {shop.name}
               </div>
             </div>
@@ -682,12 +708,12 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
             products={productsWithStock as any}
             shopSlug={shop.slug}
             shopName={shop.name}
-            accentColor={accent}
-            textColor="#ffffff"
-            textMuted="rgba(255, 255, 255, 0.65)"
-            cardBg="#08080c"
-            cardBorder="rgba(55, 44, 102, 0.4)"
-            isLight={false}
+            accentColor={storefrontAccent}
+            textColor={storefrontTextColor}
+            textMuted={storefrontMutedColor}
+            cardBg={storefrontSurface}
+            cardBorder={storefrontBorder}
+            isLight={isLightBg}
             shopCategories={parsedShopCategories}
           />
         </main>
@@ -696,10 +722,13 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
       {/* ─── Storefront Footer ─── */}
       <footer
         style={{
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-          background: "rgba(4, 4, 6, 0.98)",
+          borderTop: `1px solid ${storefrontBorder}`,
+          background: storefrontSurface,
           padding: "24px 20px",
-          marginTop: 40,
+          marginTop: "auto",
+          width: "100%",
+          position: "relative",
+          zIndex: 20,
         }}
       >
         <div
@@ -712,20 +741,32 @@ export default async function StorefrontPublicPage({ params }: { params: Promise
             flexWrap: "wrap",
             gap: 14,
             fontSize: 11,
-            color: "rgba(255, 255, 255, 0.4)",
+            color: storefrontMutedColor,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ color: "#ffffff", fontWeight: 800 }}>KRYPT.MARKET</span>
+            <span style={{ color: storefrontTextColor, fontWeight: 800 }}>KRYPT.MARKET</span>
             <span>•</span>
             <span>{shop.name}</span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Link href={`/${shop.slug}/lookup`} style={{ color: "#c4b5fd", textDecoration: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <StorefrontTosModal
+              shopName={shop.name}
+              termsOfService={shop.termsOfService}
+              supportEmail={shop.supportEmail}
+              contactInfo={shop.contactInfo}
+              discordUrl={shop.discordUrl}
+              telegramUrl={shop.telegramUrl}
+              accentColor={storefrontAccent}
+            />
+            <Link href={`/${shop.slug}/lookup`} style={{ color: storefrontAccent, textDecoration: "none", fontWeight: 700 }}>
               Find My Order
             </Link>
-            <Link href="/" style={{ color: "rgba(255, 255, 255, 0.6)", textDecoration: "none" }}>
+            <Link href="/terms" style={{ color: storefrontMutedColor, textDecoration: "none" }}>
+              Platform Terms
+            </Link>
+            <Link href="/" style={{ color: storefrontMutedColor, textDecoration: "none" }}>
               Create Store
             </Link>
           </div>

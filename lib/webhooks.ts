@@ -296,9 +296,17 @@ export async function sendDiscordSaleNotification(
       timestamp: new Date().toISOString(),
     };
 
+    // Verify Discord Webhook URL safety before dispatch
+    const validation = validateDiscordWebhookUrl(shop.discordWebhookUrl);
+    if (!validation.valid) {
+      console.warn(`[Discord Notification Skipped] Invalid or unsafe webhook URL for shop ${shop.id}: ${validation.error}`);
+      return;
+    }
+
     await fetch(shop.discordWebhookUrl.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      redirect: "error", // Prevent HTTP redirect SSRF
       body: JSON.stringify({
         username: "KRYPT Sales Daemon",
         avatar_url: "https://krypt.market/logo.png",
@@ -327,6 +335,12 @@ export async function sendApprovalRequestWebhook(params: {
   if (!webhookUrl || !webhookUrl.trim()) return;
 
   try {
+    const validation = validateDiscordWebhookUrl(webhookUrl);
+    if (!validation.valid) {
+      console.warn(`[Approval Webhook Skipped] Invalid Discord approval webhook URL: ${validation.error}`);
+      return;
+    }
+
     const embed = {
       title: "📋 Storefront Node Approval Request",
       description: `Operator requested protocol verification for **${params.shopName}**`,
@@ -344,6 +358,7 @@ export async function sendApprovalRequestWebhook(params: {
     await fetch(webhookUrl.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      redirect: "error",
       body: JSON.stringify({
         username: "KRYPT Node Approvals",
         embeds: [embed],
@@ -368,6 +383,12 @@ export async function sendAdminActionWebhook(params: {
   if (!webhookUrl || !webhookUrl.trim()) return;
 
   try {
+    const validation = validateDiscordWebhookUrl(webhookUrl);
+    if (!validation.valid) {
+      console.warn(`[Admin Action Webhook Skipped] Invalid Discord approval webhook URL: ${validation.error}`);
+      return;
+    }
+
     const isApproved = params.action === "approved";
     const embed = {
       title: isApproved ? "✅ Storefront Node Approved" : "❌ Storefront Node Rejected",
@@ -385,6 +406,7 @@ export async function sendAdminActionWebhook(params: {
     await fetch(webhookUrl.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      redirect: "error",
       body: JSON.stringify({
         username: "KRYPT Audit Daemon",
         embeds: [embed],
@@ -392,6 +414,37 @@ export async function sendAdminActionWebhook(params: {
     });
   } catch (err) {
     console.warn("[Admin Action Webhook Error]", err);
+  }
+}
+
+/**
+ * Discord Webhook URL Validator
+ * Strictly validates that webhook URLs belong to genuine Discord endpoints and use HTTPS.
+ */
+export function validateDiscordWebhookUrl(urlString: string): { valid: boolean; error?: string } {
+  if (!urlString || typeof urlString !== "string") {
+    return { valid: false, error: "Discord webhook URL is required." };
+  }
+  try {
+    const url = new URL(urlString.trim());
+    if (url.protocol !== "https:") {
+      return { valid: false, error: "Discord webhook URLs must use HTTPS protocol." };
+    }
+    const hostname = url.hostname.toLowerCase();
+    if (
+      hostname !== "discord.com" &&
+      hostname !== "discordapp.com" &&
+      hostname !== "canary.discord.com" &&
+      hostname !== "ptb.discord.com"
+    ) {
+      return { valid: false, error: "Invalid Discord webhook domain. Must be discord.com or discordapp.com." };
+    }
+    if (!url.pathname.startsWith("/api/webhooks/")) {
+      return { valid: false, error: "Invalid Discord webhook path. Must start with /api/webhooks/." };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, error: "Malformed Discord webhook URL provided." };
   }
 }
 
@@ -422,9 +475,7 @@ export function validateWebhookUrl(urlString: string): { valid: boolean; error?:
       hostname.endsWith(".localhost") ||
       hostname.endsWith(".local")
     ) {
-      if (process.env.NODE_ENV === "production") {
-        return { valid: false, error: "Localhost and loopback destinations are forbidden." };
-      }
+      return { valid: false, error: "Localhost and loopback destinations are forbidden." };
     }
 
     // Block AWS / GCP / Azure / cloud metadata services and private subnets

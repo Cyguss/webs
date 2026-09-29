@@ -13,9 +13,14 @@ export interface PlatformConfig {
   cryptomus_sandbox_mode: boolean;
   announcement_banner_active: boolean;
   announcement_banner_text: string;
-  announcement_banner_type: "info" | "warning" | "alert";
+  announcement_banner_type: "info" | "warning" | "alert" | "promo";
+  announcement_banner_target: "all" | "platform" | "home" | "dashboard" | "storefronts";
+  announcement_banner_link_url: string;
+  announcement_banner_link_text: string;
+  announcement_banner_dismissible: boolean;
   block_all_admins: boolean;
   max_shops_per_user: number;
+  payout_hold_days: number;
 }
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
@@ -30,8 +35,13 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   announcement_banner_active: false,
   announcement_banner_text: "",
   announcement_banner_type: "info",
+  announcement_banner_target: "all",
+  announcement_banner_link_url: "",
+  announcement_banner_link_text: "",
+  announcement_banner_dismissible: true,
   block_all_admins: false,
   max_shops_per_user: 10,
+  payout_hold_days: 14,
 };
 
 export async function getPlatformSettingsMap(): Promise<Record<string, string>> {
@@ -63,8 +73,13 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
     announcement_banner_active: map.announcement_banner_active === "true",
     announcement_banner_text: map.announcement_banner_text || "",
     announcement_banner_type: (map.announcement_banner_type as any) || "info",
+    announcement_banner_target: (map.announcement_banner_target as any) || "all",
+    announcement_banner_link_url: map.announcement_banner_link_url || "",
+    announcement_banner_link_text: map.announcement_banner_link_text || "",
+    announcement_banner_dismissible: map.announcement_banner_dismissible !== undefined ? map.announcement_banner_dismissible === "true" : true,
     block_all_admins: map.block_all_admins === "true",
     max_shops_per_user: map.max_shops_per_user ? parseInt(map.max_shops_per_user, 10) || 10 : 10,
+    payout_hold_days: map.payout_hold_days !== undefined ? parseInt(map.payout_hold_days, 10) || 14 : DEFAULT_PLATFORM_CONFIG.payout_hold_days,
   };
 }
 
@@ -117,4 +132,12 @@ export async function getPlatformFeePercent(): Promise<number> {
   const val = await getPlatformSetting("platform_fee_percent", "5");
   const parsed = parseFloat(val);
   return isNaN(parsed) ? 5.0 : Math.max(0, Math.min(100, parsed));
+}
+
+export async function getPayoutHoldDays(): Promise<number> {
+  const envVal = process.env.PAYOUT_HOLD_DAYS;
+  const fallback = envVal ? parseInt(envVal, 10) : 14;
+  const val = await getPlatformSetting("payout_hold_days", String(isNaN(fallback) ? 14 : fallback));
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? 14 : Math.max(0, parsed);
 }

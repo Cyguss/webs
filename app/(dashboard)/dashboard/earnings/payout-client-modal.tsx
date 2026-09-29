@@ -5,13 +5,25 @@ import { useRouter } from "next/navigation";
 import { Wallet, Coins, CreditCard, ArrowRight, Loader2, CheckCircle, X, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/toast-context";
 
-export default function PayoutClientModal({ availableBalance }: { availableBalance: number }) {
+export default function PayoutClientModal({
+  availableBalance,
+  reserveBalance = 0,
+  payoutableBalance,
+}: {
+  availableBalance: number;
+  reserveBalance?: number;
+  payoutableBalance?: number;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const effectivePayoutable = payoutableBalance !== undefined 
+    ? payoutableBalance 
+    : Math.max(0, availableBalance - (reserveBalance || 0));
 
   const [method, setMethod] = useState<"crypto">("crypto");
   const [amount, setAmount] = useState("");
@@ -34,10 +46,12 @@ export default function PayoutClientModal({ availableBalance }: { availableBalan
       return;
     }
 
-    if (requestedNum > availableBalance) {
-      const msg = `Requested amount exceeds available balance ($${availableBalance.toFixed(2)}).`;
+    if (requestedNum > effectivePayoutable) {
+      const msg = reserveBalance > 0
+        ? `Cannot withdraw $${requestedNum.toFixed(2)}. $${reserveBalance.toFixed(2)} is reserved for open disputes. Max payoutable: $${effectivePayoutable.toFixed(2)}.`
+        : `Requested amount exceeds available balance ($${effectivePayoutable.toFixed(2)}).`;
       setError(msg);
-      toast.error("Insufficient Balance", msg);
+      toast.error("Insufficient Payoutable Balance", msg);
       return;
     }
 
@@ -89,7 +103,7 @@ export default function PayoutClientModal({ availableBalance }: { availableBalan
       <button
         onClick={() => setOpen(true)}
         className="btn btn-primary"
-        disabled={availableBalance < 10}
+        disabled={effectivePayoutable < 10}
         style={{ gap: 8 }}
       >
         <Wallet size={16} /> Request Payout
@@ -173,22 +187,44 @@ export default function PayoutClientModal({ availableBalance }: { availableBalan
                   <span className="badge badge-success" style={{ fontSize: 11 }}>Instant Batching</span>
                 </div>
 
+                {/* Dispute Reserve Warning if present */}
+                {reserveBalance > 0 && (
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: "var(--radius-md)",
+                      background: "rgba(245, 158, 11, 0.08)",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                      color: "#f59e0b",
+                      fontSize: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                    <div>
+                      <strong>${reserveBalance.toFixed(2)} Held in Reserve:</strong> Open customer dispute. Max currently payoutable: <strong>${effectivePayoutable.toFixed(2)}</strong>.
+                    </div>
+                  </div>
+                )}
+
                 {/* Amount input */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                     <label className="label">Amount ($ USD)</label>
                     <span
                       style={{ color: "#818cf8", cursor: "pointer", fontWeight: 600 }}
-                      onClick={() => setAmount(availableBalance.toFixed(2))}
+                      onClick={() => setAmount(effectivePayoutable.toFixed(2))}
                     >
-                      Max: ${availableBalance.toFixed(2)}
+                      Max: ${effectivePayoutable.toFixed(2)}
                     </span>
                   </div>
                   <input
                     type="number"
                     step="0.01"
                     min="10"
-                    max={availableBalance}
+                    max={effectivePayoutable}
                     className="input"
                     placeholder="100.00"
                     value={amount}

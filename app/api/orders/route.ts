@@ -17,13 +17,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userShop = await getActiveMerchantShop(session.user.id);
+    const { searchParams } = new URL(req.url);
+    const shopId = searchParams.get("shopId");
+    const userShop = await getActiveMerchantShop(session.user.id, shopId);
 
     if (!userShop) {
-      return NextResponse.json({ orders: [] });
+      return NextResponse.json({ orders: [], totalCount: 0 });
     }
 
-    const { searchParams } = new URL(req.url);
     const limitParam = parseInt(searchParams.get("limit") || "20", 10);
     const limit = isNaN(limitParam) ? 20 : Math.min(limitParam, 100);
 

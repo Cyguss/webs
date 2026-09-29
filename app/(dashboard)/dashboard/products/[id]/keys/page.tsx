@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, use, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -29,8 +30,17 @@ import { DURATION_OPTIONS, getKeyDurationDisplay, KeyDurationType } from "@/lib/
 export default function ProductKeysPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: productId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlShopId = searchParams.get("shopId");
+  const [activeShopId, setActiveShopId] = useState<string | null>(urlShopId);
+  const querySuffix = activeShopId ? `?shopId=${encodeURIComponent(activeShopId)}` : "";
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<any>(null);
@@ -67,9 +77,13 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
 
   async function loadData() {
     try {
-      const res = await fetch(`/api/products/${productId}/keys`);
+      const query = activeShopId ? `?shopId=${encodeURIComponent(activeShopId)}` : "";
+      const res = await fetch(`/api/products/${productId}/keys${query}`);
       if (!res.ok) throw new Error("Failed to load product keys");
       const data = await res.json();
+      if (data.product?.shopId && !activeShopId) {
+        setActiveShopId(data.product.shopId);
+      }
       setProduct(data.product);
       setKeys(data.keys || []);
 
@@ -208,7 +222,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
         .map((k) => k.trim())
         .filter((k) => k.length > 0);
 
-      const res = await fetch(`/api/products/${productId}/keys`, {
+      const res = await fetch(`/api/products/${productId}/keys${querySuffix}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -216,6 +230,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
           duration: selectedDuration || product?.duration || "lifetime",
           durationDays: selectedCustomDays || product?.durationDays || 0,
           variantId: selectedVariantId || null,
+          shopId: activeShopId || undefined,
         }),
       });
 
@@ -238,7 +253,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
 
     setAddingKey(true);
     try {
-      const res = await fetch(`/api/products/${productId}/keys`, {
+      const res = await fetch(`/api/products/${productId}/keys${querySuffix}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -246,6 +261,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
           duration: selectedDuration || product?.duration || "lifetime",
           durationDays: selectedCustomDays || product?.durationDays || 0,
           variantId: selectedVariantId || null,
+          shopId: activeShopId || undefined,
         }),
       });
 
@@ -290,7 +306,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
         const dur = matchV?.duration || product?.duration || "lifetime";
         const days = matchV?.durationDays ?? (product?.durationDays || 0);
 
-        const res = await fetch(`/api/products/${productId}/keys`, {
+        const res = await fetch(`/api/products/${productId}/keys${querySuffix}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -298,6 +314,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
             duration: dur,
             durationDays: days,
             variantId: matchV?.id || null,
+            shopId: activeShopId || undefined,
           }),
         });
 
@@ -322,7 +339,8 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
     if (!confirm("Are you sure you want to remove this license key?")) return;
     setDeletingId(keyId);
     try {
-      const res = await fetch(`/api/products/${productId}/keys?keyId=${keyId}`, {
+      const delQuery = activeShopId ? `&shopId=${encodeURIComponent(activeShopId)}` : "";
+      const res = await fetch(`/api/products/${productId}/keys?keyId=${keyId}${delQuery}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete key");
@@ -393,7 +411,7 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <Link
-          href={`/dashboard/products/${productId}/edit`}
+          href={`/dashboard/products/${productId}/edit${querySuffix}`}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -428,20 +446,6 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
               <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--color-foreground)", letterSpacing: "-0.02em", margin: 0 }}>
                 {product?.title || "Product"} — Key Vault & Inventory
               </h1>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  fontFamily: "var(--font-mono, monospace)",
-                  padding: "3px 8px",
-                  borderRadius: 6,
-                  background: "rgba(55, 44, 102, 0.4)",
-                  border: "1px solid rgba(139, 92, 246, 0.45)",
-                  color: "#c4b5fd",
-                }}
-              >
-                ${product?.price || "0.00"} USD
-              </span>
               {productVariants.length > 0 ? (
                 <span
                   style={{
@@ -873,262 +877,269 @@ export default function ProductKeysPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Bulk Key Importer Modal */}
-      {showBulkModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: 20,
-          }}
-        >
+      {showBulkModal &&
+        mounted &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="card"
             style={{
-              maxWidth: 640,
-              width: "100%",
-              padding: 26,
-              border: "1px solid rgba(139, 92, 246, 0.35)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.78)",
+              backdropFilter: "blur(8px)",
               display: "flex",
-              flexDirection: "column",
-              gap: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 99999,
+              padding: 20,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowBulkModal(false);
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    background: "rgba(55, 44, 102, 0.4)",
-                    border: "1px solid rgba(139, 92, 246, 0.45)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#c4b5fd",
-                  }}
-                >
-                  <FileText size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: "var(--color-foreground)" }}>
-                    Bulk License Key Importer (500+ Keys)
-                  </h3>
-                  <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
-                    Paste a list of keys or drag & drop a .txt/.csv file. Whitespace and duplicates are automatically cleaned.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowBulkModal(false)}
-                className="btn btn-ghost"
-                style={{ padding: 6, borderRadius: "50%" }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Mode selector if product has multiple duration variants */}
-            {productVariants.length > 0 && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setBulkModalMode("single")}
-                  className={bulkModalMode === "single" ? "btn btn-primary" : "btn btn-secondary"}
-                  style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
-                >
-                  Single Category Paste
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkModalMode("multi")}
-                  className={bulkModalMode === "multi" ? "btn btn-primary" : "btn btn-secondary"}
-                  style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
-                >
-                  Multi-Category Batch Paste ({productVariants.length} Tiers)
-                </button>
-              </div>
-            )}
-
-            {/* Single Category Paste */}
-            {(!productVariants.length || bulkModalMode === "single") && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {/* Target Duration Category Selector */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "var(--color-surface)", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)" }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    Target Duration Category / Variant:
-                  </label>
-                  <select
-                    value={selectedDuration}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSelectedDuration(val);
-                      const matchV = productVariants.find((v) => v.duration === val || v.id === val);
-                      if (matchV) {
-                        setSelectedCustomDays(matchV.durationDays || 0);
-                        setSelectedVariantId(matchV.id || "");
-                      } else {
-                        const opt = DURATION_OPTIONS.find((o) => o.id === val);
-                        setSelectedCustomDays(opt?.days || 0);
-                        setSelectedVariantId("");
-                      }
-                    }}
-                    className="input"
-                    style={{ fontSize: 13, height: 38, fontWeight: 700 }}
-                  >
-                    {productVariants.length > 0
-                      ? productVariants.map((v) => (
-                          <option key={v.id || v.duration} value={v.duration}>
-                            {v.label || v.duration.toUpperCase()} ({v.duration.toUpperCase()} Access Tier)
-                          </option>
-                        ))
-                      : DURATION_OPTIONS.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </option>
-                        ))}
-                  </select>
-                  <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
-                    All keys pasted below will be assigned to this specific duration tier.
-                  </span>
-                </div>
-
-                {/* Keys Textarea */}
-                <div>
-                  <textarea
-                    rows={8}
-                    value={bulkInput}
-                    onChange={(e) => setBulkInput(e.target.value)}
-                    placeholder="Paste keys here (one key per line)...&#10;KEY-AAA-111&#10;KEY-BBB-222&#10;KEY-CCC-333"
-                    className="input"
+            <div
+              className="card modal-fly-in"
+              style={{
+                maxWidth: 640,
+                width: "100%",
+                padding: 26,
+                border: "1px solid rgba(139, 92, 246, 0.35)",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.85)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
                     style={{
-                      width: "100%",
-                      fontFamily: "var(--font-mono, monospace)",
-                      fontSize: 12,
-                      resize: "vertical",
-                      minHeight: 160,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: "rgba(55, 44, 102, 0.4)",
+                      border: "1px solid rgba(139, 92, 246, 0.45)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#c4b5fd",
                     }}
-                  />
+                  >
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: "var(--color-foreground)" }}>
+                      Bulk License Key Importer (500+ Keys)
+                    </h3>
+                    <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", margin: "2px 0 0" }}>
+                      Paste a list of keys or drag & drop a .txt/.csv file. Whitespace and duplicates are automatically cleaned.
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="btn btn-ghost"
+                  style={{ padding: 6, borderRadius: "50%" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-                {/* Live Stats */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "var(--color-surface)", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-border)", fontFamily: "var(--font-mono, monospace)" }}>
-                  <div style={{ display: "flex", gap: 14 }}>
-                    <span>
-                      Valid Unique: <strong style={{ color: "#34d399" }}>{bulkStats.validKeys.length}</strong>
+              {/* Mode selector if product has multiple duration variants */}
+              {productVariants.length > 0 && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setBulkModalMode("single")}
+                    className={bulkModalMode === "single" ? "btn btn-primary" : "btn btn-secondary"}
+                    style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
+                  >
+                    Single Category Paste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkModalMode("multi")}
+                    className={bulkModalMode === "multi" ? "btn btn-primary" : "btn btn-secondary"}
+                    style={{ fontSize: 12, padding: "6px 14px", flex: 1 }}
+                  >
+                    Multi-Category Batch Paste ({productVariants.length} Tiers)
+                  </button>
+                </div>
+              )}
+
+              {/* Single Category Paste */}
+              {(!productVariants.length || bulkModalMode === "single") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Target Duration Category Selector */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "var(--color-surface)", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)" }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Target Duration Category / Variant:
+                    </label>
+                    <select
+                      value={selectedDuration}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedDuration(val);
+                        const matchV = productVariants.find((v) => v.duration === val || v.id === val);
+                        if (matchV) {
+                          setSelectedCustomDays(matchV.durationDays || 0);
+                          setSelectedVariantId(matchV.id || "");
+                        } else {
+                          const opt = DURATION_OPTIONS.find((o) => o.id === val);
+                          setSelectedCustomDays(opt?.days || 0);
+                          setSelectedVariantId("");
+                        }
+                      }}
+                      className="input"
+                      style={{ fontSize: 13, height: 38, fontWeight: 700 }}
+                    >
+                      {productVariants.length > 0
+                        ? productVariants.map((v) => (
+                            <option key={v.id || v.duration} value={v.duration}>
+                              {v.label || v.duration.toUpperCase()} ({v.duration.toUpperCase()} Access Tier)
+                            </option>
+                          ))
+                        : DURATION_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.label}
+                            </option>
+                          ))}
+                    </select>
+                    <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+                      All keys pasted below will be assigned to this specific duration tier.
                     </span>
-                    {bulkStats.duplicateCount > 0 && (
-                      <span>
-                        Duplicates Filtered: <strong style={{ color: "#f59e0b" }}>{bulkStats.duplicateCount}</strong>
-                      </span>
-                    )}
-                    {bulkStats.emptyLines > 0 && (
-                      <span style={{ color: "var(--color-muted-foreground)" }}>
-                        Empty lines: {bulkStats.emptyLines}
-                      </span>
-                    )}
                   </div>
 
-                  <span style={{ color: "var(--color-muted-foreground)" }}>
-                    Total lines: {bulkStats.totalLines}
-                  </span>
+                  {/* Keys Textarea */}
+                  <div>
+                    <textarea
+                      rows={8}
+                      value={bulkInput}
+                      onChange={(e) => setBulkInput(e.target.value)}
+                      placeholder="Paste keys here (one key per line)...&#10;KEY-AAA-111&#10;KEY-BBB-222&#10;KEY-CCC-333"
+                      className="input"
+                      style={{
+                        width: "100%",
+                        fontFamily: "var(--font-mono, monospace)",
+                        fontSize: 12,
+                        resize: "vertical",
+                        minHeight: 160,
+                      }}
+                    />
+                  </div>
+
+                  {/* Live Stats */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "var(--color-surface)", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--color-border)", fontFamily: "var(--font-mono, monospace)" }}>
+                    <div style={{ display: "flex", gap: 14 }}>
+                      <span>
+                        Valid Unique: <strong style={{ color: "#34d399" }}>{bulkStats.validKeys.length}</strong>
+                      </span>
+                      {bulkStats.duplicateCount > 0 && (
+                        <span>
+                          Duplicates Filtered: <strong style={{ color: "#f59e0b" }}>{bulkStats.duplicateCount}</strong>
+                        </span>
+                      )}
+                      {bulkStats.emptyLines > 0 && (
+                        <span style={{ color: "var(--color-muted-foreground)" }}>
+                          Empty lines: {bulkStats.emptyLines}
+                        </span>
+                      )}
+                    </div>
+
+                    <span style={{ color: "var(--color-muted-foreground)" }}>
+                      Total lines: {bulkStats.totalLines}
+                    </span>
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkModal(false)}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddBulkKeys}
+                      disabled={addingKey || bulkStats.validKeys.length === 0}
+                      className="btn btn-primary"
+                      style={{ gap: 6, fontWeight: 700 }}
+                    >
+                      {addingKey ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                      <span>Import {bulkStats.validKeys.length} Keys to {selectedDuration.toUpperCase()}</span>
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                {/* Modal Actions */}
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowBulkModal(false)}
-                    className="btn btn-ghost"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddBulkKeys}
-                    disabled={addingKey || bulkStats.validKeys.length === 0}
-                    className="btn btn-primary"
-                    style={{ gap: 6, fontWeight: 700 }}
-                  >
-                    {addingKey ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                    <span>Import {bulkStats.validKeys.length} Keys to {selectedDuration.toUpperCase()}</span>
-                  </button>
-                </div>
-              </div>
-            )}
+              {/* Multi-Category Batch Paste */}
+              {productVariants.length > 0 && bulkModalMode === "multi" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
+                    {productVariants.map((v) => {
+                      const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
+                      const currentDraft = bulkMultiCategoryInputs[v.id] || "";
+                      const countInDraft = currentDraft.split(/[\r\n,]+/).filter(Boolean).length;
 
-            {/* Multi-Category Batch Paste */}
-            {productVariants.length > 0 && bulkModalMode === "multi" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
-                  {productVariants.map((v) => {
-                    const dMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
-                    const currentDraft = bulkMultiCategoryInputs[v.id] || "";
-                    const countInDraft = currentDraft.split(/[\r\n,]+/).filter(Boolean).length;
-
-                    return (
-                      <div key={v.id} style={{ background: "var(--color-surface)", padding: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
-                              {dMeta.shortLabel}
+                      return (
+                        <div key={v.id} style={{ background: "var(--color-surface)", padding: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "rgba(55, 44, 102, 0.4)", color: "#c4b5fd", border: "1px solid rgba(139, 92, 246, 0.45)", fontFamily: "var(--font-mono, monospace)" }}>
+                                {dMeta.shortLabel}
+                              </span>
+                              <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
+                            </div>
+                            <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
+                              {countInDraft} keys in draft
                             </span>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>{v.label}</span>
                           </div>
-                          <span style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono, monospace)" }}>
-                            {countInDraft} keys in draft
-                          </span>
+                          <textarea
+                            className="input"
+                            rows={3}
+                            placeholder={`Paste serial keys for ${v.label} here (one per line)...`}
+                            value={currentDraft}
+                            onChange={(e) =>
+                              setBulkMultiCategoryInputs({
+                                ...bulkMultiCategoryInputs,
+                                [v.id]: e.target.value,
+                              })
+                            }
+                            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
+                          />
                         </div>
-                        <textarea
-                          className="input"
-                          rows={3}
-                          placeholder={`Paste serial keys for ${v.label} here (one per line)...`}
-                          value={currentDraft}
-                          onChange={(e) =>
-                            setBulkMultiCategoryInputs({
-                              ...bulkMultiCategoryInputs,
-                              [v.id]: e.target.value,
-                            })
-                          }
-                          style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingTop: 8, borderTop: "1px solid var(--color-border)" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowBulkModal(false)}
-                    className="btn btn-ghost"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddMultiCategoryBulkKeys}
-                    disabled={addingKey}
-                    className="btn btn-primary"
-                    style={{ gap: 6, fontWeight: 700 }}
-                  >
-                    {addingKey ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                    <span>Import All Categorized Keys</span>
-                  </button>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingTop: 8, borderTop: "1px solid var(--color-border)" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkModal(false)}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddMultiCategoryBulkKeys}
+                      disabled={addingKey}
+                      className="btn btn-primary"
+                      style={{ gap: 6, fontWeight: 700 }}
+                    >
+                      {addingKey ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                      <span>Import All Categorized Keys</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

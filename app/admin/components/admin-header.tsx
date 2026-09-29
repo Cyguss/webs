@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Terminal, Lock, ExternalLink, ShieldAlert } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AdminHeaderProps {
   adminData: any;
@@ -42,17 +43,17 @@ export function AdminHeader({
               width: 32,
               height: 32,
               borderRadius: "var(--radius-sm)",
-              background: adminData?.isSuperAdmin ? "#ffffff" : "#1a1c24",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
+              background: adminData?.isSuperAdmin ? "var(--color-primary, #6366f1)" : "var(--color-surface-2, rgba(125,125,125,0.1))",
+              border: "1px solid var(--color-border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: adminData?.isSuperAdmin ? "#000000" : "#ffffff",
+              color: adminData?.isSuperAdmin ? "#ffffff" : "var(--color-foreground)",
             }}
           >
             <Terminal size={17} />
           </div>
-          <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>
+          <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em", color: "var(--color-foreground)" }}>
             {adminData?.isSuperAdmin ? "ADMIN PANEL • SUPER ADMIN" : "ADMIN PANEL"}
           </span>
         </div>
@@ -139,6 +140,9 @@ export function AdminHeader({
             <span>Lock Session</span>
           </button>
         )}
+
+        {/* Theme Switcher */}
+        <ThemeToggle variant="pill" />
       </div>
     </header>
   );

@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { OrderLookupForm } from "@/components/order-lookup-form";
 import { ArrowLeft, Terminal, Cpu } from "lucide-react";
+import { GlobalAnnouncementBanner } from "@/components/global-announcement-banner";
 
 export const metadata: Metadata = {
   title: "Order Ledger Query | KRYPT MARKET",
@@ -13,13 +14,14 @@ export default function GlobalOrderLookupPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#030305",
-        color: "#ffffff",
+        background: "var(--color-background)",
+        color: "var(--color-foreground)",
         display: "flex",
         flexDirection: "column",
         position: "relative",
       }}
     >
+      <GlobalAnnouncementBanner currentLocation="platform" />
       {/* Tactical Background Grid */}
       <div
         className="krypt-grid-bg"
@@ -34,20 +36,20 @@ export default function GlobalOrderLookupPage() {
       {/* Navigation Header */}
       <header
         style={{
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: "1px solid var(--color-border)",
           padding: "14px 24px",
-          background: "rgba(8, 8, 12, 0.95)",
+          background: "var(--header-bg)",
           backdropFilter: "blur(12px)",
           position: "relative",
           zIndex: 10,
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "#ffffff", fontWeight: 800, fontSize: 16, fontFamily: "var(--font-mono, monospace)" }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(55, 44, 102, 0.4)", border: "1px solid rgba(139, 92, 246, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c4b5fd" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--color-foreground)", fontWeight: 800, fontSize: 16, fontFamily: "var(--font-mono, monospace)" }}>
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(55, 44, 102, 0.2)", border: "1px solid rgba(139, 92, 246, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary-light)" }}>
               <Terminal size={15} />
             </div>
-            <span>KRYPT<span style={{ color: "#c4b5fd" }}>.MARKET</span></span>
+            <span>KRYPT<span style={{ color: "var(--color-primary-light)" }}>.MARKET</span></span>
           </Link>
 
           <Link
@@ -55,15 +57,15 @@ export default function GlobalOrderLookupPage() {
             style={{
               fontSize: 12,
               fontFamily: "var(--font-mono, monospace)",
-              color: "rgba(255, 255, 255, 0.7)",
+              color: "var(--color-muted-foreground)",
               textDecoration: "none",
               display: "flex",
               alignItems: "center",
               gap: 6,
               padding: "6px 12px",
               borderRadius: 6,
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "var(--btn-ghost-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <ArrowLeft size={13} />
@@ -78,7 +80,7 @@ export default function GlobalOrderLookupPage() {
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", padding: "18px 24px", textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "rgba(255, 255, 255, 0.4)", position: "relative", zIndex: 10 }}>
+      <footer style={{ borderTop: "1px solid var(--color-border)", padding: "18px 24px", textAlign: "center", fontSize: 11, fontFamily: "var(--font-mono, monospace)", color: "var(--color-muted-foreground)", position: "relative", zIndex: 10 }}>
         &copy; {new Date().getFullYear()} KRYPT • Instant Key Delivery Protocol
       </footer>
     </div>

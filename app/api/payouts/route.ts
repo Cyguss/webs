@@ -32,6 +32,10 @@ export async function POST(req: Request) {
     const { amount, method, destinationAddress, cryptoCurrency } = result.data;
     const requestedAmount = amount;
 
+    // Release any mature escrow sales first
+    const { releaseMatureEscrowBalances } = await import("@/lib/escrow");
+    await releaseMatureEscrowBalances(session.user.id);
+
     // Zero withdrawal fee — platform fee is already settled from gross sales
     const feeAmount = 0;
     const amountSent = requestedAmount;
@@ -47,25 +51,40 @@ export async function POST(req: Request) {
 
       const balanceRecord = balanceRows[0];
       const currentAvailable = balanceRecord ? parseFloat(balanceRecord.availableBalance) : 0;
+      const currentReserve = balanceRecord ? parseFloat(balanceRecord.reserveBalance || "0") : 0;
 
-      if (!balanceRecord || requestedAmount > currentAvailable) {
+      if (!balanceRecord || currentAvailable <= 0) {
+        const debtMsg =
+          currentAvailable < 0
+            ? `Payouts are blocked due to an outstanding negative balance of $${Math.abs(currentAvailable).toFixed(2)}. Payouts are temporarily unavailable until the balance is cleared.`
+            : "No available funds to withdraw.";
+        throw new Error(debtMsg);
+      }
+
+      // Payoutable balance excludes any active dispute reserve held by payment providers
+      const payoutableAmount = Math.max(0, currentAvailable - currentReserve);
+
+      if (requestedAmount > payoutableAmount) {
+        if (currentReserve > 0) {
+          throw new Error(
+            `Insufficient payoutable balance. $${currentReserve.toFixed(2)} is held in dispute reserve (payoutable: $${payoutableAmount.toFixed(2)}).`
+          );
+        }
         throw new Error(`Insufficient available balance. Available: $${currentAvailable.toFixed(2)}`);
       }
 
       const newAvailable = (currentAvailable - requestedAmount).toFixed(2);
-      const newWithdrawn = (parseFloat(balanceRecord.totalWithdrawn || "0") + requestedAmount).toFixed(2);
 
-      const updateResult = await tx
+      await tx
         .update(sellerBalances)
         .set({
           availableBalance: newAvailable,
-          totalWithdrawn: newWithdrawn,
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(sellerBalances.userId, session.user.id),
-            sql`CAST(${sellerBalances.availableBalance} AS DECIMAL(10,2)) >= ${requestedAmount}`
+            sql`CAST(${sellerBalances.availableBalance} AS DECIMAL(10,2)) - CAST(COALESCE(${sellerBalances.reserveBalance}, 0) AS DECIMAL(10,2)) >= ${requestedAmount}`
           )
         );
 
@@ -95,7 +114,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       payoutId,
-      message: "Payout request submitted successfully. Processing usually takes 24-48 hours.",
+      message: "Payout request submitted successfully. It will be reviewed and processed manually by the administration.",
     });
   } catch (err: any) {
     console.error("Error creating payout request:", err);

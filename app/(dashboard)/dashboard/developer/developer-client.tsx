@@ -87,7 +87,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
 
   const fetchApiKeys = async () => {
     try {
-      const res = await fetch("/api/developer/api-keys");
+      const res = await fetch(`/api/developer/api-keys?shopId=${encodeURIComponent(shop.id)}`);
       const data = await res.json();
       if (res.ok) {
         setApiKeys(data.keys || []);
@@ -101,7 +101,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
 
   const fetchWebhooks = async () => {
     try {
-      const res = await fetch("/api/developer/webhooks");
+      const res = await fetch(`/api/developer/webhooks?shopId=${encodeURIComponent(shop.id)}`);
       const data = await res.json();
       if (res.ok) {
         setWebhooks(data.endpoints || []);
@@ -146,7 +146,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
       const res = await fetch("/api/developer/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newKeyName.trim() }),
+        body: JSON.stringify({ name: newKeyName.trim(), shopId: shop.id }),
       });
       const data = await res.json();
 
@@ -172,7 +172,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
       const res = await fetch("/api/developer/api-keys", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyId }),
+        body: JSON.stringify({ keyId, shopId: shop.id }),
       });
 
       if (!res.ok) throw new Error("Failed to revoke key");
@@ -201,6 +201,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
         body: JSON.stringify({
           url: newWebhookUrl.trim(),
           events: selectedEvents,
+          shopId: shop.id,
         }),
       });
       const data = await res.json();
@@ -226,7 +227,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
       const res = await fetch("/api/developer/webhooks", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpointId }),
+        body: JSON.stringify({ endpointId, shopId: shop.id }),
       });
 
       if (!res.ok) throw new Error("Failed to delete webhook");
@@ -244,7 +245,7 @@ export function DeveloperClient({ shop }: { shop: any }) {
       const res = await fetch("/api/developer/webhooks/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpointId }),
+        body: JSON.stringify({ endpointId, shopId: shop.id }),
       });
       const data = await res.json();
 

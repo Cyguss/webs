@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { getKeyDurationDisplay } from "@/lib/key-duration";
 import { getCategoryIcon, PRESET_CATEGORIES } from "@/components/product-category-selector";
+import { StorefrontSortSelector } from "@/components/storefront-sort-selector";
+import { StorefrontPlanSelector } from "@/components/storefront-plan-selector";
 
 export interface StorefrontProductItem {
   id: string;
@@ -42,6 +44,7 @@ export interface StorefrontProductItem {
   variants: string | null;
   type: string;
   isUnlimitedStock?: boolean;
+  variantStocks?: Record<string, number>;
 }
 
 export interface StorefrontShopCategory {
@@ -76,6 +79,13 @@ export function StorefrontProductsCatalog({
   isLight,
   shopCategories = [],
 }: StorefrontProductsCatalogProps) {
+  const effAccent = accentColor || "rgb(55, 44, 102)";
+  const effSurface = cardBg || "var(--color-surface)";
+  const effBorder = cardBorder || "var(--color-border)";
+  const effText = textColor || "var(--color-foreground)";
+  const effMuted = textMuted || "var(--color-muted-foreground)";
+  const effSurface2 = isLight ? "rgba(0,0,0,0.04)" : "var(--color-surface-2)";
+
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "all";
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
@@ -97,7 +107,7 @@ export function StorefrontProductsCatalog({
     }
   }, [searchParams]);
 
-  // Aggregate category list with counts
+  // Aggregate category list with counts - only show categories with products > 0
   const categoryTabs = useMemo(() => {
     const countMap: Record<string, number> = { all: products.length };
     const nameMap: Record<string, string> = { all: "All Products" };
@@ -135,23 +145,24 @@ export function StorefrontProductsCatalog({
 
     const addedKeys = new Set<string>(["all"]);
 
-    // First add shop configured categories
+    // First add shop configured categories ONLY if they have items
     for (const c of shopCategories) {
       const idLower = c.id.toLowerCase();
-      if (!addedKeys.has(idLower)) {
+      const cnt = countMap[idLower] || 0;
+      if (!addedKeys.has(idLower) && cnt > 0) {
         tabs.push({
           id: idLower,
           name: c.name,
-          count: countMap[idLower] || 0,
+          count: cnt,
           icon: c.icon || "Layers",
         });
         addedKeys.add(idLower);
       }
     }
 
-    // Then add any other categories present in products
+    // Then add any other categories present in products that have items
     for (const [catKey, count] of Object.entries(countMap)) {
-      if (!addedKeys.has(catKey) && catKey !== "uncategorized") {
+      if (!addedKeys.has(catKey) && catKey !== "uncategorized" && count > 0) {
         tabs.push({
           id: catKey,
           name: nameMap[catKey] || catKey,
@@ -162,7 +173,7 @@ export function StorefrontProductsCatalog({
       }
     }
 
-    if (countMap["uncategorized"] && tabs.length > 1) {
+    if (countMap["uncategorized"] && countMap["uncategorized"] > 0 && tabs.length > 1) {
       tabs.push({
         id: "uncategorized",
         name: "Other",
@@ -242,20 +253,21 @@ export function StorefrontProductsCatalog({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* ─── Weaponized Command Deck (Search, Filters, View Modes) ─── */}
+      {/* ─── Command Deck (Search, Filters, View Modes) ─── */}
       <div
         style={{
           padding: "16px 20px",
-          background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-          border: "1px solid rgba(55, 44, 102, 0.45)",
+          background: effSurface,
+          border: `1px solid ${effBorder}`,
           borderRadius: 14,
           backdropFilter: "blur(16px)",
-          boxShadow: "0 10px 32px rgba(0, 0, 0, 0.8)",
+          boxShadow: "0 10px 32px rgba(0, 0, 0, 0.06)",
           display: "flex",
           flexDirection: "column",
           gap: 14,
           position: "relative",
-          overflow: "hidden",
+          overflow: "visible",
+          zIndex: 30,
         }}
       >
         {/* Subtle top scanline */}
@@ -266,7 +278,9 @@ export function StorefrontProductsCatalog({
             left: 0,
             right: 0,
             height: 1,
-            background: "linear-gradient(90deg, transparent, rgb(55, 44, 102), #8b5cf6, transparent)",
+            borderRadius: "14px 14px 0 0",
+            background: `linear-gradient(90deg, transparent, ${effAccent}, transparent)`,
+            pointerEvents: "none",
           }}
         />
 
@@ -281,7 +295,7 @@ export function StorefrontProductsCatalog({
                 left: 12,
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "#c4b5fd",
+                color: effAccent,
                 pointerEvents: "none",
               }}
             />
@@ -294,9 +308,9 @@ export function StorefrontProductsCatalog({
                 width: "100%",
                 padding: "8px 30px 8px 34px",
                 borderRadius: 8,
-                background: "rgba(3, 3, 5, 0.9)",
-                border: "1px solid rgba(139, 92, 246, 0.25)",
-                color: "#ffffff",
+                background: effSurface2,
+                border: `1px solid ${effBorder}`,
+                color: effText,
                 fontSize: 12,
                 fontFamily: "var(--font-mono, monospace)",
                 letterSpacing: "0.03em",
@@ -304,11 +318,11 @@ export function StorefrontProductsCatalog({
                 transition: "all 0.15s ease",
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#8b5cf6";
-                e.currentTarget.style.boxShadow = "0 0 12px rgba(139, 92, 246, 0.25)";
+                e.currentTarget.style.borderColor = effAccent;
+                e.currentTarget.style.boxShadow = `0 0 12px ${effAccent}40`;
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.25)";
+                e.currentTarget.style.borderColor = effBorder;
                 e.currentTarget.style.boxShadow = "none";
               }}
             />
@@ -323,7 +337,7 @@ export function StorefrontProductsCatalog({
                   transform: "translateY(-50%)",
                   background: "none",
                   border: "none",
-                  color: "rgba(255, 255, 255, 0.6)",
+                  color: effMuted,
                   cursor: "pointer",
                   display: "flex",
                 }}
@@ -342,9 +356,9 @@ export function StorefrontProductsCatalog({
               style={{
                 padding: "6px 10px",
                 borderRadius: 6,
-                background: inStockOnly ? "rgba(55, 44, 102, 0.45)" : "rgba(255, 255, 255, 0.03)",
-                border: inStockOnly ? "1px solid #8b5cf6" : "1px solid rgba(255, 255, 255, 0.1)",
-                color: inStockOnly ? "#c4b5fd" : "rgba(255, 255, 255, 0.6)",
+                background: inStockOnly ? `${effAccent}25` : effSurface2,
+                border: inStockOnly ? `1px solid ${effAccent}` : `1px solid ${effBorder}`,
+                color: inStockOnly ? effAccent : effMuted,
                 fontSize: 11,
                 fontFamily: "var(--font-mono, monospace)",
                 fontWeight: 700,
@@ -360,43 +374,30 @@ export function StorefrontProductsCatalog({
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  background: inStockOnly ? "#a78bfa" : "rgba(255, 255, 255, 0.3)",
-                  boxShadow: inStockOnly ? "0 0 8px #8b5cf6" : "none",
+                  background: inStockOnly ? effAccent : effMuted,
+                  boxShadow: inStockOnly ? `0 0 8px ${effAccent}` : "none",
                 }}
               />
               <span>In Stock</span>
             </button>
 
             {/* Sort Dropdown */}
-            <div style={{ position: "relative" }}>
-              <select
-                value={sortBy}
-                onChange={(e: any) => setSortBy(e.target.value)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  background: "rgba(3, 3, 5, 0.9)",
-                  border: "1px solid rgba(255, 255, 255, 0.12)",
-                  color: "#c4b5fd",
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontWeight: 700,
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <option value="default">SORT: DEFAULT</option>
-                <option value="price-asc">PRICE: LOW &rarr; HIGH</option>
-                <option value="price-desc">PRICE: HIGH &rarr; LOW</option>
-              </select>
-            </div>
+            <StorefrontSortSelector
+              value={sortBy}
+              onChange={setSortBy}
+              surfaceColor={effSurface2}
+              borderColor={effBorder}
+              textColor={effText}
+              mutedColor={effMuted}
+              accentColor={effAccent}
+            />
 
             {/* View Mode Toggle: Grid vs Table */}
             <div
               style={{
                 display: "flex",
-                background: "rgba(3, 3, 5, 0.9)",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
+                background: effSurface2,
+                border: `1px solid ${effBorder}`,
                 borderRadius: 6,
                 padding: 2,
               }}
@@ -408,9 +409,9 @@ export function StorefrontProductsCatalog({
                 style={{
                   padding: "5px 8px",
                   borderRadius: 4,
-                  background: viewMode === "grid" ? "rgb(55, 44, 102)" : "transparent",
-                  border: viewMode === "grid" ? "1px solid #8b5cf6" : "1px solid transparent",
-                  color: viewMode === "grid" ? "#ffffff" : "rgba(255, 255, 255, 0.5)",
+                  background: viewMode === "grid" ? effAccent : "transparent",
+                  border: viewMode === "grid" ? `1px solid ${effAccent}` : "1px solid transparent",
+                  color: viewMode === "grid" ? "#ffffff" : effMuted,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -426,9 +427,9 @@ export function StorefrontProductsCatalog({
                 style={{
                   padding: "5px 8px",
                   borderRadius: 4,
-                  background: viewMode === "table" ? "rgb(55, 44, 102)" : "transparent",
-                  border: viewMode === "table" ? "1px solid #8b5cf6" : "1px solid transparent",
-                  color: viewMode === "table" ? "#ffffff" : "rgba(255, 255, 255, 0.5)",
+                  background: viewMode === "table" ? effAccent : "transparent",
+                  border: viewMode === "table" ? `1px solid ${effAccent}` : "1px solid transparent",
+                  color: viewMode === "table" ? "#ffffff" : effMuted,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -441,7 +442,7 @@ export function StorefrontProductsCatalog({
           </div>
         </div>
 
-        {/* Category Tabs: Military / Cyber Index Chips */}
+        {/* Category Tabs */}
         {categoryTabs.length > 1 && (
           <div
             style={{
@@ -465,12 +466,12 @@ export function StorefrontProductsCatalog({
                     padding: "6px 14px",
                     borderRadius: 6,
                     border: isSelected
-                      ? "1px solid #8b5cf6"
-                      : "1px solid rgba(255, 255, 255, 0.08)",
+                      ? `1px solid ${effAccent}`
+                      : `1px solid ${effBorder}`,
                     background: isSelected
-                      ? "rgb(55, 44, 102)"
-                      : "rgba(255, 255, 255, 0.02)",
-                    color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.65)",
+                      ? effAccent
+                      : effSurface2,
+                    color: isSelected ? "#ffffff" : effText,
                     fontFamily: "var(--font-mono, monospace)",
                     fontSize: 11,
                     fontWeight: 800,
@@ -480,11 +481,11 @@ export function StorefrontProductsCatalog({
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    boxShadow: isSelected ? "0 0 14px rgba(139, 92, 246, 0.35)" : "none",
+                    boxShadow: isSelected ? `0 0 14px ${effAccent}55` : "none",
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <span style={{ color: isSelected ? "#ffffff" : "#c4b5fd", opacity: isSelected ? 0.9 : 0.7 }}>
+                  <span style={{ color: isSelected ? "#ffffff" : effAccent, opacity: isSelected ? 0.9 : 0.8 }}>
                     [{formattedIndex}]
                   </span>
                   <span>{tab.name}</span>
@@ -492,8 +493,8 @@ export function StorefrontProductsCatalog({
                     style={{
                       padding: "1px 5px",
                       borderRadius: 3,
-                      background: isSelected ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.06)",
-                      color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.5)",
+                      background: isSelected ? "rgba(255, 255, 255, 0.2)" : effBorder,
+                      color: isSelected ? "#ffffff" : effMuted,
                       fontSize: 9.5,
                     }}
                   >
@@ -512,8 +513,8 @@ export function StorefrontProductsCatalog({
           style={{
             padding: "48px 24px",
             textAlign: "center",
-            background: "rgba(6, 6, 10, 0.8)",
-            border: "1px dashed rgba(255, 255, 255, 0.1)",
+            background: effSurface,
+            border: `1px dashed ${effBorder}`,
             borderRadius: 14,
           }}
         >
@@ -533,10 +534,10 @@ export function StorefrontProductsCatalog({
           >
             <Lock size={22} />
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-mono, monospace)" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: effText, fontFamily: "var(--font-mono, monospace)" }}>
             No Products Found
           </div>
-          <p style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.5)", marginTop: 6, fontFamily: "var(--font-mono, monospace)" }}>
+          <p style={{ fontSize: 12, color: effMuted, marginTop: 6, fontFamily: "var(--font-mono, monospace)" }}>
             No products matched your search or filters.
           </p>
           {(searchQuery || selectedCategory !== "all" || inStockOnly) && (
@@ -551,9 +552,9 @@ export function StorefrontProductsCatalog({
                 marginTop: 14,
                 padding: "6px 14px",
                 borderRadius: 6,
-                background: "rgba(55, 44, 102, 0.4)",
-                border: "1px solid rgba(139, 92, 246, 0.4)",
-                color: "#c4b5fd",
+                background: `${effAccent}20`,
+                border: `1px solid ${effAccent}55`,
+                color: effAccent,
                 fontSize: 11,
                 fontFamily: "var(--font-mono, monospace)",
                 fontWeight: 700,
@@ -575,9 +576,16 @@ export function StorefrontProductsCatalog({
         >
           {filteredProducts.map((p, pIdx) => {
             const variants = getProductVariants(p);
+            const variantStocks = p.variantStocks || {};
             const activeVarId = selectedVariantPerProduct[p.id] || (variants[0]?.id ?? "");
             const activeVariant = variants.find((v: any) => v.id === activeVarId) || variants[0];
             const currentPrice = activeVariant ? parseFloat(activeVariant.price) : parseFloat(p.price);
+
+            const activeVariantStock = p.isUnlimitedStock
+              ? 9999
+              : activeVariant
+              ? (variantStocks[activeVariant.id] ?? variantStocks[activeVariant.duration] ?? p.stock)
+              : p.stock;
 
             const dMeta = getKeyDurationDisplay(
               activeVariant?.duration || p.duration,
@@ -585,21 +593,21 @@ export function StorefrontProductsCatalog({
               activeVariant?.customDurationLabel || p.customDurationLabel
             );
 
-            const isOutOfStock = !p.isUnlimitedStock && p.stock <= 0;
+            const isOutOfStock = !p.isUnlimitedStock && activeVariantStock <= 0;
 
             return (
               <div
                 key={p.id}
                 className="interactive-pill"
                 style={{
-                  background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-                  border: "1px solid rgba(55, 44, 102, 0.4)",
+                  background: effSurface,
+                  border: `1px solid ${effBorder}`,
                   borderRadius: 12,
-                  overflow: "hidden",
+                  overflow: "visible",
                   display: "flex",
                   flexDirection: "column",
                   position: "relative",
-                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.7)",
+                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.06)",
                   transition: "all 0.2s ease",
                 }}
               >
@@ -610,20 +618,22 @@ export function StorefrontProductsCatalog({
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                    background: "rgba(255, 255, 255, 0.02)",
+                    borderBottom: `1px solid ${effBorder}`,
+                    background: effSurface2,
+                    borderTopLeftRadius: 11,
+                    borderTopRightRadius: 11,
                     fontSize: 10,
                     fontFamily: "var(--font-mono, monospace)",
                   }}
                 >
-                  <span style={{ color: "rgba(255, 255, 255, 0.5)", letterSpacing: "0.02em" }}>
+                  <span style={{ color: effMuted, letterSpacing: "0.02em" }}>
                     {p.type === "key" ? "Digital Key" : "Instant Delivery"}
                   </span>
 
                   <span
                     style={{
                       fontWeight: 800,
-                      color: isOutOfStock ? "#ef4444" : "#c4b5fd",
+                      color: isOutOfStock ? "#ef4444" : effAccent,
                       display: "flex",
                       alignItems: "center",
                       gap: 4,
@@ -634,15 +644,15 @@ export function StorefrontProductsCatalog({
                         width: 5,
                         height: 5,
                         borderRadius: "50%",
-                        background: isOutOfStock ? "#ef4444" : "#a78bfa",
-                        boxShadow: `0 0 6px ${isOutOfStock ? "#ef4444" : "#8b5cf6"}`,
+                        background: isOutOfStock ? "#ef4444" : effAccent,
+                        boxShadow: `0 0 6px ${isOutOfStock ? "#ef4444" : effAccent}`,
                       }}
                     />
                     {p.isUnlimitedStock
                       ? "Instant"
                       : isOutOfStock
                       ? "Out of Stock"
-                      : `${p.stock} in Stock`}
+                      : `${activeVariantStock} in Stock`}
                   </span>
                 </div>
 
@@ -653,7 +663,7 @@ export function StorefrontProductsCatalog({
                     display: "block",
                     height: 140,
                     position: "relative",
-                    background: "#030305",
+                    background: effSurface2,
                     overflow: "hidden",
                     textDecoration: "none",
                   }}
@@ -678,8 +688,8 @@ export function StorefrontProductsCatalog({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        background: "radial-gradient(circle, rgba(55,44,102,0.4) 0%, rgba(3,3,5,0.95) 100%)",
-                        color: "#c4b5fd",
+                        background: `radial-gradient(circle, ${effAccent}25 0%, ${effSurface2} 100%)`,
+                        color: effAccent,
                       }}
                     >
                       <Terminal size={36} />
@@ -691,7 +701,7 @@ export function StorefrontProductsCatalog({
                     style={{
                       position: "absolute",
                       inset: 0,
-                      backgroundImage: "linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.4) 50%)",
+                      backgroundImage: "linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.15) 50%)",
                       backgroundSize: "100% 4px",
                       pointerEvents: "none",
                     }}
@@ -710,9 +720,9 @@ export function StorefrontProductsCatalog({
                           fontWeight: 700,
                           padding: "2px 6px",
                           borderRadius: 4,
-                          background: "rgba(55, 44, 102, 0.35)",
-                          color: "#c4b5fd",
-                          border: "1px solid rgba(139, 92, 246, 0.3)",
+                          background: `${effAccent}18`,
+                          color: effAccent,
+                          border: `1px solid ${effAccent}35`,
                           textTransform: "uppercase",
                         }}
                       >
@@ -724,7 +734,7 @@ export function StorefrontProductsCatalog({
                       href={`/${shopSlug}/product/${p.id}`}
                       style={{
                         textDecoration: "none",
-                        color: "#ffffff",
+                        color: effText,
                         fontWeight: 800,
                         fontSize: 14,
                         letterSpacing: "-0.01em",
@@ -739,36 +749,23 @@ export function StorefrontProductsCatalog({
                     </Link>
                   </div>
 
-                  {/* Hardware-Chip Duration Selector on Card (If Multi-Duration) */}
+                  {/* Duration Plan Dropdown Selector */}
                   {variants.length > 0 && (
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      {variants.map((v: any) => {
-                        const isVarActive = activeVarId === v.id;
-                        const vMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedVariantPerProduct((prev) => ({ ...prev, [p.id]: v.id }));
-                            }}
-                            style={{
-                              padding: "2px 7px",
-                              borderRadius: 4,
-                              background: isVarActive ? "rgb(55, 44, 102)" : "rgba(255, 255, 255, 0.03)",
-                              border: isVarActive ? "1px solid #8b5cf6" : "1px solid rgba(255, 255, 255, 0.08)",
-                              color: isVarActive ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
-                              fontSize: 10,
-                              fontFamily: "var(--font-mono, monospace)",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
-                          >
-                            {v.label || vMeta.shortLabel}
-                          </button>
-                        );
-                      })}
+                    <div style={{ marginTop: 2 }}>
+                      <StorefrontPlanSelector
+                        variants={variants}
+                        activeVariantId={activeVarId}
+                        onSelectVariant={(varId) =>
+                          setSelectedVariantPerProduct((prev) => ({ ...prev, [p.id]: varId }))
+                        }
+                        product={p}
+                        fullWidth
+                        surfaceColor={effSurface}
+                        borderColor={effBorder}
+                        textColor={effText}
+                        mutedColor={effMuted}
+                        accentColor={effAccent}
+                      />
                     </div>
                   )}
 
@@ -777,7 +774,7 @@ export function StorefrontProductsCatalog({
                     style={{
                       marginTop: "auto",
                       paddingTop: 10,
-                      borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                      borderTop: `1px solid ${effBorder}`,
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
@@ -785,7 +782,7 @@ export function StorefrontProductsCatalog({
                     }}
                   >
                     <div>
-                      <span style={{ fontSize: 9.5, color: "rgba(255, 255, 255, 0.4)", fontFamily: "var(--font-mono, monospace)", display: "block" }}>
+                      <span style={{ fontSize: 9.5, color: effMuted, fontFamily: "var(--font-mono, monospace)", display: "block" }}>
                         PRICE
                       </span>
                       <span
@@ -793,7 +790,7 @@ export function StorefrontProductsCatalog({
                           fontSize: 18,
                           fontWeight: 800,
                           fontFamily: "var(--font-mono, monospace)",
-                          color: "#ffffff",
+                          color: effText,
                           letterSpacing: "-0.02em",
                         }}
                       >
@@ -807,10 +804,10 @@ export function StorefrontProductsCatalog({
                         padding: "7px 14px",
                         borderRadius: 6,
                         background: isOutOfStock
-                          ? "rgba(255, 255, 255, 0.05)"
-                          : "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(78, 62, 140) 100%)",
-                        color: isOutOfStock ? "rgba(255, 255, 255, 0.4)" : "#ffffff",
-                        border: isOutOfStock ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(167, 139, 250, 0.45)",
+                          ? effSurface2
+                          : `linear-gradient(135deg, ${effAccent} 0%, ${effAccent} 100%)`,
+                        color: isOutOfStock ? effMuted : "#ffffff",
+                        border: isOutOfStock ? `1px solid ${effBorder}` : `1px solid ${effAccent}88`,
                         textDecoration: "none",
                         fontSize: 11,
                         fontWeight: 800,
@@ -819,7 +816,7 @@ export function StorefrontProductsCatalog({
                         display: "flex",
                         alignItems: "center",
                         gap: 5,
-                        boxShadow: isOutOfStock ? "none" : "0 0 14px rgba(55, 44, 102, 0.6)",
+                        boxShadow: isOutOfStock ? "none" : `0 0 14px ${effAccent}50`,
                         pointerEvents: isOutOfStock ? "none" : "auto",
                       }}
                     >
@@ -835,60 +832,67 @@ export function StorefrontProductsCatalog({
         /* ─── CATALOG VIEW MODE 2: TABLE ─── */
         <div
           style={{
-            background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-            border: "1px solid rgba(55, 44, 102, 0.45)",
+            background: effSurface,
+            border: `1px solid ${effBorder}`,
             borderRadius: 12,
-            overflow: "hidden",
-            boxShadow: "0 10px 32px rgba(0, 0, 0, 0.8)",
+            minHeight: 220,
+            overflow: "visible",
+            boxShadow: "0 10px 32px rgba(0, 0, 0, 0.06)",
           }}
         >
-          <div style={{ overflowX: "auto" }}>
+          <div style={{ overflowX: "visible" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>
               <thead>
                 <tr
                   style={{
-                    background: "rgba(55, 44, 102, 0.25)",
-                    borderBottom: "1px solid rgba(139, 92, 246, 0.25)",
-                    color: "#c4b5fd",
+                    background: effSurface2,
+                    borderBottom: `1px solid ${effBorder}`,
+                    color: effText,
                     fontSize: 10,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                   }}
                 >
-                  <th style={{ padding: "10px 14px" }}>#</th>
-                  <th style={{ padding: "10px 14px" }}>Product</th>
-                  <th style={{ padding: "10px 14px" }}>Category</th>
-                  <th style={{ padding: "10px 14px" }}>Stock</th>
-                  <th style={{ padding: "10px 14px" }}>Plans</th>
-                  <th style={{ padding: "10px 14px" }}>Price</th>
-                  <th style={{ padding: "10px 14px", textAlign: "right" }}>Action</th>
+                  <th style={{ padding: "12px 14px", verticalAlign: "middle" }}>#</th>
+                  <th style={{ padding: "12px 14px", verticalAlign: "middle" }}>Product</th>
+                  <th style={{ padding: "12px 14px", verticalAlign: "middle" }}>Category</th>
+                  <th style={{ padding: "12px 14px", verticalAlign: "middle" }}>Stock</th>
+                  <th style={{ padding: "12px 14px", verticalAlign: "middle" }}>Plans</th>
+                  <th style={{ padding: "12px 14px", verticalAlign: "middle" }}>Price</th>
+                  <th style={{ padding: "12px 14px", textAlign: "right", verticalAlign: "middle", width: 120 }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProducts.map((p, idx) => {
                   const variants = getProductVariants(p);
+                  const variantStocks = p.variantStocks || {};
                   const activeVarId = selectedVariantPerProduct[p.id] || (variants[0]?.id ?? "");
                   const activeVariant = variants.find((v: any) => v.id === activeVarId) || variants[0];
                   const currentPrice = activeVariant ? parseFloat(activeVariant.price) : parseFloat(p.price);
-                  const isOutOfStock = !p.isUnlimitedStock && p.stock <= 0;
+
+                  // Compute active stock for the chosen variant
+                  const activeVariantStock = p.isUnlimitedStock
+                    ? 9999
+                    : activeVariant
+                    ? (variantStocks[activeVariant.id] ?? variantStocks[activeVariant.duration] ?? p.stock)
+                    : p.stock;
+
+                  const isOutOfStock = !p.isUnlimitedStock && activeVariantStock <= 0;
 
                   return (
                     <tr
                       key={p.id}
                       style={{
-                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                        borderBottom: `1px solid ${effBorder}`,
                         transition: "background 0.15s ease",
                       }}
-                      onMouseOver={(e) => (e.currentTarget.style.background = "rgba(55, 44, 102, 0.15)")}
+                      onMouseOver={(e) => (e.currentTarget.style.background = effSurface2)}
                       onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      {/* Index */}
-                      <td style={{ padding: "12px 14px", color: "rgba(255, 255, 255, 0.4)", fontSize: 11 }}>
+                      <td style={{ padding: "14px 14px", color: effMuted, fontSize: 11, verticalAlign: "middle" }}>
                         {idx.toString().padStart(2, "0")}
                       </td>
-
-                      {/* Title & Media */}
-                      <td style={{ padding: "12px 14px" }}>
+                      <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
                         <Link
                           href={`/${shopSlug}/product/${p.id}`}
                           style={{
@@ -896,17 +900,17 @@ export function StorefrontProductsCatalog({
                             alignItems: "center",
                             gap: 10,
                             textDecoration: "none",
-                            color: "#ffffff",
+                            color: effText,
                             fontWeight: 700,
                           }}
                         >
                           <div
                             style={{
-                              width: 32,
-                              height: 32,
+                              width: 34,
+                              height: 34,
                               borderRadius: 6,
-                              background: "#000",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              background: effSurface2,
+                              border: `1px solid ${effBorder}`,
                               overflow: "hidden",
                               flexShrink: 0,
                             }}
@@ -914,7 +918,7 @@ export function StorefrontProductsCatalog({
                             {p.thumbnailUrl || p.imageUrl ? (
                               <img src={p.thumbnailUrl || p.imageUrl || ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : (
-                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#c4b5fd" }}>
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: effAccent }}>
                                 <Terminal size={14} />
                               </div>
                             )}
@@ -922,90 +926,78 @@ export function StorefrontProductsCatalog({
                           <span>{p.title}</span>
                         </Link>
                       </td>
-
-                      {/* Category */}
-                      <td style={{ padding: "12px 14px" }}>
+                      <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
                         <span
                           style={{
                             fontSize: 10,
-                            padding: "2px 6px",
+                            padding: "3px 7px",
                             borderRadius: 4,
-                            background: "rgba(55, 44, 102, 0.35)",
-                            color: "#c4b5fd",
-                            border: "1px solid rgba(139, 92, 246, 0.3)",
+                            background: `${effAccent}18`,
+                            color: effAccent,
+                            border: `1px solid ${effAccent}35`,
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {p.category || "General"}
                         </span>
                       </td>
-
-                      {/* Vault Stock */}
-                      <td style={{ padding: "12px 14px" }}>
+                      <td style={{ padding: "14px 14px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             fontSize: 11,
                             fontWeight: 700,
-                            color: isOutOfStock ? "#ef4444" : "#c4b5fd",
+                            color: isOutOfStock ? "#ef4444" : effAccent,
                           }}
                         >
-                          {p.isUnlimitedStock ? "Instant" : isOutOfStock ? "Out of Stock" : `${p.stock} in stock`}
+                          {p.isUnlimitedStock ? "Instant" : isOutOfStock ? "Out of Stock" : `${activeVariantStock} in stock`}
                         </span>
                       </td>
-
-                      {/* Available Tiers Chips */}
-                      <td style={{ padding: "12px 14px" }}>
+                      <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
                         {variants.length > 0 ? (
-                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            {variants.map((v: any) => {
-                              const isVarActive = activeVarId === v.id;
-                              const vMeta = getKeyDurationDisplay(v.duration, v.durationDays, v.customDurationLabel);
-                              return (
-                                <button
-                                  key={v.id}
-                                  type="button"
-                                  onClick={() => setSelectedVariantPerProduct((prev) => ({ ...prev, [p.id]: v.id }))}
-                                  style={{
-                                    padding: "2px 6px",
-                                    borderRadius: 4,
-                                    background: isVarActive ? "rgb(55, 44, 102)" : "rgba(255, 255, 255, 0.04)",
-                                    border: isVarActive ? "1px solid #8b5cf6" : "1px solid rgba(255, 255, 255, 0.08)",
-                                    color: isVarActive ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
-                                    fontSize: 9.5,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  {v.label || vMeta.shortLabel}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          <StorefrontPlanSelector
+                            variants={variants}
+                            activeVariantId={activeVarId}
+                            onSelectVariant={(varId) =>
+                              setSelectedVariantPerProduct((prev) => ({ ...prev, [p.id]: varId }))
+                            }
+                            product={p}
+                            size="sm"
+                            surfaceColor={effSurface}
+                            borderColor={effBorder}
+                            textColor={effText}
+                            mutedColor={effMuted}
+                            accentColor={effAccent}
+                          />
                         ) : (
-                          <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.4)" }}>Standard</span>
+                          <span style={{ fontSize: 11, color: effMuted }}>Standard</span>
                         )}
                       </td>
-
-                      {/* Price */}
-                      <td style={{ padding: "12px 14px", fontWeight: 800, color: "#ffffff", fontSize: 13 }}>
+                      <td style={{ padding: "14px 14px", fontWeight: 800, color: effText, fontSize: 13, verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         ${currentPrice.toFixed(2)}
                       </td>
-
-                      {/* Action */}
-                      <td style={{ padding: "12px 14px", textAlign: "right" }}>
+                      <td style={{ padding: "14px 14px", textAlign: "right", verticalAlign: "middle", width: 120, whiteSpace: "nowrap" }}>
                         <Link
                           href={`/${shopSlug}/product/${p.id}`}
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: 5,
-                            padding: "5px 12px",
+                            justifyContent: "center",
+                            height: 32,
+                            padding: "0 14px",
                             borderRadius: 6,
-                            background: isOutOfStock ? "rgba(255, 255, 255, 0.05)" : "linear-gradient(135deg, rgb(55, 44, 102) 0%, rgb(78, 62, 140) 100%)",
-                            border: isOutOfStock ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(167, 139, 250, 0.4)",
-                            color: isOutOfStock ? "rgba(255, 255, 255, 0.4)" : "#ffffff",
+                            background: isOutOfStock
+                              ? effSurface2
+                              : `linear-gradient(135deg, ${effAccent} 0%, ${effAccent} 100%)`,
+                            border: isOutOfStock
+                              ? `1px solid ${effBorder}`
+                              : `1px solid ${effAccent}88`,
+                            color: isOutOfStock ? effMuted : "#ffffff",
                             textDecoration: "none",
-                            fontSize: 10.5,
+                            fontSize: 11,
                             fontWeight: 800,
-                            letterSpacing: "0.05em",
+                            letterSpacing: "0.04em",
+                            whiteSpace: "nowrap",
+                            boxShadow: isOutOfStock ? "none" : `0 0 10px ${effAccent}50`,
                             pointerEvents: isOutOfStock ? "none" : "auto",
                           }}
                         >

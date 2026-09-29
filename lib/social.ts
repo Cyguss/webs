@@ -284,6 +284,115 @@ export async function getYouTubeInfo(rawUrl?: string | null): Promise<YouTubeCha
 }
 
 /**
+ * Classifies any Discord input string into Server Invite vs User Profile/Handle
+ */
+export function parseDiscordInput(input?: string | null): {
+  type: "server" | "user";
+  isUrl: boolean;
+  href: string | null;
+  handle: string;
+  label: string;
+  buttonText: string;
+} {
+  if (!input) {
+    return {
+      type: "server",
+      isUrl: false,
+      href: null,
+      handle: "",
+      label: "Discord",
+      buttonText: "Join",
+    };
+  }
+
+  const trimmed = input.trim();
+
+  // Check if it's an invite link (discord.gg / discord.com/invite / discordapp.com/invite)
+  const isInvite = /(?:discord\.gg\/|discord\.com\/invite\/|discordapp\.com\/invite\/)/i.test(trimmed);
+
+  // Check if it's an explicit Discord user profile link (discord.com/users/123456789)
+  const isUserUrl = /(?:discord\.com\/users\/|discordapp\.com\/users\/)/i.test(trimmed);
+
+  // Check if it's a raw numeric user snowflake ID (17-20 digits)
+  const isUserId = /^\d{17,20}$/.test(trimmed);
+
+  // Check if it's a handle (starts with @ or no slashes/dots)
+  const isHandle = trimmed.startsWith("@") || (!trimmed.includes("/") && !trimmed.includes("."));
+
+  if (isInvite) {
+    const inviteCodeMatch = trimmed.match(/(?:discord\.gg\/|discord\.com\/invite\/|discordapp\.com\/invite\/)([a-zA-Z0-9_-]+)/i);
+    const code = inviteCodeMatch ? inviteCodeMatch[1] : trimmed.replace(/^https?:\/\//i, "");
+    const href = `https://discord.gg/${code}`;
+    return {
+      type: "server",
+      isUrl: true,
+      href,
+      handle: `discord.gg/${code}`,
+      label: "Discord Server",
+      buttonText: "Join",
+    };
+  }
+
+  if (isUserUrl) {
+    const userIdMatch = trimmed.match(/\/users\/(\d+)/i);
+    const userId = userIdMatch ? userIdMatch[1] : trimmed;
+    const href = `https://discord.com/users/${userId}`;
+    return {
+      type: "user",
+      isUrl: true,
+      href,
+      handle: `@${userId}`,
+      label: "Discord User",
+      buttonText: "Open Profile",
+    };
+  }
+
+  if (isUserId) {
+    return {
+      type: "user",
+      isUrl: true,
+      href: `https://discord.com/users/${trimmed}`,
+      handle: `@${trimmed}`,
+      label: "Discord User",
+      buttonText: "Open Profile",
+    };
+  }
+
+  if (isHandle) {
+    const cleanHandle = trimmed.replace(/^@/, "");
+    return {
+      type: "user",
+      isUrl: false,
+      href: null,
+      handle: `@${cleanHandle}`,
+      label: "Discord User",
+      buttonText: `@${cleanHandle}`,
+    };
+  }
+
+  // Fallback: URL starting with http/https -> only allow genuine discord domains over HTTPS
+  if (/^https:\/\/(?:[a-zA-Z0-9-]+\.)*discord(?:app)?\.(?:com|gg)\//i.test(trimmed)) {
+    return {
+      type: "server",
+      isUrl: true,
+      href: trimmed,
+      handle: trimmed.replace(/^https?:\/\//i, ""),
+      label: "Discord Server",
+      buttonText: "Join",
+    };
+  }
+
+  return {
+    type: "user",
+    isUrl: false,
+    href: null,
+    handle: trimmed.startsWith("@") ? trimmed : `@${trimmed}`,
+    label: "Discord User",
+    buttonText: trimmed.startsWith("@") ? trimmed : `@${trimmed}`,
+  };
+}
+
+/**
  * Discord Invite & Guild Metadata Extractor
  * Uses the official Discord API v10 invite endpoint with member counts
  */
@@ -291,6 +400,12 @@ export async function getDiscordInfo(rawUrl?: string | null): Promise<DiscordGui
   if (!rawUrl) return null;
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
+
+  // If it's a user handle or user URL, don't attempt guild invite lookup
+  const parsedDiscord = parseDiscordInput(trimmed);
+  if (parsedDiscord.type === "user") {
+    return null;
+  }
 
   const cacheKey = `dc:${trimmed.toLowerCase()}`;
   const cached = getCached<DiscordGuildData>(cacheKey);

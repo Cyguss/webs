@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { GlobalAnnouncementBanner } from "@/components/global-announcement-banner";
 
 function DiscordLogo({ size = 16 }: { size?: number }) {
   return (
@@ -41,11 +42,20 @@ function DiscordLogo({ size = 16 }: { size?: number }) {
 export default function LandingPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [feePercent, setFeePercent] = useState<number>(5);
 
   const DISCORD_INVITE = "https://discord.gg/krypt";
 
   useEffect(() => {
     setMounted(true);
+    fetch("/api/platform/public")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.platformFeePercent === "number") {
+          setFeePercent(data.platformFeePercent);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const isAuthenticated = Boolean(session?.user);
@@ -61,6 +71,7 @@ export default function LandingPage() {
         position: "relative",
       }}
     >
+      <GlobalAnnouncementBanner currentLocation="home" />
       {/* Ambient Grid Background */}
       <div
         className="krypt-grid-bg"
@@ -107,11 +118,11 @@ export default function LandingPage() {
             justifyContent: "space-between",
             padding: "10px 18px",
             borderRadius: 12,
-            background: "rgba(5, 5, 8, 0.92)",
+            background: "var(--header-bg)",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(55, 44, 102, 0.45)",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.8)",
+            border: "1px solid var(--color-border)",
+            boxShadow: "var(--card-shadow)",
           }}
         >
           {/* Brand */}
@@ -129,13 +140,13 @@ export default function LandingPage() {
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: "#08080c",
-                border: "1px solid rgba(139, 92, 246, 0.4)",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#c4b5fd",
-                boxShadow: "0 0 12px rgba(55, 44, 102, 0.5)",
+                color: "var(--color-primary-light)",
+                boxShadow: "0 0 12px var(--color-primary-subtle)",
               }}
             >
               <ShoppingBag size={16} />
@@ -146,7 +157,7 @@ export default function LandingPage() {
                   fontSize: 16,
                   fontWeight: 900,
                   letterSpacing: "0.04em",
-                  color: "#ffffff",
+                  color: "var(--color-foreground)",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
@@ -158,9 +169,9 @@ export default function LandingPage() {
                   fontWeight: 800,
                   padding: "1px 5px",
                   borderRadius: 4,
-                  background: "rgba(55, 44, 102, 0.4)",
-                  border: "1px solid rgba(139, 92, 246, 0.4)",
-                  color: "#c4b5fd",
+                  background: "var(--color-primary-subtle)",
+                  border: "1px solid var(--color-primary-glow)",
+                  color: "var(--color-primary-light)",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
@@ -180,16 +191,16 @@ export default function LandingPage() {
                 gap: 6,
                 padding: "6px 12px",
                 borderRadius: 8,
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                color: "#c4b5fd",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-foreground)",
                 fontWeight: 600,
                 fontSize: 12,
                 textDecoration: "none",
                 fontFamily: "var(--font-mono, monospace)",
               }}
             >
-              <Key size={13} />
+              <Key size={13} color="var(--color-primary-light)" />
               <span>Find My Order</span>
             </Link>
 
@@ -204,9 +215,9 @@ export default function LandingPage() {
                 gap: 6,
                 padding: "6px 12px",
                 borderRadius: 8,
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                color: "#9ca3af",
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-foreground-muted)",
                 fontWeight: 600,
                 fontSize: 12,
                 textDecoration: "none",
@@ -243,7 +254,7 @@ export default function LandingPage() {
                   style={{
                     padding: "6px 12px",
                     borderRadius: 8,
-                    color: "#9ca3af",
+                    color: "var(--color-foreground-muted)",
                     fontSize: 12,
                     fontWeight: 600,
                     textDecoration: "none",
@@ -308,17 +319,17 @@ export default function LandingPage() {
             lineHeight: 1.08,
             letterSpacing: "-0.03em",
             margin: "0 0 20px",
-            color: "#ffffff",
+            color: "var(--color-foreground)",
           }}
         >
-          Sell Software & Digital Keys with Instant 24/7 Delivery
+          Sell Software &amp; Digital Keys with Instant 24/7 Delivery
         </h1>
 
         {/* Subtitle */}
         <p
           style={{
             fontSize: "clamp(15px, 2vw, 17px)",
-            color: "#8b949e",
+            color: "var(--color-muted-foreground)",
             maxWidth: 680,
             margin: "0 auto 36px",
             lineHeight: 1.6,
@@ -347,44 +358,22 @@ export default function LandingPage() {
               <span>Go to Dashboard</span>
             </Link>
           ) : (
-            <>
-              <Link
-                href="/register"
-                className="interactive-pill krypt-btn-primary"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "13px 28px",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  textDecoration: "none",
-                }}
-              >
-                <span>Create Your Store</span>
-                <ArrowRight size={15} />
-              </Link>
-              <Link
-                href="/demo-store"
-                className="interactive-pill"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "13px 24px",
-                  borderRadius: 10,
-                  background: "rgba(255, 255, 255, 0.04)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  color: "#ffffff",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  textDecoration: "none",
-                }}
-              >
-                <span>View Demo Store</span>
-                <ExternalLink size={14} color="#c4b5fd" />
-              </Link>
-            </>
+            <Link
+              href="/register"
+              className="interactive-pill krypt-btn-primary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "13px 28px",
+                borderRadius: 10,
+                fontSize: 14,
+                textDecoration: "none",
+              }}
+            >
+              <span>Create Your Store</span>
+              <ArrowRight size={15} />
+            </Link>
           )}
         </div>
       </section>
@@ -411,6 +400,8 @@ export default function LandingPage() {
             className="krypt-card"
             style={{
               padding: "24px",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -430,15 +421,15 @@ export default function LandingPage() {
                 <CreditCard size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#ffffff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>
                   Credit &amp; Debit Card Checkout
                 </h3>
-                <span style={{ fontSize: 11, color: "#8b949e" }}>
+                <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
                   Stripe Card, Apple Pay &amp; Google Pay
                 </span>
               </div>
             </div>
-            <p style={{ fontSize: 13, color: "#8b949e", margin: "0 0 16px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: "0 0 16px", lineHeight: 1.5 }}>
               Process major card payments securely with 3D Secure verification and zero customer friction.
             </p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -455,6 +446,8 @@ export default function LandingPage() {
             className="krypt-card"
             style={{
               padding: "24px",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -474,15 +467,15 @@ export default function LandingPage() {
                 <Coins size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#ffffff" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--color-foreground)" }}>
                   Cryptocurrency Invoicing
                 </h3>
-                <span style={{ fontSize: 11, color: "#8b949e" }}>
+                <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
                   Direct Automated Blockchain Settlements
                 </span>
               </div>
             </div>
-            <p style={{ fontSize: 13, color: "#8b949e", margin: "0 0 16px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: "0 0 16px", lineHeight: 1.5 }}>
               Accept decentralized payments with automated address generation, instant mempool detection, and 0 chargebacks.
             </p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -496,7 +489,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Merchant Suite & Store Operations (Redesigned) ───────────── */}
+      {/* ─── Merchant Suite & Store Operations ───────────── */}
       <section
         style={{
           position: "relative",
@@ -507,13 +500,13 @@ export default function LandingPage() {
         }}
       >
         <div style={{ textAlign: "left", marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono, monospace)" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-primary-light)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono, monospace)" }}>
             Merchant Suite &amp; Operations
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.02em", margin: "0 0 8px" }}>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: "var(--color-foreground)", letterSpacing: "-0.02em", margin: "0 0 8px" }}>
             The Operating System for Digital Goods
           </h2>
-          <p style={{ fontSize: 14, color: "#8b949e", margin: 0, maxWidth: 640 }}>
+          <p style={{ fontSize: 14, color: "var(--color-muted-foreground)", margin: 0, maxWidth: 640 }}>
             Everything you need to automate orders, manage serial pools, protect license keys, and scale your brand without technical friction.
           </p>
         </div>
@@ -525,7 +518,7 @@ export default function LandingPage() {
             gap: 16,
           }}
         >
-          {/* Card 1: Custom Domains (We Host) */}
+          {/* Card 1: Custom Domains */}
           <div
             className="krypt-card"
             style={{
@@ -533,8 +526,8 @@ export default function LandingPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.5)",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -559,11 +552,11 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 6px" }}>
                 Custom Domains &amp; Edge CDN
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
-                Connect your brand domain (<code style={{ color: "#c4b5fd" }}>store.yourbrand.com</code>) with 1 click. We host everything on our global edge network with automatic SSL certificates and DDoS protection.
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
+                Connect your brand domain (<code style={{ color: "var(--color-primary-light)" }}>store.yourbrand.com</code>) with 1 click. We host everything on our global edge network with automatic SSL certificates and DDoS protection.
               </p>
             </div>
           </div>
@@ -576,8 +569,8 @@ export default function LandingPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.5)",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -602,10 +595,10 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 6px" }}>
                 Multi-Duration Key Vaults
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 Set separate stock pools and distinct prices for Daily, Weekly, Monthly, and Lifetime tiers under a single product listing. Paste serials in bulk line-by-line.
               </p>
             </div>
@@ -619,8 +612,8 @@ export default function LandingPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.5)",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -645,10 +638,10 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 6px" }}>
                 Automated Fulfillment &amp; Anti-Duplicate
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 Keys are automatically assigned and revealed instantly upon confirmed payment. Built-in atomic locking guarantees zero double-sells across all traffic spikes.
               </p>
             </div>
@@ -662,8 +655,8 @@ export default function LandingPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.5)",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -688,10 +681,10 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 6px" }}>
                 Developer Webhooks &amp; REST API
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 Trigger external loaders, server APIs, and backend auth databases with cryptographically signed order payloads and customizable retry policies.
               </p>
             </div>
@@ -705,8 +698,8 @@ export default function LandingPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.5)",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -731,10 +724,10 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 6px" }}>
                 Discord Server &amp; Social Widgets
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 Display live online community member counts, showcase verified buyer reviews, and link your Telegram, YouTube, and Trustpilot channels directly.
               </p>
             </div>
@@ -748,8 +741,8 @@ export default function LandingPage() {
               display: "flex",
               flexDirection: "column",
               gap: 12,
-              background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-              border: "1px solid rgba(55, 44, 102, 0.5)",
+              background: "var(--card-bg)",
+              border: "1px solid var(--color-border)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -774,10 +767,10 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 6px" }}>
                 Self-Service Key Recovery
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 Customers can lookup and retrieve all past keys and receipt links with their email anytime, eliminating 90% of routine support requests.
               </p>
             </div>
@@ -796,10 +789,10 @@ export default function LandingPage() {
         }}
       >
         <div style={{ textAlign: "left", marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono, monospace)" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-primary-light)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4, fontFamily: "var(--font-mono, monospace)" }}>
             Quick Setup
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", margin: 0 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-foreground)", letterSpacing: "-0.02em", margin: 0 }}>
             Start Selling in 3 Simple Steps
           </h2>
         </div>
@@ -836,8 +829,8 @@ export default function LandingPage() {
               className="krypt-card"
               style={{
                 padding: "22px",
-                background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-                border: "1px solid rgba(55, 44, 102, 0.45)",
+                background: "var(--card-bg)",
+                border: "1px solid var(--color-border)",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -846,7 +839,7 @@ export default function LandingPage() {
                     fontSize: 12,
                     fontWeight: 900,
                     fontFamily: "var(--font-mono, monospace)",
-                    color: "#c4b5fd",
+                    color: "var(--color-primary-light)",
                   }}
                 >
                   STEP {s.phase}
@@ -855,10 +848,10 @@ export default function LandingPage() {
                   {s.tag}
                 </span>
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 8px", color: "#ffffff" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 8px", color: "var(--color-foreground)" }}>
                 {s.title}
               </h3>
-              <p style={{ fontSize: 13, color: "#8b949e", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 {s.desc}
               </p>
             </div>
@@ -881,12 +874,12 @@ export default function LandingPage() {
           style={{
             padding: "40px 32px",
             textAlign: "center",
-            background: "linear-gradient(180deg, #090812 0%, #05040a 100%)",
-            border: "1px solid rgba(55, 44, 102, 0.6)",
-            boxShadow: "0 0 40px rgba(55, 44, 102, 0.35)",
+            background: "var(--card-bg)",
+            border: "1px solid var(--color-border)",
+            boxShadow: "var(--card-shadow)",
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#c4b5fd", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontFamily: "var(--font-mono, monospace)" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "var(--color-primary-light)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8, fontFamily: "var(--font-mono, monospace)" }}>
             TRANSPARENT PRICING
           </div>
           <div
@@ -894,16 +887,16 @@ export default function LandingPage() {
               fontSize: 64,
               fontWeight: 900,
               letterSpacing: "-0.04em",
-              color: "#ffffff",
+              color: "var(--color-foreground)",
               lineHeight: 1,
               marginBottom: 6,
               fontFamily: "var(--font-mono, monospace)",
             }}
           >
-            5%
+            {feePercent}%
           </div>
-          <p style={{ fontSize: 14, color: "#8b949e", margin: "0 auto 24px", maxWidth: 460, lineHeight: 1.5 }}>
-            Flat platform fee per completed checkout. Keep 95% of your sales revenue. Zero monthly subscription, free custom domain hosting, fast payouts.
+          <p style={{ fontSize: 14, color: "var(--color-muted-foreground)", margin: "0 auto 24px", maxWidth: 460, lineHeight: 1.5 }}>
+            Flat platform fee per completed checkout. Keep {Math.max(0, 100 - feePercent)}% of your sales revenue. Zero monthly subscription, free custom domain hosting, fast payouts.
           </p>
 
           <div
@@ -969,9 +962,9 @@ export default function LandingPage() {
         style={{
           position: "relative",
           zIndex: 1,
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          borderTop: "1px solid var(--color-border)",
           padding: "28px 20px",
-          background: "#020305",
+          background: "var(--header-bg)",
         }}
       >
         <div
@@ -985,13 +978,13 @@ export default function LandingPage() {
             gap: 16,
             fontSize: 12,
             fontFamily: "var(--font-mono, monospace)",
-            color: "#6b7280",
+            color: "var(--color-muted-foreground)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontWeight: 800, color: "#ffffff" }}>KRYPT MARKET</span>
+            <span style={{ fontWeight: 800, color: "var(--color-foreground)" }}>KRYPT MARKET</span>
             <span>&bull;</span>
-            <span style={{ color: "#c4b5fd" }}>Digital Key &amp; License E-Commerce</span>
+            <span style={{ color: "var(--color-primary-light)" }}>Digital Key &amp; License E-Commerce</span>
           </div>
 
           <div>&copy; {new Date().getFullYear()} KRYPT. All rights reserved.</div>
@@ -1000,11 +993,21 @@ export default function LandingPage() {
             <Link
               href="/lookup"
               style={{
-                color: "#c4b5fd",
+                color: "var(--color-primary-light)",
                 textDecoration: "none",
               }}
             >
               Order Lookup
+            </Link>
+
+            <Link
+              href="/terms"
+              style={{
+                color: "var(--color-muted-foreground)",
+                textDecoration: "none",
+              }}
+            >
+              Terms of Service
             </Link>
 
             <a
@@ -1012,7 +1015,7 @@ export default function LandingPage() {
               target="_blank"
               rel="noreferrer"
               style={{
-                color: "#9ca3af",
+                color: "var(--color-muted-foreground)",
                 textDecoration: "none",
                 display: "flex",
                 alignItems: "center",
@@ -1027,7 +1030,7 @@ export default function LandingPage() {
               <Link
                 href="/dashboard"
                 style={{
-                  color: "#c4b5fd",
+                  color: "var(--color-primary-light)",
                   textDecoration: "none",
                   fontWeight: 700,
                 }}
@@ -1039,7 +1042,7 @@ export default function LandingPage() {
                 <Link
                   href="/login"
                   style={{
-                    color: "#9ca3af",
+                    color: "var(--color-muted-foreground)",
                     textDecoration: "none",
                   }}
                 >
@@ -1048,7 +1051,7 @@ export default function LandingPage() {
                 <Link
                   href="/register"
                   style={{
-                    color: "#c4b5fd",
+                    color: "var(--color-primary-light)",
                     textDecoration: "none",
                     fontWeight: 700,
                   }}

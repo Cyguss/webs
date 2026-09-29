@@ -96,7 +96,7 @@ export default function CryptoSandboxClient({
 
     try {
       await new Promise((r) => setTimeout(r, 1000));
-      setSimStatus("Verifying Cryptomus MD5 signature & processing webhook...");
+      setSimStatus("Verifying NOWPayments HMAC-SHA512 signature & processing webhook...");
 
       const res = await fetch("/api/webhooks/crypto/simulate", {
         method: "POST",
@@ -151,7 +151,7 @@ export default function CryptoSandboxClient({
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <div style={{ background: "#6366f1", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>
-                CRYPTOMUS
+                NOWPAYMENTS
               </div>
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Sandbox Simulator</span>
             </div>
@@ -306,7 +306,7 @@ export default function CryptoSandboxClient({
             <Zap size={15} /> Developer Sandbox Trigger
           </div>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", margin: "0 0 14px", lineHeight: 1.5 }}>
-            Simulate a real blockchain payment. This sends a cryptographically signed (MD5) Cryptomus IPN webhook to KRYPT MARKET, validates the secret key, and automatically triggers atomic order fulfillment.
+            Simulate a real blockchain payment. This sends a cryptographically signed NOWPayments IPN webhook to KRYPT MARKET, validates the secret key, and automatically triggers atomic order fulfillment.
           </p>
 
           <button
@@ -336,7 +336,7 @@ export default function CryptoSandboxClient({
               </>
             ) : (
               <>
-                <CheckCircle2 size={16} /> Simulate Cryptomus Payment (Trigger Webhook)
+                <CheckCircle2 size={16} /> Simulate NOWPayments Payment (Trigger Webhook)
               </>
             )}
           </button>

@@ -18,6 +18,7 @@ import { AdminPayoutsTable } from "./components/admin-payouts-table";
 import { AdminStaffTab } from "./components/admin-staff-tab";
 import { AdminBotConfigTab } from "./components/admin-bot-config-tab";
 import { AdminPlatformSettingsTab } from "./components/admin-platform-settings-tab";
+import { AdminDebugTab } from "./components/admin-debug-tab";
 import { AdminPanicModal, AdminMasterModal, AdminRejectModal, AdminKillSwitchModal } from "./components/admin-modals";
 
 interface AdminPortalProps {
@@ -64,6 +65,7 @@ export default function AdminPortal({
   // Action loading state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [approvingShopId, setApprovingShopId] = useState<string | null>(null);
+  const [launchingShopId, setLaunchingShopId] = useState<string | null>(null);
 
   // Rejection modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -426,6 +428,11 @@ export default function AdminPortal({
     }
   }
 
+  function handleLaunchDashboard(shopId: string, shopName: string) {
+    toast.success(`Opening preview dashboard for "${shopName}"...`);
+    window.location.href = `/dashboard?shopId=${encodeURIComponent(shopId)}`;
+  }
+
   async function loadBotConfig() {
     try {
       const headersInit: Record<string, string> = {};
@@ -470,7 +477,7 @@ export default function AdminPortal({
       <div
         style={{
           minHeight: "100vh",
-          background: "#08090c",
+          background: "var(--color-background)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -485,8 +492,8 @@ export default function AdminPortal({
             padding: 36,
             textAlign: "center",
             border: "1px solid rgba(239, 68, 68, 0.4)",
-            background: "#0d0e12",
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.9)",
+            background: "var(--color-surface)",
+            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
           }}
         >
           <div
@@ -546,7 +553,7 @@ export default function AdminPortal({
       <div
         style={{
           minHeight: "100vh",
-          background: "#08090c",
+          background: "var(--color-background)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -584,6 +591,7 @@ export default function AdminPortal({
   const payoutsList: any[] = adminData?.payouts || [];
   const discordAdmins = usersList.filter((u) => u.role === "admin");
   const pendingApprovalsCount = (adminData?.approvalRequests || []).filter((r: any) => r.status === "pending").length;
+  const pendingPayoutsCount = (adminData?.payouts || []).filter((p: any) => p.status === "pending").length;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-background)", color: "var(--color-foreground)" }}>
@@ -609,11 +617,12 @@ export default function AdminPortal({
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           isSuperAdmin={Boolean(adminData?.isSuperAdmin || initialIsSuperAdmin)}
+          canAccessDebug={Boolean(adminData?.currentUserPermissions?.canAccessDebug)}
           usersCount={usersList.length}
           shopsCount={shopsList.length}
           pendingApprovalsCount={pendingApprovalsCount}
           ordersCount={ordersList.length}
-          payoutsCount={payoutsList.length}
+          payoutsCount={pendingPayoutsCount > 0 ? pendingPayoutsCount : payoutsList.length}
           staffCount={discordAdmins.length}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -627,6 +636,7 @@ export default function AdminPortal({
             usersList={usersList}
             shopsList={shopsList}
             onNavigateTab={setActiveTab}
+            onLaunchDashboard={handleLaunchDashboard}
           />
         )}
 
@@ -640,6 +650,7 @@ export default function AdminPortal({
             onDeleteUser={handleDeleteUser}
             isSuperAdmin={Boolean(adminData?.isSuperAdmin)}
             onToggleAdminPermissions={handleToggleAdminPermissions}
+            onLaunchDashboard={handleLaunchDashboard}
           />
         )}
 
@@ -650,9 +661,11 @@ export default function AdminPortal({
             setSearchTerm={setSearchTerm}
             approvingShopId={approvingShopId}
             deletingId={deletingId}
+            launchingShopId={launchingShopId}
             onApproveShop={handleApproveShop}
             onOpenRejectModal={openRejectModal}
             onDeleteShop={handleDeleteShop}
+            onLaunchDashboard={handleLaunchDashboard}
           />
         )}
 
@@ -660,14 +673,24 @@ export default function AdminPortal({
           <AdminApprovalsTable
             approvalRequests={adminData?.approvalRequests || []}
             approvingShopId={approvingShopId}
+            launchingShopId={launchingShopId}
             onApproveShop={handleApproveShop}
             onOpenRejectModal={openRejectModal}
+            onLaunchDashboard={handleLaunchDashboard}
           />
         )}
 
         {activeTab === "orders" && <AdminOrdersTable orders={ordersList} />}
 
-        {activeTab === "payouts" && <AdminPayoutsTable payouts={payoutsList} />}
+        {activeTab === "payouts" && (
+          <AdminPayoutsTable
+            payouts={payoutsList}
+            ticket={ticket}
+            onRefresh={() => fetchAdminData(ticket)}
+            isSuperAdmin={Boolean(adminData?.isSuperAdmin || initialIsSuperAdmin)}
+            canManagePayouts={adminData?.currentUserPermissions?.canManagePayouts ?? true}
+          />
+        )}
 
         {activeTab === "staff" && (
           <AdminStaffTab
@@ -696,6 +719,14 @@ export default function AdminPortal({
             botConfigSaving={botConfigSaving}
             onSaveBotConfig={handleSaveBotConfig}
             onShowMasterModal={() => setShowMasterModal(true)}
+          />
+        )}
+
+        {activeTab === "debug" && (
+          <AdminDebugTab
+            isSuperAdmin={Boolean(adminData?.isSuperAdmin || initialIsSuperAdmin)}
+            ticket={ticket}
+            currentUserPermissions={adminData?.currentUserPermissions}
           />
         )}
 

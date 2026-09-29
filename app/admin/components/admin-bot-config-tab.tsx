@@ -44,7 +44,7 @@ export function AdminBotConfigTab({
         >
           <Lock size={26} />
         </div>
-        <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "#f3f4f6" }}>
+        <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "var(--color-foreground)" }}>
           Super-Admin Permission Required
         </h3>
         <p style={{ fontSize: 13, color: "var(--color-muted-foreground)", lineHeight: 1.6, marginBottom: 24 }}>
@@ -71,7 +71,7 @@ export function AdminBotConfigTab({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#f3f4f6" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--color-foreground)" }}>
               Bot & Discord Platform Configuration
             </h2>
             <span

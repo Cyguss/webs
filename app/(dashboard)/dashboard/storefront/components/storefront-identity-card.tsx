@@ -13,6 +13,8 @@ interface StorefrontIdentityCardProps {
   setLogoUrl: (val: string) => void;
   bannerUrl: string;
   setBannerUrl: (val: string) => void;
+  customDomain?: string;
+  setCustomDomain?: (val: string) => void;
 }
 
 export function StorefrontIdentityCard({
@@ -24,6 +26,8 @@ export function StorefrontIdentityCard({
   setLogoUrl,
   bannerUrl,
   setBannerUrl,
+  customDomain = "",
+  setCustomDomain,
 }: StorefrontIdentityCardProps) {
   const toast = useToast();
 
@@ -77,6 +81,39 @@ export function StorefrontIdentityCard({
           required
         />
       </div>
+
+      {setCustomDomain && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label className="label">Subdomain Name</label>
+            <span style={{ fontSize: 11, color: "var(--color-muted-foreground)" }}>
+              Subdomain prefix on krypt.market
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+            <input
+              type="text"
+              className="input"
+              placeholder="yourstore"
+              value={customDomain}
+              onChange={(e) => setCustomDomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+              style={{ paddingRight: 110, fontFamily: "var(--font-mono, monospace)" }}
+            />
+            <span
+              style={{
+                position: "absolute",
+                right: 12,
+                fontSize: 12,
+                color: "var(--color-muted-foreground)",
+                fontFamily: "var(--font-mono, monospace)",
+                pointerEvents: "none",
+              }}
+            >
+              .krypt.market
+            </span>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label className="label">Tagline / Description</label>

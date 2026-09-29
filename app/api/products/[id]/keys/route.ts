@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shops, products, inventoryKeys, orders } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getActiveMerchantShop } from "@/lib/tenant";
 
 export async function GET(
   req: Request,
@@ -19,22 +20,29 @@ export async function GET(
     }
 
     const { id: productId } = await params;
-
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
-
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
-
-    // Verify product ownership
+    const { searchParams } = new URL(req.url);
     const product = await db.query.products.findFirst({
-      where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+      where: eq(products.id, productId),
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const targetShop = await db.query.shops.findFirst({
+      where: eq(shops.id, product.shopId),
+    });
+
+    if (!targetShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const isSuperAdmin = session.user.role === "superadmin";
+    const isAdmin = (session.user.role === "admin" && (session.user as any).adminPermissionsActive !== false) || isSuperAdmin;
+    const isOwner = targetShop.userId === session.user.id;
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const keys = await db
@@ -73,21 +81,29 @@ export async function POST(
     }
 
     const { id: productId } = await params;
-
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
-
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
-
+    const { searchParams } = new URL(req.url);
     const product = await db.query.products.findFirst({
-      where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+      where: eq(products.id, productId),
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const targetShop = await db.query.shops.findFirst({
+      where: eq(shops.id, product.shopId),
+    });
+
+    if (!targetShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const isSuperAdmin = session.user.role === "superadmin";
+    const isAdmin = (session.user.role === "admin" && (session.user as any).adminPermissionsActive !== false) || isSuperAdmin;
+    const isOwner = targetShop.userId === session.user.id;
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const body = await req.json();
@@ -170,21 +186,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Key ID is required" }, { status: 400 });
     }
 
-    const userShop = await db.query.shops.findFirst({
-      where: eq(shops.userId, session.user.id),
-    });
-
-    if (!userShop) {
-      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-    }
-
-    // Verify ownership
     const product = await db.query.products.findFirst({
-      where: and(eq(products.id, productId), eq(products.shopId, userShop.id)),
+      where: eq(products.id, productId),
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const targetShop = await db.query.shops.findFirst({
+      where: eq(shops.id, product.shopId),
+    });
+
+    if (!targetShop) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const isSuperAdmin = session.user.role === "superadmin";
+    const isAdmin = (session.user.role === "admin" && (session.user as any).adminPermissionsActive !== false) || isSuperAdmin;
+    const isOwner = targetShop.userId === session.user.id;
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Ensure key belongs to this product
