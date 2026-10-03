@@ -144,6 +144,7 @@ export default function InboxPage() {
         n.type === "store_rejected" ||
         n.type === "payment_disputed" ||
         n.type === "payment_reversed" ||
+        n.type === "payment_dispute_won" ||
         n.type === "payout_completed" ||
         n.type === "payout_approved" ||
         n.type === "payout_rejected"
@@ -306,6 +307,7 @@ export default function InboxPage() {
             const isApproved = notif.type === "store_approved";
             const isReversed = notif.type === "payment_reversed" || notif.type === "PAYMENT_REVERSED";
             const isDisputed = notif.type === "payment_disputed" || notif.type === "PAYMENT_DISPUTED";
+            const isDisputeWon = notif.type === "payment_dispute_won" || notif.type === "PAYMENT_DISPUTE_WON";
             const isPayoutApproved = notif.type === "payout_completed" || notif.type === "payout_approved";
             const isPayoutRejected = notif.type === "payout_rejected";
 
@@ -322,7 +324,7 @@ export default function InboxPage() {
                     ? "1px solid rgba(244, 63, 94, 0.45)"
                     : isRejected || isPayoutRejected
                     ? "1px solid rgba(239, 68, 68, 0.35)"
-                    : isApproved || isPayoutApproved
+                    : isApproved || isPayoutApproved || isDisputeWon
                     ? "1px solid rgba(34, 197, 94, 0.35)"
                     : isReversed
                     ? "1px solid rgba(249, 115, 22, 0.4)"
@@ -343,7 +345,7 @@ export default function InboxPage() {
                         ? "rgba(244, 63, 94, 0.15)"
                         : isRejected || isPayoutRejected
                         ? "rgba(239, 68, 68, 0.15)"
-                        : isApproved || isPayoutApproved
+                        : isApproved || isPayoutApproved || isDisputeWon
                         ? "rgba(34, 197, 94, 0.15)"
                         : isReversed
                         ? "rgba(249, 115, 22, 0.15)"
@@ -352,7 +354,7 @@ export default function InboxPage() {
                         ? "#f43f5e"
                         : isRejected || isPayoutRejected
                         ? "#ef4444"
-                        : isApproved || isPayoutApproved
+                        : isApproved || isPayoutApproved || isDisputeWon
                         ? "#22c55e"
                         : isReversed
                         ? "#f97316"
@@ -366,6 +368,8 @@ export default function InboxPage() {
                   >
                     {isDisputed ? (
                       <ShieldAlert size={22} />
+                    ) : isDisputeWon ? (
+                      <CheckCircle2 size={22} />
                     ) : isPayoutApproved ? (
                       <CheckCircle2 size={22} />
                     ) : isPayoutRejected ? (
@@ -455,6 +459,22 @@ export default function InboxPage() {
                             Payment Disputed
                           </span>
                         )}
+                        {isDisputeWon && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              borderRadius: 4,
+                              background: "rgba(34, 197, 94, 0.18)",
+                              color: "#22c55e",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            Dispute Won
+                          </span>
+                        )}
                         {isPayoutApproved && (
                           <span
                             style={{
@@ -516,7 +536,7 @@ export default function InboxPage() {
                     </p>
 
                     {/* Reason / Admin Memo Box */}
-                    {(isRejected || isReversed || isDisputed || isPayoutApproved || isPayoutRejected) && notif.reason && (
+                    {(isRejected || isReversed || isDisputed || isDisputeWon || isPayoutApproved || isPayoutRejected) && notif.reason && (
                       <div
                         style={{
                           marginTop: 12,
@@ -526,7 +546,7 @@ export default function InboxPage() {
                             ? "rgba(244, 63, 94, 0.08)"
                             : isRejected || isPayoutRejected
                             ? "rgba(239, 68, 68, 0.08)"
-                            : isApproved || isPayoutApproved
+                            : isApproved || isPayoutApproved || isDisputeWon
                             ? "rgba(34, 197, 94, 0.08)"
                             : "rgba(249, 115, 22, 0.08)",
                           borderLeft: `3px solid ${
@@ -534,7 +554,7 @@ export default function InboxPage() {
                               ? "#f43f5e"
                               : isRejected || isPayoutRejected
                               ? "#ef4444"
-                              : isApproved || isPayoutApproved
+                              : isApproved || isPayoutApproved || isDisputeWon
                               ? "#22c55e"
                               : "#f97316"
                           }`,
@@ -548,7 +568,7 @@ export default function InboxPage() {
                               ? "#f43f5e"
                               : isRejected || isPayoutRejected
                               ? "#ef4444"
-                              : isApproved || isPayoutApproved
+                              : isApproved || isPayoutApproved || isDisputeWon
                               ? "#22c55e"
                               : "#f97316",
                             textTransform: "uppercase",
@@ -558,6 +578,8 @@ export default function InboxPage() {
                         >
                           {isDisputed
                             ? "Dispute Details"
+                            : isDisputeWon
+                            ? "Dispute Resolution Note"
                             : isPayoutApproved
                             ? "Admin Confirmation Note"
                             : isPayoutRejected
@@ -595,7 +617,7 @@ export default function InboxPage() {
                             <ExternalLink size={11} />
                           </Link>
                         )}
-                        {(isPayoutApproved || isPayoutRejected) && (
+                        {(isPayoutApproved || isPayoutRejected || isDisputed || isReversed || isDisputeWon) && (
                           <>
                             <a
                               href="https://discord.gg/krypt"
@@ -617,6 +639,17 @@ export default function InboxPage() {
                               <Wallet size={12} />
                               <span>View Balance & Earnings</span>
                             </Link>
+                            {(isDisputed || isReversed) && (
+                              <Link
+                                href={`/dashboard/orders${querySuffix}`}
+                                className="btn btn-ghost"
+                                style={{ fontSize: 11, padding: "4px 10px", gap: 5 }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span>View Orders</span>
+                                <ArrowRight size={11} />
+                              </Link>
+                            )}
                           </>
                         )}
                       </div>

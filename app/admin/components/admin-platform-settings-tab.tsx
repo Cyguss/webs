@@ -50,6 +50,7 @@ export function AdminPlatformSettingsTab({
     platform_fee_percent: 5.0,
     enable_crypto_payments: true,
     enable_stripe_payments: true,
+    nowpayments_sandbox_mode: true,
     cryptomus_sandbox_mode: true,
     announcement_banner_active: false,
     announcement_banner_text: "",
@@ -414,7 +415,7 @@ export function AdminPlatformSettingsTab({
                 style={{ width: 140, fontSize: 14, fontWeight: 700 }}
               />
               <div style={{ fontSize: 12, color: "var(--color-muted-foreground)" }}>
-                % (e.g. 5.0% means seller receives <strong>{(100 - settings.platform_fee_percent).toFixed(1)}%</strong> of order total)
+                % (e.g. 5.0% platform fee; payment processing fees apply separately per payment gateway)
               </div>
             </div>
           </div>
@@ -476,8 +477,14 @@ export function AdminPlatformSettingsTab({
               </div>
               <input
                 type="checkbox"
-                checked={settings.cryptomus_sandbox_mode}
-                onChange={(e) => setSettings({ ...settings, cryptomus_sandbox_mode: e.target.checked })}
+                checked={settings.nowpayments_sandbox_mode ?? settings.cryptomus_sandbox_mode ?? true}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    nowpayments_sandbox_mode: e.target.checked,
+                    cryptomus_sandbox_mode: e.target.checked,
+                  })
+                }
               />
             </div>
 
@@ -661,7 +668,7 @@ export function AdminPlatformSettingsTab({
               onChange={(e) => setSettings({ ...settings, announcement_banner_text: e.target.value })}
               className="input"
               style={{ width: "100%", fontSize: 12, resize: "vertical" }}
-              placeholder="e.g. System Upgrade: Cryptomus payment node upgraded with sub-second confirmations."
+              placeholder="e.g. System Upgrade: NOWPayments crypto node upgraded with sub-second confirmations."
             />
           </div>
 

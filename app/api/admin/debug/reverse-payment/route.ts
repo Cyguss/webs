@@ -14,20 +14,35 @@ function getClientIp(headersList: Headers): string {
   return headersList.get("x-real-ip") || "127.0.0.1";
 }
 
-async function verifyDebugAccess() {
+async function verifyDebugAccess(req?: Request) {
   // CRITICAL SECURITY GUARD: Debug reversal endpoint is disabled in production unless ALLOW_ADMIN_DEBUG is true
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_ADMIN_DEBUG !== "true") {
     return { authorized: false, isSuperAdmin: false, user: null };
   }
 
-  const headersList = await headers();
+  let headersList: Headers;
+  if (req && req.headers) {
+    headersList = req.headers;
+  } else {
+    try {
+      headersList = await headers();
+    } catch {
+      headersList = new Headers();
+    }
+  }
+
   const ticket = headersList.get("x-admin-ticket");
   const ip = getClientIp(headersList);
   const isSuperAdminTicket = verifyAdminSessionTicket(ticket, ip);
 
-  const session = await auth.api.getSession({
-    headers: headersList,
-  });
+  let session: any = null;
+  try {
+    session = await auth.api.getSession({
+      headers: headersList,
+    });
+  } catch {
+    session = null;
+  }
 
   let currentDbUser: any = null;
   if (session?.user?.id) {
@@ -67,9 +82,9 @@ async function verifyDebugAccess() {
  * GET /api/admin/debug/reverse-payment
  * Returns a list of candidate orders for payment reversal testing.
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const authCheck = await verifyDebugAccess();
+    const authCheck = await verifyDebugAccess(req);
     if (!authCheck.authorized) {
       return NextResponse.json(
         { error: "Access denied. Debug privileges required." },
@@ -117,7 +132,7 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const authCheck = await verifyDebugAccess();
+    const authCheck = await verifyDebugAccess(req);
     if (!authCheck.authorized) {
       return NextResponse.json(
         { error: "Access denied. Debug privileges required." },
@@ -199,7 +214,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Fetch updated merchant balance
+    // 5. Fetch updated merchant balance and updated order
+    const [freshOrder] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, targetOrder.id));
+
     const updatedBalance = targetShop
       ? await db.query.sellerBalances.findFirst({
           where: eq(sellerBalances.userId, targetShop.userId),
@@ -216,7 +236,7 @@ export async function POST(req: Request) {
         buyerEmail: targetOrder.buyerEmail,
         totalAmount: targetOrder.totalAmount,
         previousPaymentStatus: targetOrder.paymentStatus,
-        newPaymentStatus: finalType === "dispute" ? "disputed" : "reversed",
+        newPaymentStatus: freshOrder?.paymentStatus || targetOrder.paymentStatus,
       },
       merchant: {
         id: targetShop?.userId,

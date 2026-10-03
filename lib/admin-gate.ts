@@ -149,7 +149,14 @@ export function verifyAdminSessionTicket(ticket: string | null | undefined, ip?:
     }
 
     // Bind ticket to issuing IP (allow local loopback during dev)
-    if (ip && data.ip && data.ip !== ip && data.ip !== "127.0.0.1" && ip !== "127.0.0.1") {
+    const isLoopback = (addr?: string) =>
+      !addr ||
+      addr === "127.0.0.1" ||
+      addr === "::1" ||
+      addr === "::ffff:127.0.0.1" ||
+      addr === "localhost";
+
+    if (ip && data.ip && data.ip !== ip && !isLoopback(data.ip) && !isLoopback(ip)) {
       return false;
     }
 

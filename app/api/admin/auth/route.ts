@@ -55,6 +55,32 @@ export async function POST(req: Request) {
     resetAdminRateLimit(ip);
     const ticket = generateAdminSessionTicket(ip);
 
+    // 4. If caller is logged into an account, elevate their DB role to superadmin
+    try {
+      const { auth } = await import("@/lib/auth");
+      const { db } = await import("@/lib/db");
+      const { user } = await import("@/lib/db/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const session = await auth.api.getSession({
+        headers: headersList,
+      });
+
+      if (session?.user?.id) {
+        await db
+          .update(user)
+          .set({
+            role: "superadmin",
+            adminPermissionsActive: true,
+            adminPermissions: "all",
+            updatedAt: new Date(),
+          })
+          .where(eq(user.id, session.user.id));
+      }
+    } catch (elevateErr) {
+      console.error("[Admin Auth] Failed to elevate session user:", elevateErr);
+    }
+
     return NextResponse.json({
       success: true,
       role: "superadmin",

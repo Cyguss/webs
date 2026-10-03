@@ -259,7 +259,7 @@ export default async function EarningsPage({
             ${totalEarned.toFixed(2)}
           </div>
           <div style={{ fontSize: 12, color: "var(--color-muted-foreground)", marginTop: 4 }}>
-            Net earnings: ${(totalEarned * (1 - feePercent / 100)).toFixed(2)} (after {feePercent}% fee)
+            Net earnings: ${((available + pending + totalWithdrawn) > 0 ? (available + pending + totalWithdrawn) : (totalEarned * (1 - feePercent / 100))).toFixed(2)} (after {feePercent}% platform fee + processing fees)
           </div>
         </div>
 
@@ -349,7 +349,7 @@ export default async function EarningsPage({
                   <th>Type</th>
                   <th>Description</th>
                   <th>Amount</th>
-                  <th>Platform Fee</th>
+                  <th>Fees (5% + Processing)</th>
                   <th>Net Impact</th>
                   <th>Date</th>
                 </tr>

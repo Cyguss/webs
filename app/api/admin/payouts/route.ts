@@ -10,11 +10,25 @@ export async function POST(req: Request) {
     const headersList = await headers();
     const ticket = headersList.get("x-admin-ticket");
     const { verifyAdminSessionTicket, getBlockAllAdminsStatus } = await import("@/lib/admin-gate");
-    const isSuperAdmin = verifyAdminSessionTicket(ticket);
+    const isSuperAdminTicket = verifyAdminSessionTicket(ticket);
 
     const session = await auth.api.getSession({
       headers: headersList,
     });
+
+    const { user: userTable, account } = await import("@/lib/db/schema");
+    const { and } = await import("drizzle-orm");
+    let currentDbUser: any = null;
+    if (session?.user?.id) {
+      currentDbUser = await db.query.user.findFirst({
+        where: eq(userTable.id, session.user.id),
+      });
+    }
+
+    const isSuperAdmin =
+      isSuperAdminTicket ||
+      currentDbUser?.role === "superadmin" ||
+      (session?.user as any)?.role === "superadmin";
 
     if (!isSuperAdmin && (!session || !session.user)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,11 +45,6 @@ export async function POST(req: Request) {
       }
 
       // Live verification of Discord admin role
-      const { user: userTable, account } = await import("@/lib/db/schema");
-      const { and } = await import("drizzle-orm");
-      const currentDbUser = await db.query.user.findFirst({
-        where: eq(userTable.id, session.user.id),
-      });
       const discordAccount = await db.query.account.findFirst({
         where: and(eq(account.userId, session.user.id), eq(account.providerId, "discord")),
       });

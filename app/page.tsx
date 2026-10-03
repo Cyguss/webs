@@ -896,7 +896,7 @@ export default function LandingPage() {
             {feePercent}%
           </div>
           <p style={{ fontSize: 14, color: "var(--color-muted-foreground)", margin: "0 auto 24px", maxWidth: 460, lineHeight: 1.5 }}>
-            Flat platform fee per completed checkout. Keep {Math.max(0, 100 - feePercent)}% of your sales revenue. Zero monthly subscription, free custom domain hosting, fast payouts.
+            Flat platform fee per completed checkout (+ payment processing fees). Zero monthly subscription, free custom domain hosting, fast payouts.
           </p>
 
           <div

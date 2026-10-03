@@ -88,7 +88,7 @@ export function AdminDebugTab({
 
   // Form state
   const [selectedOrderId, setSelectedOrderId] = useState("");
-  const [reversalType, setReversalType] = useState<"dispute" | "refund" | "chargeback" | "reversal">("dispute");
+  const [reversalType, setReversalType] = useState<"dispute" | "refund" | "chargeback" | "reversal" | "dispute_won">("dispute");
   const [customAmount, setCustomAmount] = useState<string>("");
   const [reason, setReason] = useState<string>("Buyer opened dispute: Unauthorized transaction / charge not recognized");
   const [executing, setExecuting] = useState(false);
@@ -122,12 +122,14 @@ export function AdminDebugTab({
 
   useEffect(() => {
     loadCandidateOrders();
-  }, []);
+  }, [ticket, isSuperAdmin]);
 
-  function handleTypeChange(type: "dispute" | "refund" | "chargeback" | "reversal") {
+  function handleTypeChange(type: "dispute" | "refund" | "chargeback" | "reversal" | "dispute_won") {
     setReversalType(type);
     if (type === "dispute") {
       setReason("Buyer opened dispute: Unauthorized transaction / charge not recognized");
+    } else if (type === "dispute_won") {
+      setReason("Dispute resolved in merchant favor: Proof of delivery provided");
     } else if (type === "refund") {
       setReason("Merchant / Customer agreed refund");
     } else if (type === "chargeback") {
@@ -142,6 +144,8 @@ export function AdminDebugTab({
     setCustomAmount(parseFloat(o.totalAmount).toFixed(2));
     if (reversalType === "dispute") {
       setReason(`Buyer dispute on Order #${o.id.slice(0, 8)}: Unauthorized transaction`);
+    } else if (reversalType === "dispute_won") {
+      setReason(`Dispute won for Order #${o.id.slice(0, 8)}: Evidence accepted`);
     } else {
       setReason(`Debug simulated ${reversalType} for Order #${o.id.slice(0, 8)}`);
     }
@@ -157,8 +161,11 @@ export function AdminDebugTab({
 
     const orderObj = orders.find((o) => o.id === selectedOrderId.trim());
     const isDispute = reversalType === "dispute";
+    const isDisputeWon = reversalType === "dispute_won";
     const confirmPrompt = isDispute
-      ? `Simulate BUYER DISPUTE on Order #${selectedOrderId.slice(0, 8)}?\n\nThis will mark the order as DISPUTED, debit/hold the merchant's balance, and dispatch a high-priority dispute notice to the merchant's inbox.`
+      ? `Simulate BUYER DISPUTE on Order #${selectedOrderId.slice(0, 8)}?\n\nThis will mark the order as DISPUTED, hold the dispute amount in reserve, and dispatch a high-priority dispute notice to the merchant's inbox.`
+      : isDisputeWon
+      ? `Simulate DISPUTE WON on Order #${selectedOrderId.slice(0, 8)}?\n\nThis will mark the order as COMPLETED, release the held reserve balance back to payoutable funds, and notify the merchant.`
       : `Simulate ${reversalType.toUpperCase()} on Order #${selectedOrderId.slice(0, 8)}?\n\nThis will debit the merchant's balance and dispatch a notification to the merchant's inbox.`;
     if (!confirm(confirmPrompt)) return;
 
@@ -483,12 +490,12 @@ export function AdminDebugTab({
               <label className="label" style={{ fontSize: 12 }}>
                 Operation Type
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
                 {[
                   {
                     id: "dispute",
                     label: "Dispute",
-                    desc: "Buyer Dispute (Held/Contested)",
+                    desc: "Buyer Dispute (Held/Reserve)",
                     color: "#f43f5e",
                     bg: "rgba(244, 63, 94, 0.12)",
                     icon: ShieldAlert,
@@ -500,6 +507,14 @@ export function AdminDebugTab({
                     color: "#ef4444",
                     bg: "rgba(239, 68, 68, 0.12)",
                     icon: AlertCircle,
+                  },
+                  {
+                    id: "dispute_won",
+                    label: "Dispute Won",
+                    desc: "Release Reserve Funds",
+                    color: "#22c55e",
+                    bg: "rgba(34, 197, 94, 0.12)",
+                    icon: CheckCircle2,
                   },
                   {
                     id: "refund",

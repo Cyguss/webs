@@ -16,7 +16,7 @@ export default function ExportCsvButton({ transactions }: { transactions: Transa
   const handleExport = () => {
     if (!transactions || transactions.length === 0) return;
 
-    const headers = ["ID", "Type", "Description", "Gross Amount (USD)", "Platform Fee (USD)", "Net Amount (USD)", "Date"];
+    const headers = ["ID", "Type", "Description", "Gross Amount (USD)", "Fees (Platform + Processing) (USD)", "Net Amount (USD)", "Date"];
     const rows = transactions.map((t) => [
       `"${t.id}"`,
       `"${t.type}"`,

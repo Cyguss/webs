@@ -62,10 +62,12 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
   STRIPE_CLI_WEBHOOK_SECRET: z.string().optional().default(""),
 
-  // ── Crypto / NOWPayments & Cryptomus (Optional) ──
+  // ── Crypto / NOWPayments (Sole Provider) ──
+  NOWPAYMENTS_SANDBOX: z.string().optional().default("true"),
   NOWPAYMENTS_API_KEY: z.string().optional().default(""),
   NOWPAYMENTS_IPN_SECRET: z.string().optional().default(""),
-  CRYPTOMUS_SANDBOX: z.string().optional().default("true"),
+  // Legacy Cryptomus fields (deprecated / ignored)
+  CRYPTOMUS_SANDBOX: z.string().optional().default("false"),
   CRYPTOMUS_MERCHANT_ID: z.string().optional().default(""),
   CRYPTOMUS_PAYMENT_KEY: z.string().optional().default(""),
   CRYPTOMUS_PAYOUT_KEY: z.string().optional().default(""),
@@ -152,7 +154,7 @@ export const features = {
     env.RESEND_API_KEY.startsWith("re_")
   ),
   crypto: Boolean(
-    (env.CRYPTOMUS_MERCHANT_ID && env.CRYPTOMUS_PAYMENT_KEY) ||
-    (env.NOWPAYMENTS_API_KEY && env.NOWPAYMENTS_API_KEY !== "your-nowpayments-api-key")
+    env.NOWPAYMENTS_API_KEY &&
+    env.NOWPAYMENTS_API_KEY !== "your-nowpayments-api-key"
   ),
 };

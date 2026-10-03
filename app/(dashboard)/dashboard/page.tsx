@@ -266,8 +266,10 @@ function DashboardOverviewInner() {
   const availableBalance = parseFloat(data?.balanceData?.availableBalance ?? "0");
   const pendingBalance = parseFloat(data?.balanceData?.pendingBalance ?? "0");
   const totalEarned = parseFloat(data?.balanceData?.totalEarned ?? "0");
-  const feePercent = (data as any)?.platformFeePercent ?? 5.0;
-  const netEarnings = totalEarned * (1 - feePercent / 100);
+  const totalWithdrawn = parseFloat(data?.balanceData?.totalWithdrawn ?? "0");
+  const feePercent = (data as any)?.stats?.platformFeePercent ?? (data as any)?.platformFeePercent ?? 5.0;
+  const settledNet = availableBalance + pendingBalance + totalWithdrawn;
+  const netEarnings = settledNet > 0 ? settledNet : totalEarned * (1 - feePercent / 100);
   const totalOrdersCount = (data as any)?.totalOrdersCount ?? data?.recentOrders?.length ?? 0;
   const recentOrders = data?.recentOrders || [];
   const approvalStatus = data?.approvalStatus;
@@ -647,7 +649,7 @@ function DashboardOverviewInner() {
                         <Clock size={12} /> Pending Clearance
                       </div>
                       <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", lineHeight: 1.4 }}>
-                        ${pendingBalance.toFixed(2)} from recent sales is in the clearance window before becoming available for instant withdrawal.
+                        ${pendingBalance.toFixed(2)} from recent sales (after {feePercent}% platform fee + payment processing fees) is in the clearance window before becoming available for instant withdrawal.
                       </div>
                     </div>
                   )}
@@ -679,8 +681,8 @@ function DashboardOverviewInner() {
               ${netEarnings.toFixed(2)}
             </div>
           </div>
-          <div style={{ marginTop: 14, fontSize: 12, color: totalEarned > 0 ? "var(--color-success)" : "var(--color-muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
-            <CheckCircle2 size={13} /> {totalEarned > 0 ? `Gross sales: $${totalEarned.toFixed(2)} • ${feePercent}% fee deducted` : `Flat ${feePercent}% platform fee on sales • No monthly fees`}
+          <div style={{ marginTop: 14, fontSize: 12, color: totalEarned > 0 ? "var(--color-success)" : "var(--color-muted-foreground)", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+            <CheckCircle2 size={13} style={{ flexShrink: 0 }} /> <span>{totalEarned > 0 ? `Gross sales: $${totalEarned.toFixed(2)} • ${feePercent}% platform fee + payment processing fees deducted` : `Flat ${feePercent}% platform fee + payment processing fees • No monthly fees`}</span>
           </div>
         </div>
 

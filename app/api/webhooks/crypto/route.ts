@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { fulfillOrder } from "@/lib/order-fulfillment";
 import { verifyNowPaymentsWebhook } from "@/lib/nowpayments";
-import { verifyCryptomusWebhook } from "@/lib/cryptomus";
 
 export const dynamic = "force-dynamic";
 
@@ -19,31 +18,17 @@ export async function POST(req: Request) {
     const nowpaymentsSig = req.headers.get("x-nowpayments-sig") || req.headers.get("x-nowpayments-signature");
     const ipnSecret = (process.env.NOWPAYMENTS_IPN_SECRET || "").trim();
 
-    // ── 1. NOWPayments Webhook Verification ──
-    if (nowpaymentsSig || ipnSecret) {
-      if (process.env.NODE_ENV === "production" || ipnSecret) {
-        if (!nowpaymentsSig) {
-          console.error("[NOWPayments IPN] Missing x-nowpayments-sig header.");
-          return NextResponse.json({ error: "Missing signature header" }, { status: 401 });
-        }
-
-        const isValid = verifyNowPaymentsWebhook(body, nowpaymentsSig, ipnSecret);
-        if (!isValid) {
-          console.error("[NOWPayments IPN] Signature verification failed!");
-          return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-        }
+    // ── NOWPayments IPN Signature Verification ──
+    if (ipnSecret) {
+      if (!nowpaymentsSig) {
+        console.error("[NOWPayments IPN] Missing x-nowpayments-sig header.");
+        return NextResponse.json({ error: "Missing signature header" }, { status: 401 });
       }
-    } else {
-      // ── 2. Fallback / Cryptomus Webhook Verification (Backward compatibility) ──
-      const cryptomusKey = (process.env.CRYPTOMUS_PAYMENT_KEY || "").trim();
-      const cryptomusSign = body.sign || req.headers.get("sign") || "";
 
-      if (cryptomusSign && cryptomusKey) {
-        const isValid = verifyCryptomusWebhook(rawBody, cryptomusSign, cryptomusKey);
-        if (!isValid) {
-          console.error("[Crypto Webhook] Cryptomus signature verification failed!");
-          return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-        }
+      const isValid = verifyNowPaymentsWebhook(body, nowpaymentsSig, ipnSecret);
+      if (!isValid) {
+        console.error("[NOWPayments IPN] Signature verification failed!");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
       }
     }
 

@@ -10,7 +10,8 @@ export interface PlatformConfig {
   platform_fee_percent: number;
   enable_crypto_payments: boolean;
   enable_stripe_payments: boolean;
-  cryptomus_sandbox_mode: boolean;
+  nowpayments_sandbox_mode: boolean;
+  cryptomus_sandbox_mode?: boolean;
   announcement_banner_active: boolean;
   announcement_banner_text: string;
   announcement_banner_type: "info" | "warning" | "alert" | "promo";
@@ -31,6 +32,7 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   platform_fee_percent: 5.0,
   enable_crypto_payments: true,
   enable_stripe_payments: true,
+  nowpayments_sandbox_mode: true,
   cryptomus_sandbox_mode: true,
   announcement_banner_active: false,
   announcement_banner_text: "",
@@ -69,7 +71,18 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
     platform_fee_percent: map.platform_fee_percent !== undefined ? parseFloat(map.platform_fee_percent) || 5.0 : DEFAULT_PLATFORM_CONFIG.platform_fee_percent,
     enable_crypto_payments: map.enable_crypto_payments !== undefined ? map.enable_crypto_payments === "true" : DEFAULT_PLATFORM_CONFIG.enable_crypto_payments,
     enable_stripe_payments: map.enable_stripe_payments !== undefined ? map.enable_stripe_payments === "true" : DEFAULT_PLATFORM_CONFIG.enable_stripe_payments,
-    cryptomus_sandbox_mode: map.cryptomus_sandbox_mode !== undefined ? map.cryptomus_sandbox_mode === "true" : DEFAULT_PLATFORM_CONFIG.cryptomus_sandbox_mode,
+    nowpayments_sandbox_mode:
+      map.nowpayments_sandbox_mode !== undefined
+        ? map.nowpayments_sandbox_mode === "true"
+        : map.cryptomus_sandbox_mode !== undefined
+        ? map.cryptomus_sandbox_mode === "true"
+        : DEFAULT_PLATFORM_CONFIG.nowpayments_sandbox_mode,
+    cryptomus_sandbox_mode:
+      map.nowpayments_sandbox_mode !== undefined
+        ? map.nowpayments_sandbox_mode === "true"
+        : map.cryptomus_sandbox_mode !== undefined
+        ? map.cryptomus_sandbox_mode === "true"
+        : true,
     announcement_banner_active: map.announcement_banner_active === "true",
     announcement_banner_text: map.announcement_banner_text || "",
     announcement_banner_type: (map.announcement_banner_type as any) || "info",

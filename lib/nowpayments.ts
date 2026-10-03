@@ -20,8 +20,13 @@ export interface NowPaymentsInvoiceResponse {
 function getNowPaymentsConfig() {
   const apiKey = (process.env.NOWPAYMENTS_API_KEY || "").trim();
   const ipnSecret = (process.env.NOWPAYMENTS_IPN_SECRET || "").trim();
+  const isSandbox =
+    (process.env.NOWPAYMENTS_SANDBOX || "false").toLowerCase() === "true";
+  const baseUrl = isSandbox
+    ? "https://api-sandbox.nowpayments.io/v1"
+    : "https://api.nowpayments.io/v1";
 
-  return { apiKey, ipnSecret };
+  return { apiKey, ipnSecret, isSandbox, baseUrl };
 }
 
 /**
@@ -31,7 +36,7 @@ function getNowPaymentsConfig() {
 export async function createNowPaymentsInvoice(
   params: CreateNowPaymentsInvoiceParams
 ): Promise<NowPaymentsInvoiceResponse> {
-  const { apiKey } = getNowPaymentsConfig();
+  const { apiKey, baseUrl, isSandbox } = getNowPaymentsConfig();
 
   if (!apiKey) {
     console.error("[NOWPayments] Missing NOWPAYMENTS_API_KEY in environment variables.");
@@ -59,7 +64,7 @@ export async function createNowPaymentsInvoice(
   }
 
   try {
-    const response = await fetch("https://api.nowpayments.io/v1/invoice", {
+    const response = await fetch(`${baseUrl}/invoice`, {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
@@ -74,7 +79,7 @@ export async function createNowPaymentsInvoice(
       const errMsg =
         data.message ||
         (typeof data.errors === "object" ? JSON.stringify(data.errors) : "NOWPayments invoice creation failed");
-      console.error("[NOWPayments API Error]:", response.status, data);
+      console.error(`[NOWPayments API Error (${isSandbox ? "Sandbox" : "Live"})]:`, response.status, data);
       return { success: false, error: errMsg };
     }
 
@@ -141,11 +146,11 @@ export function verifyNowPaymentsWebhook(
  * Checks payment status directly with NOWPayments API by payment ID.
  */
 export async function checkNowPaymentsPaymentStatus(paymentId: string) {
-  const { apiKey } = getNowPaymentsConfig();
+  const { apiKey, baseUrl } = getNowPaymentsConfig();
   if (!apiKey) return null;
 
   try {
-    const res = await fetch(`https://api.nowpayments.io/v1/payment/${paymentId}`, {
+    const res = await fetch(`${baseUrl}/payment/${paymentId}`, {
       headers: {
         "x-api-key": apiKey,
       },
