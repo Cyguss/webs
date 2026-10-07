@@ -241,6 +241,8 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
+    // Explicitly clean up inventory keys for this product
+    await db.delete(inventoryKeys).where(eq(inventoryKeys.productId, productId));
     await db.delete(products).where(eq(products.id, productId));
 
     return NextResponse.json({ success: true });
