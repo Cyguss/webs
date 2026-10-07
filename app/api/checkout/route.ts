@@ -29,6 +29,24 @@ export async function POST(req: Request) {
       );
     }
 
+    // Platform Maintenance Mode Guard
+    const { isPlatformInMaintenance } = await import("@/lib/platform-settings");
+    const { inMaintenance, message: maintenanceMsg } = await isPlatformInMaintenance();
+    if (inMaintenance) {
+      const session = await auth.api.getSession({ headers: headersList }).catch(() => null);
+      const isSuperAdmin = (session?.user as any)?.role === "superadmin";
+      if (!isSuperAdmin) {
+        return NextResponse.json(
+          {
+            error:
+              maintenanceMsg ||
+              "Platform checkout is temporarily paused for scheduled maintenance. Please check back shortly.",
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     const body = await req.json();
     const result = checkoutSchema.safeParse(body);
     if (!result.success) {

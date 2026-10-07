@@ -481,9 +481,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             stock={stock}
             variantStocks={variantStocks}
             accentColor={storefrontAccent}
+            isMaintenanceMode={platformConfig.maintenance_mode}
+            maintenanceMessage={platformConfig.maintenance_message}
           />
         </div>
       </div>
+
 
       {/* ─── Storefront Footer ─── */}
       <footer

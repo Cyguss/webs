@@ -118,7 +118,7 @@ export async function POST(
     const keyCustomLabel = customDurationLabel !== undefined ? (customDurationLabel?.trim() || null) : product.customDurationLabel;
     const keyVariantId = variantId || null;
 
-    // Filter, clean whitespace, and deduplicate
+    // Filter, clean whitespace, and deduplicate within incoming batch
     const uniqueKeysSet = new Set<string>();
     const cleanedKeys: string[] = [];
 
@@ -136,7 +136,27 @@ export async function POST(
       return NextResponse.json({ error: "No valid unique keys found" }, { status: 400 });
     }
 
-    const keysToInsert = cleanedKeys.map((keyValue: string) => ({
+    // Query existing keys for this product to prevent duplicate keys in database
+    const existingDbKeys = await db
+      .select({ keyValue: inventoryKeys.keyValue })
+      .from(inventoryKeys)
+      .where(eq(inventoryKeys.productId, productId));
+
+    const existingKeySet = new Set(existingDbKeys.map((k) => k.keyValue.trim()));
+    const finalKeysToInsert = cleanedKeys.filter((k) => !existingKeySet.has(k));
+
+    if (finalKeysToInsert.length === 0) {
+      return NextResponse.json(
+        {
+          error: "All provided keys already exist in the inventory for this product.",
+          count: 0,
+          duplicatesFiltered: keys.length,
+        },
+        { status: 400 }
+      );
+    }
+
+    const keysToInsert = finalKeysToInsert.map((keyValue: string) => ({
       id: crypto.randomUUID(),
       productId,
       variantId: keyVariantId,
@@ -154,11 +174,14 @@ export async function POST(
       await db.insert(inventoryKeys).values(chunk);
     }
 
+    const totalDuplicates = keys.length - keysToInsert.length;
+
     return NextResponse.json({
       success: true,
       count: keysToInsert.length,
-      duplicatesFiltered: keys.length - cleanedKeys.length,
+      duplicatesFiltered: totalDuplicates,
     });
+
   } catch (err: any) {
     console.error("Error adding product keys:", err);
     return NextResponse.json({ error: err.message || "Failed to add keys" }, { status: 500 });

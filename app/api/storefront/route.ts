@@ -88,10 +88,11 @@ export async function POST(req: Request) {
 
     if (RESERVED_SLUGS.includes(slug)) {
       return NextResponse.json(
-        { error: "This slug is reserved by the KRYPT Protocol" },
+        { error: "This slug is reserved by the platform" },
         { status: 400 }
       );
     }
+
 
     // Check store limit per user
     const existingUserShops = await db.query.shops.findMany({

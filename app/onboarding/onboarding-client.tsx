@@ -76,19 +76,20 @@ export default function OnboardingClient({ user }: { user: any }) {
     e.preventDefault();
     setError("");
 
-    if (!name.trim()) {
-      const msg = "Please enter a name for your store";
+    if (!name.trim() || name.trim().length < 2) {
+      const msg = "Store name must be at least 2 characters";
       setError(msg);
       toast.error(msg);
       return;
     }
 
     if (!slug.trim() || slug.length < 3) {
-      const msg = "Store slug must contain at least 3 characters (letters, numbers, hyphens)";
+      const msg = "Storefront slug must contain at least 3 characters (letters, numbers, hyphens)";
       setError(msg);
       toast.error(msg);
       return;
     }
+
 
     setLoading(true);
 
@@ -560,7 +561,7 @@ export default function OnboardingClient({ user }: { user: any }) {
                 {/* Store Name */}
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                    Store Name <span style={{ color: "var(--color-danger)" }}>*</span>
+                    Store Name <span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-muted-foreground)" }}>(min. 2 characters)</span> <span style={{ color: "var(--color-danger)" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
                     <Store
@@ -574,6 +575,7 @@ export default function OnboardingClient({ user }: { user: any }) {
                       value={name}
                       onChange={handleNameChange}
                       required
+                      minLength={2}
                       style={{ paddingLeft: 42, height: 44, fontSize: 15 }}
                       autoFocus
                     />
@@ -586,7 +588,7 @@ export default function OnboardingClient({ user }: { user: any }) {
                 {/* Store Slug / URL */}
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                    Storefront Slug (URL Subpath) <span style={{ color: "var(--color-danger)" }}>*</span>
+                    Storefront Slug (URL Subpath) <span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-muted-foreground)" }}>(min. 3 characters)</span> <span style={{ color: "var(--color-danger)" }}>*</span>
                   </label>
                   <div
                     style={{

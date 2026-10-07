@@ -10,6 +10,7 @@ import Link from "next/link";
 import { getKeyDurationDisplay } from "@/lib/key-duration";
 import { getActiveMerchantShop } from "@/lib/tenant";
 import { ProductTypeCell } from "./product-type-cell";
+import { DeleteProductButton } from "./delete-product-button";
 
 export default async function ProductsPage({
   searchParams,
@@ -183,11 +184,12 @@ export default async function ProductsPage({
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <Link
                         href={`/dashboard/products/${product.id}/edit${querySuffix}`}
                         className="btn btn-ghost"
                         style={{ padding: "6px 10px" }}
+                        title="Edit product"
                       >
                         <Edit size={14} />
                       </Link>
@@ -196,12 +198,19 @@ export default async function ProductsPage({
                           href={`/dashboard/products/${product.id}/keys${querySuffix}`}
                           className="btn btn-ghost"
                           style={{ padding: "6px 10px", fontSize: 12 }}
+                          title="Manage keys"
                         >
                           <Key size={14} />
                           Keys
                         </Link>
                       )}
+                      <DeleteProductButton
+                        productId={product.id}
+                        productTitle={product.title}
+                        shopId={shop.id}
+                      />
                     </div>
+
                   </td>
                 </tr>
               ))}

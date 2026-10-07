@@ -14,6 +14,8 @@ export default function ProductCheckoutClient({
   stock,
   variantStocks = {},
   accentColor = "rgb(55, 44, 102)",
+  isMaintenanceMode = false,
+  maintenanceMessage,
 }: any) {
   const router = useRouter();
   const toast = useToast();
@@ -145,6 +147,13 @@ export default function ProductCheckoutClient({
 
   async function handleCheckout(isMockPay = false) {
     setError(null);
+
+    if (isMaintenanceMode) {
+      const msg = maintenanceMessage || "Platform checkout is temporarily paused for scheduled maintenance.";
+      setError(msg);
+      toast.warning("Maintenance Active", msg);
+      return;
+    }
 
     if (!buyerEmail.trim() || !buyerEmail.includes("@")) {
       const msg = "Please enter a valid email address.";
@@ -595,6 +604,27 @@ export default function ProductCheckoutClient({
           </div>
         </div>
 
+        {isMaintenanceMode && (
+          <div
+            style={{
+              padding: "10px 14px",
+              borderRadius: 8,
+              background: "rgba(245, 158, 11, 0.12)",
+              border: "1px solid rgba(245, 158, 11, 0.35)",
+              color: "#f59e0b",
+              fontSize: 12,
+              lineHeight: 1.4,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontFamily: "var(--font-mono, monospace)",
+            }}
+          >
+            <Clock size={16} style={{ flexShrink: 0 }} />
+            <span>{maintenanceMessage || "Platform checkout is temporarily paused for scheduled maintenance."}</span>
+          </div>
+        )}
+
         {error && (
           <div className="animate-pop" style={{ padding: "8px 12px", borderRadius: 6, background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#ef4444", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>
             {error}
@@ -605,7 +635,7 @@ export default function ProductCheckoutClient({
         <button
           type="button"
           onClick={() => handleCheckout(false)}
-          disabled={loading || stock <= 0}
+          disabled={loading || stock <= 0 || isMaintenanceMode}
           className="krypt-btn-primary"
           style={{
             width: "100%",
@@ -614,21 +644,30 @@ export default function ProductCheckoutClient({
             fontSize: 13,
             fontFamily: "var(--font-mono, monospace)",
             fontWeight: 800,
-            cursor: loading || stock <= 0 ? "not-allowed" : "pointer",
+            cursor: loading || stock <= 0 || isMaintenanceMode ? "not-allowed" : "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            opacity: stock <= 0 ? 0.45 : 1,
+            opacity: stock <= 0 || isMaintenanceMode ? 0.5 : 1,
             marginTop: 4,
-            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-            border: `1px solid ${accentColor}88`,
-            boxShadow: `0 0 18px ${accentColor}50`,
-            color: "#ffffff",
+            background: isMaintenanceMode
+              ? "rgba(245, 158, 11, 0.2)"
+              : `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
+            border: isMaintenanceMode
+              ? "1px solid rgba(245, 158, 11, 0.4)"
+              : `1px solid ${accentColor}88`,
+            boxShadow: isMaintenanceMode ? "none" : `0 0 18px ${accentColor}50`,
+            color: isMaintenanceMode ? "#f59e0b" : "#ffffff",
           }}
         >
           {loading ? (
             <Loader2 size={16} className="animate-spin" />
+          ) : isMaintenanceMode ? (
+            <>
+              <Clock size={15} />
+              <span>Checkout Paused (Maintenance)</span>
+            </>
           ) : (
             <>
               <Zap size={15} />

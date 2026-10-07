@@ -30,7 +30,7 @@ import { ProductVariantsManager } from "@/components/product-variants-manager";
 import { ProductVariant } from "@/lib/validations/product";
 import { ProductCategorySelector } from "@/components/product-category-selector";
 import { ProductVideoShowcaseManager } from "@/components/product-video-showcase-manager";
-import { parseVideoShowcase } from "@/lib/media";
+import { parseVideoShowcase, normalizeImageUrl } from "@/lib/media";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -67,13 +67,23 @@ export default function NewProductPage() {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
 
   function handleAddImage() {
-    const trimmed = imageInput.trim();
-    if (!trimmed) return;
-    if (images.length >= 5) return;
-    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return;
-    setImages([...images, trimmed]);
+    const normalized = normalizeImageUrl(imageInput);
+    if (!normalized) {
+      toast.error("Invalid Image URL", "Please enter a valid HTTP or HTTPS image URL.");
+      return;
+    }
+    if (images.length >= 5) {
+      toast.warning("Limit Reached", "Maximum 5 images allowed per product.");
+      return;
+    }
+    if (images.includes(normalized)) {
+      toast.info("Duplicate Image", "This image has already been added.");
+      return;
+    }
+    setImages([...images, normalized]);
     setImageInput("");
   }
+
 
   function handleRemoveImage(idx: number) {
     setImages(images.filter((_, i) => i !== idx));
@@ -433,6 +443,11 @@ export default function NewProductPage() {
                 </button>
               </div>
 
+              <div style={{ fontSize: 11.5, color: "var(--color-muted-foreground)", lineHeight: 1.4, marginTop: 2 }}>
+                💡 <strong>Direct image URL required:</strong> Supports <code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>, <code>.webp</code>, <code>.gif</code>.
+                Imgur links (e.g. <code>imgur.com/xyz</code>) are auto-converted to direct links. On IMGBB, right-click the preview and choose <em>&quot;Copy Image Address&quot;</em>.
+              </div>
+
               {/* Images preview list */}
               {images.length > 0 ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10, marginTop: 4 }}>
@@ -454,8 +469,12 @@ export default function NewProductPage() {
                           src={imgUrl}
                           alt={`Product view ${idx + 1}`}
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.opacity = "0.35";
+                          }}
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
+
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(idx)}

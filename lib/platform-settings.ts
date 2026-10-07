@@ -154,3 +154,12 @@ export async function getPayoutHoldDays(): Promise<number> {
   const parsed = parseInt(val, 10);
   return isNaN(parsed) ? 14 : Math.max(0, parsed);
 }
+
+export async function isPlatformInMaintenance(): Promise<{ inMaintenance: boolean; message: string }> {
+  const config = await getPlatformConfig();
+  return {
+    inMaintenance: config.maintenance_mode,
+    message: config.maintenance_message,
+  };
+}
+

@@ -221,17 +221,19 @@ export function normalizeImageUrl(url?: string | null): string | null {
   let clean = url.trim();
   if (!clean) return null;
 
-  // Imgur page -> direct image link
-  if (/^https?:\/\/imgur\.com\/([a-zA-Z0-9]+)$/i.test(clean)) {
-    const match = clean.match(/^https?:\/\/imgur\.com\/([a-zA-Z0-9]+)$/i);
-    if (match && match[1]) {
-      return `https://i.imgur.com/${match[1]}.png`;
-    }
+  // Imgur gallery / album / direct page -> direct image link
+  const imgurMatch = clean.match(/^https?:\/\/(?:[a-zA-Z0-9_-]+\.)?imgur\.com\/(?:gallery\/|a\/)?([a-zA-Z0-9]{5,8})(?:\.[a-zA-Z]+)?(?:[?#].*)?$/i);
+  if (imgurMatch && imgurMatch[1]) {
+    return `https://i.imgur.com/${imgurMatch[1]}.png`;
   }
 
-  if (!clean.startsWith("http://") && !clean.startsWith("https://") && !clean.startsWith("/")) {
+  // Handle leading protocol-relative //
+  if (clean.startsWith("//")) {
+    clean = `https:${clean}`;
+  } else if (!clean.startsWith("http://") && !clean.startsWith("https://") && !clean.startsWith("/")) {
     clean = `https://${clean}`;
   }
 
   return clean;
 }
+

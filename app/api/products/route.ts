@@ -515,8 +515,16 @@ export async function PUT(req: Request) {
     }
 
     if (allKeysToInsert.length > 0) {
+      const existingDbKeys = await db
+        .select({ keyValue: inventoryKeys.keyValue })
+        .from(inventoryKeys)
+        .where(eq(inventoryKeys.productId, id));
+
+      const existingKeySet = new Set(existingDbKeys.map((k) => k.keyValue.trim()));
+
       const seenKeyStrings = new Set<string>();
       const deduplicatedKeys = allKeysToInsert.filter((item) => {
+        if (existingKeySet.has(item.keyValue)) return false;
         if (seenKeyStrings.has(item.keyValue)) return false;
         seenKeyStrings.add(item.keyValue);
         return true;
@@ -527,6 +535,7 @@ export async function PUT(req: Request) {
         await db.insert(inventoryKeys).values(deduplicatedKeys.slice(i, i + BATCH_SIZE));
       }
     }
+
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

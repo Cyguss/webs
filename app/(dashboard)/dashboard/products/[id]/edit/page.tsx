@@ -33,7 +33,8 @@ import { ProductVariantsManager } from "@/components/product-variants-manager";
 import { ProductVariant } from "@/lib/validations/product";
 import { ProductCategorySelector } from "@/components/product-category-selector";
 import { ProductVideoShowcaseManager } from "@/components/product-video-showcase-manager";
-import { parseVideoShowcase } from "@/lib/media";
+import { parseVideoShowcase, normalizeImageUrl } from "@/lib/media";
+import { DeleteProductButton } from "../../delete-product-button";
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: productId } = use(params);
@@ -89,13 +90,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [confirmExitOpen, setConfirmExitOpen] = useState(false);
 
   function handleAddImage() {
-    const trimmed = imageInput.trim();
-    if (!trimmed) return;
-    if (images.length >= 5) return;
-    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return;
-    setImages([...images, trimmed]);
+    const normalized = normalizeImageUrl(imageInput);
+    if (!normalized) {
+      toast.error("Invalid Image URL", "Please enter a valid HTTP or HTTPS image URL.");
+      return;
+    }
+    if (images.length >= 5) {
+      toast.warning("Limit Reached", "Maximum 5 images allowed per product.");
+      return;
+    }
+    if (images.includes(normalized)) {
+      toast.info("Duplicate Image", "This image has already been added.");
+      return;
+    }
+    setImages([...images, normalized]);
     setImageInput("");
   }
+
 
   function handleRemoveImage(idx: number) {
     setImages(images.filter((_, i) => i !== idx));
@@ -532,7 +543,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <Link
               href={`/dashboard/products/${productId}/keys${querySuffix}`}
               className="btn btn-secondary"
@@ -540,7 +551,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             >
               <Key size={15} /> Keys Vault ({unusedDbKeys.length} Available)
             </Link>
+            <DeleteProductButton
+              productId={productId}
+              productTitle={title}
+              shopId={activeShopId || undefined}
+              variant="button"
+              onSuccess={() => {
+                router.push(`/dashboard/products${querySuffix}`);
+              }}
+            />
           </div>
+
         </div>
       </div>
 
@@ -665,6 +686,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </button>
               </div>
 
+              <div style={{ fontSize: 11.5, color: "var(--color-muted-foreground)", lineHeight: 1.4, marginTop: 2 }}>
+                💡 <strong>Direct image URL required:</strong> Supports <code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>, <code>.webp</code>, <code>.gif</code>.
+                Imgur links (e.g. <code>imgur.com/xyz</code>) are auto-converted to direct links. On IMGBB, right-click the preview and choose <em>&quot;Copy Image Address&quot;</em>.
+              </div>
+
               {/* Images preview list */}
               {images.length > 0 ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10, marginTop: 4 }}>
@@ -686,8 +712,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                           src={imgUrl}
                           alt={`Product view ${idx + 1}`}
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.opacity = "0.35";
+                          }}
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
+
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(idx)}
